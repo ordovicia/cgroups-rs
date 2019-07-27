@@ -1,5 +1,4 @@
-use std::error::Error as StdError;
-use std::fmt;
+use std::{error::Error as StdError, fmt};
 
 /// The result type returned from this crate.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -13,47 +12,24 @@ pub struct Error {
 }
 
 /// The kinds of errors that can occur while operating on cgroups.
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorKind {
-    /// Failed to read from a cgroup file.
-    ReadFailed,
+    /// Failed to do an I/O operation on a cgroup file system.
+    Io,
 
-    /// Failed to parse a string in a cgroup file into a value.
+    /// Failed to parse a content in a cgroup file into a value.
+    ///
     /// In the future, there will be some information attached to this variant.
-    ParseFailed,
+    Parse,
 
-    /// Failed to write to a cgroup file.
-    WriteFailed,
-
-    /// Failed to apply a value to a subsystem.
-    ApplyFailed,
+    /// Failed to apply a value to a cgruop.
+    Apply,
 
     /// You tried to do something invalid.
     ///
     /// This could be because you tried to set a value in a cgroup that is not a root
     /// cgroup. Or, when using unified hierarchy, you tried to add a task in a non-leaf node.
     InvalidOperation,
-
-    /// The path of the cgroup was invalid.
-    ///
-    /// This could be caused by trying to escape the cgroup filesystem via a string of `..`.
-    /// This crate checks against this and operations will fail with this error.
-    InvalidPath,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let msg = match self.kind {
-            ErrorKind::ReadFailed => "unable to read a cgroup file",
-            ErrorKind::ParseFailed => "unable to parse a string in a cgroup file",
-            ErrorKind::WriteFailed => "unable to write to a cgroup file",
-            ErrorKind::ApplyFailed => "unable to apply a value to a subsystem (controller)",
-            ErrorKind::InvalidOperation => "the requested operation is invalid",
-            ErrorKind::InvalidPath => "the given path is invalid",
-        };
-        write!(f, "{}", msg)
-    }
-}
 
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
@@ -64,15 +40,33 @@ impl StdError for Error {
     }
 }
 
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self.kind {
+                ErrorKind::Io => "unable to do I/O operation on a cgroup file system",
+                ErrorKind::Parse => "unable to parse content in a cgroup file",
+                ErrorKind::Apply => "unable to apply a value to a cgroup",
+            ErrorKind::InvalidOperation => "the requested operation is invalid",
+}
+        )?;
+
+        if let Some(ref source) = self.source {
+            write!(f, ": {}", source)?;
+        }
+
+        Ok(())
+    }
+}
+
 impl Error {
     pub(crate) fn new(kind: ErrorKind) -> Self {
         Self { kind, source: None }
     }
 
-    pub(crate) fn with_source<E>(kind: ErrorKind, source: E) -> Self
-    where
-        E: StdError + Send + 'static,
-    {
+    pub(crate) fn with_source(kind: ErrorKind, source: impl StdError + Send + 'static) -> Self {
         Self {
             kind,
             source: Some(Box::new(source)),
@@ -82,5 +76,13 @@ impl Error {
     /// Returns the kind of this error.
     pub fn kind(&self) -> ErrorKind {
         self.kind
+    }
+
+    pub(crate) fn io(source: impl StdError + Send + 'static) -> Self {
+        Self::with_source(ErrorKind::Io, source)
+    }
+
+    pub(crate) fn parse(source: impl StdError + Send + 'static) -> Self {
+        Self::with_source(ErrorKind::Parse, source)
     }
 }
