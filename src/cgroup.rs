@@ -84,19 +84,7 @@ impl<'b> Cgroup<'b> {
     /// will change.
     pub fn delete(self) {
         self.subsystems.into_iter().for_each(|sub| match sub {
-            Subsystem::Pid(pidc) => pidc.delete(),
-            Subsystem::Mem(c) => c.delete(),
-            Subsystem::CpuSet(c) => c.delete(),
-            Subsystem::CpuAcct(c) => c.delete(),
             Subsystem::Cpu(c) => c.delete(),
-            Subsystem::Devices(c) => c.delete(),
-            Subsystem::Freezer(c) => c.delete(),
-            Subsystem::NetCls(c) => c.delete(),
-            Subsystem::BlkIo(c) => c.delete(),
-            Subsystem::PerfEvent(c) => c.delete(),
-            Subsystem::NetPrio(c) => c.delete(),
-            Subsystem::HugeTlb(c) => c.delete(),
-            Subsystem::Rdma(c) => c.delete(),
         });
     }
 

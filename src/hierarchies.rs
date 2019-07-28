@@ -8,20 +8,8 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 use crate::{
-    blkio::BlkIoController,
     cgroup::Cgroup,
     cpu::CpuController,
-    cpuacct::CpuAcctController,
-    cpuset::CpuSetController,
-    devices::DevicesController,
-    freezer::FreezerController,
-    hugetlb::HugeTlbController,
-    memory::MemController,
-    net_cls::NetClsController,
-    net_prio::NetPrioController,
-    perf_event::PerfEventController,
-    pid::PidController,
-    rdma::RdmaController,
     {Controllers, Hierarchy, Subsystem},
 };
 
@@ -33,44 +21,8 @@ pub struct V1 {
 impl Hierarchy for V1 {
     fn subsystems(&self) -> Vec<Subsystem> {
         let mut subs = vec![];
-        if self.check_support(Controllers::Pids) {
-            subs.push(Subsystem::Pid(PidController::new(self.root())));
-        }
-        if self.check_support(Controllers::Mem) {
-            subs.push(Subsystem::Mem(MemController::new(self.root())));
-        }
-        if self.check_support(Controllers::CpuSet) {
-            subs.push(Subsystem::CpuSet(CpuSetController::new(self.root())));
-        }
-        if self.check_support(Controllers::CpuAcct) {
-            subs.push(Subsystem::CpuAcct(CpuAcctController::new(self.root())));
-        }
         if self.check_support(Controllers::Cpu) {
             subs.push(Subsystem::Cpu(CpuController::new(self.root())));
-        }
-        if self.check_support(Controllers::Devices) {
-            subs.push(Subsystem::Devices(DevicesController::new(self.root())));
-        }
-        if self.check_support(Controllers::Freezer) {
-            subs.push(Subsystem::Freezer(FreezerController::new(self.root())));
-        }
-        if self.check_support(Controllers::NetCls) {
-            subs.push(Subsystem::NetCls(NetClsController::new(self.root())));
-        }
-        if self.check_support(Controllers::BlkIo) {
-            subs.push(Subsystem::BlkIo(BlkIoController::new(self.root())));
-        }
-        if self.check_support(Controllers::PerfEvent) {
-            subs.push(Subsystem::PerfEvent(PerfEventController::new(self.root())));
-        }
-        if self.check_support(Controllers::NetPrio) {
-            subs.push(Subsystem::NetPrio(NetPrioController::new(self.root())));
-        }
-        if self.check_support(Controllers::HugeTlb) {
-            subs.push(Subsystem::HugeTlb(HugeTlbController::new(self.root())));
-        }
-        if self.check_support(Controllers::Rdma) {
-            subs.push(Subsystem::Rdma(RdmaController::new(self.root())));
         }
 
         subs
