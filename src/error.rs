@@ -1,23 +1,23 @@
 use std::{error::Error as StdError, fmt};
 
-/// The result type returned from this crate.
+/// Result type returned from this crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// The error type that can be returned from this crate, in the `Result::Err` variant.
-/// The lower-level cause of this error can be obtained from the `source` method.
+/// Error type that can be returned from this crate, in the `Result::Err` variant. The lower-level
+/// source of this error can be obtained by using `source` method.
 #[derive(Debug)]
 pub struct Error {
     kind: ErrorKind,
     source: Option<Box<dyn StdError + Send + 'static>>,
 }
 
-/// The kinds of errors that can occur while operating on cgroups.
+/// Kinds of errors that can occur while operating on cgroups.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorKind {
     /// Failed to do an I/O operation on a cgroup file system.
     Io,
 
-    /// Failed to parse a content in a cgroup file into a value.
+    /// Failed to parse contents in a cgroup file into a value.
     ///
     /// In the future, there will be some information attached to this variant.
     Parse,
@@ -26,10 +26,8 @@ pub enum ErrorKind {
     Apply,
 
     /// You tried to do something invalid.
-    ///
-    /// This could be because you tried to set a value in a cgroup that is not a root
-    /// cgroup. Or, when using unified hierarchy, you tried to add a task in a non-leaf node.
     InvalidOperation,
+}
 
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
@@ -46,11 +44,11 @@ impl fmt::Display for Error {
             f,
             "{}",
             match self.kind {
-                ErrorKind::Io => "unable to do I/O operation on a cgroup file system",
-                ErrorKind::Parse => "unable to parse content in a cgroup file",
+                ErrorKind::Io => "unable to do an I/O operation on a cgroup file system",
+                ErrorKind::Parse => "unable to parse contents in a cgroup file",
                 ErrorKind::Apply => "unable to apply a value to a cgroup",
-            ErrorKind::InvalidOperation => "the requested operation is invalid",
-}
+                ErrorKind::InvalidOperation => "the requested operation is invalid",
+            }
         )?;
 
         if let Some(ref source) = self.source {

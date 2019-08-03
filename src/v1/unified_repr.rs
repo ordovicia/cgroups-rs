@@ -12,11 +12,24 @@ pub struct UnifiedRepr {
 
 impl UnifiedRepr {
     pub fn new(name: PathBuf) -> Self {
-        let cpu = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name));
+        use SubsystemKind::*;
+        Self::with_subsystems(name, &[Cpu])
+    }
 
-        Self {
-            cpu: if cpu.exists() { Some(cpu) } else { None },
+    pub fn with_subsystems(name: PathBuf, subsystem_kinds: &[SubsystemKind]) -> Self {
+        use SubsystemKind::*;
+
+        let mut cpu = None;
+        for kind in subsystem_kinds {
+            let path = CgroupPath::new(*kind, name.clone());
+            match kind {
+                Cpu => {
+                    cpu = Some(cpu::Subsystem::new(path));
         }
+    }
+        }
+
+        Self { cpu }
     }
 
     pub fn supports(&self, subsystem_kind: SubsystemKind) -> bool {
@@ -27,8 +40,8 @@ impl UnifiedRepr {
         }
     }
 
-    pub fn cpu(&self) -> &Option<cpu::Subsystem> {
-        &self.cpu
+    pub fn cpu(&self) -> Option<&cpu::Subsystem> {
+        self.cpu.as_ref()
     }
 
     pub fn create(&mut self) -> Result<()> {

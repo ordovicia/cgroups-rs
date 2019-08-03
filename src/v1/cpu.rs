@@ -1,29 +1,45 @@
+//! Operations on a CPU subsystem.
+//!
+//! See the kernel's documentation for more information about this subsystem, found at
+//! [Documentation/scheduler/sched-design-CFS.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt),
+//! paragraph 7 ("GROUP SCHEDULER EXTENSIONS TO CFS"), and
+//! [Documentation/scheduler/sched-bwc.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt).
+
 use std::{io::Write, path::PathBuf};
 
 use crate::{
     util::{parse_file, parse_option},
-    v1::{self, Cgroup, CgroupPath},
+    v1::{self, Cgroup, CgroupPath, SubsystemKind},
     Error, ErrorKind, Result,
 };
 
-#[derive(Debug, Clone)]
+/// Handler of a CPU subsystem.
+#[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,
 }
 
+/// Resource limits about how CPU time is provided to a cgroup.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
+    /// Weight of how much of the total CPU time should be provided to this cgroup.
     pub shares: Option<u64>,
+    /// Total available CPU time for this cgroup within a period (in microseconds).
     pub cfs_quota: Option<i64>,
+    /// Length of a period (in microseconds).
     pub cfs_period: Option<u64>,
     // pub realtime_runtime: Option<i64>,
     // pub realtime_period: Option<u64>,
 }
 
+/// Throttling statistics of a cgroup.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stat {
+    /// Number of periods (as specifiec in `Resources.cfs_period`) that have elapsed.
     pub nr_periods: u64,
+    /// Number of times this cgroup has been throttled.
     pub nr_throttled: u64,
+    /// Total time duration for which this cgroup has been throttled (in nanoseconds).
     pub throttled_time: u64,
 }
 
@@ -32,9 +48,9 @@ impl Cgroup for Subsystem {
         Self { path }
     }
 
-    // fn subsystem_kind(&self) ->SubsystemKind {
-    //     SubsystemKind::Cpu
-    // }
+    fn subsystem_kind(&self) -> SubsystemKind {
+        SubsystemKind::Cpu
+    }
 
     fn path(&self) -> PathBuf {
         self.path.to_path_buf()
@@ -44,6 +60,10 @@ impl Cgroup for Subsystem {
         Box::new(Self::new(self.path.subsystem_root()))
     }
 
+    /// Apply the `Some` fields in `resources.cpu`.
+    ///
+    /// If `validate` is `true`, this method validates that the resource limits are
+    /// correctly set, and returns an error with kind `ErrorKind::Apply` if the validation failed.
     fn apply(&mut self, resources: &v1::Resources, validate: bool) -> Result<()> {
         let res: &self::Resources = &resources.cpu;
 
@@ -72,6 +92,25 @@ const CFS_PERIOD_FILE_NAME: &str = "cpu.cfs_period_us";
 const CFS_QUOTA_FILE_NAME: &str = "cpu.cfs_quota_us";
 
 impl Subsystem {
+    /// Reads throttling statistics of this cgroup from `cpu.stat` file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if failed to read and parse `cpu.stat` file of this cgroup.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    ///
+    /// let cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// println!("{:?}", cgroup.stat()?);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn stat(&self) -> Result<Stat> {
         use std::io::{BufRead, BufReader};
 
@@ -85,7 +124,7 @@ impl Subsystem {
         for line in buf.lines() {
             let line = line.map_err(Error::io)?;
             let mut entry = line.split_whitespace();
-            match entry.next().ok_or(Error::new(ErrorKind::Parse))? {
+            match entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))? {
                 "nr_periods" => {
                     nr_periods = Some(parse_option(entry.next())?);
                 }
@@ -114,32 +153,206 @@ impl Subsystem {
         Err(Error::new(ErrorKind::Parse))
     }
 
+    /// Reads the CPU time shares of this cgroup from `cpu.shares` file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if failed to read and parse `cpu.shares` file of this cgroup.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    ///
+    /// let cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// let shares = cgroup.shares()?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn shares(&self) -> Result<u64> {
         self.open_file_read(SHARES_FILE_NAME).and_then(parse_file)
     }
 
+    /// Sets a CPU time shares to this cgroup by writing to `cpu.shares` file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if failed to write to `cpu.shares` file of this cgroup.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    ///
+    /// let mut cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// cgroup.set_shares(2048)?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn set_shares(&mut self, shares: u64) -> Result<()> {
         let mut file = self.open_file_write(SHARES_FILE_NAME, false)?;
         write!(file, "{}", shares).map_err(Error::io)
     }
 
-    pub fn cfs_period(&self) -> Result<u64> {
-        self.open_file_read(CFS_PERIOD_FILE_NAME)
-            .and_then(parse_file)
-    }
-
-    pub fn set_cfs_period(&mut self, us: u64) -> Result<()> {
-        let mut file = self.open_file_write(CFS_PERIOD_FILE_NAME, false)?;
-        write!(file, "{}", us).map_err(Error::io)
-    }
-
+    /// Reads the total available CPU time within a period (in microseconds) of this cgroup from
+    /// `cpu.cfs_quota_us` file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if failed to read and parse `cpu.cfs_quota_us` file of this cgroup.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    ///
+    /// let cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// let cfs_quota = cgroup.cfs_quota()?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn cfs_quota(&self) -> Result<i64> {
         self.open_file_read(CFS_QUOTA_FILE_NAME)
             .and_then(parse_file)
     }
 
+    /// Sets the total available CPU time within a period (in microseconds) of this cgroup by
+    /// writing to `cpu.cfs_quota_us` file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if failed to write to `cpu.cfs_quota_us` file of this cgroup.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    ///
+    /// let mut cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// cgroup.set_cfs_quota(500 * 1000)?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn set_cfs_quota(&mut self, us: i64) -> Result<()> {
         let mut file = self.open_file_write(CFS_QUOTA_FILE_NAME, false)?;
         write!(file, "{}", us).map_err(Error::io)
+    }
+
+    /// Reads the length of period (in microseconds) of this cgroup from `cpu.cfs_period_us` file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if failed to read and parse `cpu.cfs_period_us` file of this cgroup.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    ///
+    /// let cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// let cfs_period = cgroup.cfs_period()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn cfs_period(&self) -> Result<u64> {
+        self.open_file_read(CFS_PERIOD_FILE_NAME)
+            .and_then(parse_file)
+    }
+
+    /// Sets the length of period (in microseconds) of this cgroup by writing to `cpu.cfs_period_us` file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if failed to write to `cpu.cfs_period_us` file of this cgroup.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    ///
+    /// let mut cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// cgroup.set_cfs_period(1000 * 1000)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn set_cfs_period(&mut self, us: u64) -> Result<()> {
+        let mut file = self.open_file_write(CFS_PERIOD_FILE_NAME, false)?;
+        write!(file, "{}", us).map_err(Error::io)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_subsystem_stat() -> Result<()> {
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
+        cgroup.create()?;
+
+        assert_eq!(
+            cgroup.stat()?,
+            Stat {
+                nr_periods: 0,
+                nr_throttled: 0,
+                throttled_time: 0
+            }
+        );
+
+        cgroup.delete()
+    }
+
+    #[test]
+    fn test_subsystem_shares() -> Result<()> {
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
+        cgroup.create()?;
+        assert_eq!(cgroup.shares()?, 1024); // default value
+
+        cgroup.set_shares(2048)?;
+        assert_eq!(cgroup.shares()?, 2048);
+
+        cgroup.delete()
+    }
+
+    #[test]
+    fn test_subsystem_quota() -> Result<()> {
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
+        cgroup.create()?;
+        assert_eq!(cgroup.cfs_quota()?, -1);
+
+        cgroup.set_cfs_quota(100 * 1000)?;
+        assert_eq!(cgroup.cfs_quota()?, 100 * 1000);
+
+        cgroup.delete()
+    }
+
+    #[test]
+    fn test_subsystem_period() -> Result<()> {
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
+        cgroup.create()?;
+        assert_eq!(cgroup.cfs_period()?, 100 * 1000); // default value
+
+        cgroup.set_cfs_period(1000 * 1000)?;
+        assert_eq!(cgroup.cfs_period()?, 1000 * 1000);
+
+        cgroup.delete()
     }
 }
