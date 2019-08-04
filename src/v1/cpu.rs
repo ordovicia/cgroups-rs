@@ -14,8 +14,8 @@ pub struct Subsystem {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     pub shares: Option<u64>,
-    pub quota: Option<i64>,
-    pub period: Option<u64>,
+    pub cfs_quota: Option<i64>,
+    pub cfs_period: Option<u64>,
     // pub realtime_runtime: Option<i64>,
     // pub realtime_period: Option<u64>,
 }
@@ -48,19 +48,19 @@ impl Cgroup for Subsystem {
         let res: &self::Resources = &resources.cpu;
 
         macro_rules! a {
-            ($entity: ident, $getter: ident, $setter: ident) => {
-                if let Some(entity) = res.$entity {
-                    self.$setter(entity)?;
-                    if validate && entity != self.$getter()? {
+            ($resource: ident, $setter: ident) => {
+                if let Some(resource) = res.$resource {
+                    self.$setter(resource)?;
+                    if validate && resource != self.$resource()? {
                         return Err(Error::new(ErrorKind::Apply));
                     }
                 }
             };
         }
 
-        a!(shares, shares, set_shares);
-        a!(period, cfs_period, set_cfs_period);
-        a!(quota, cfs_quota, set_cfs_quota);
+        a!(shares, set_shares);
+        a!(cfs_period, set_cfs_period);
+        a!(cfs_quota, set_cfs_quota);
 
         Ok(())
     }

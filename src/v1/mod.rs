@@ -1,9 +1,11 @@
 use std::fmt;
 
+mod builder;
 mod cgroup;
 pub mod cpu;
 mod unified_repr;
 
+pub use builder::Builder;
 pub use cgroup::{Cgroup, CgroupPath};
 pub use unified_repr::UnifiedRepr;
 
