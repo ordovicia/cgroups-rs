@@ -1,11 +1,8 @@
 language: rust
 rust:
   - stable
-  - beta
   - nightly
-matrix:
-  allow_failures:
-    - rust: nightly
-  fast_finish: true
 script:
   - cargo build --verbose --all
+  - cargo test --verbose --all
+  - cargo test -- --ignored test_cgroup_add_get_remove_tasks --test-threads=1
