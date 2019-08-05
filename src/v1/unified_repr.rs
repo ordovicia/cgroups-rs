@@ -25,8 +25,8 @@ impl UnifiedRepr {
             match kind {
                 Cpu => {
                     cpu = Some(cpu::Subsystem::new(path));
-        }
-    }
+                }
+            }
         }
 
         Self { cpu }
@@ -79,6 +79,22 @@ impl UnifiedRepr {
     pub fn remove_task(&mut self, pid: Pid) -> Result<()> {
         if let Some(ref mut cpu) = self.cpu {
             cpu.remove_task(pid)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn add_proc(&mut self, pid: Pid) -> Result<()> {
+        if let Some(ref mut cpu) = self.cpu {
+            cpu.add_proc(pid)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn remove_proc(&mut self, pid: Pid) -> Result<()> {
+        if let Some(ref mut cpu) = self.cpu {
+            cpu.remove_proc(pid)?;
         }
 
         Ok(())
