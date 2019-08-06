@@ -1,6 +1,6 @@
 //! Operations on a CPU subsystem.
 //!
-//! See the kernel's documentation for more information about this subsystem, found at
+//! For more information about this subsystem, see the kernel's documentation at
 //! [Documentation/scheduler/sched-design-CFS.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt),
 //! paragraph 7 ("GROUP SCHEDULER EXTENSIONS TO CFS"), and
 //! [Documentation/scheduler/sched-bwc.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt).
@@ -176,7 +176,7 @@ impl Subsystem {
         self.open_file_read(SHARES_FILE_NAME).and_then(parse_file)
     }
 
-    /// Sets a CPU time shares to this cgroup by writing to `cpu.shares` file.
+    /// Sets CPU time shares to this cgroup by writing to `cpu.shares` file.
     ///
     /// # Errors
     ///
@@ -225,7 +225,7 @@ impl Subsystem {
             .and_then(parse_file)
     }
 
-    /// Sets the total available CPU time within a period (in microseconds) of this cgroup by
+    /// Sets total available CPU time within a period (in microseconds) of this cgroup by
     /// writing to `cpu.cfs_quota_us` file.
     ///
     /// # Errors
@@ -274,7 +274,7 @@ impl Subsystem {
             .and_then(parse_file)
     }
 
-    /// Sets the length of period (in microseconds) of this cgroup by writing to `cpu.cfs_period_us` file.
+    /// Sets length of period (in microseconds) of this cgroup by writing to `cpu.cfs_period_us` file.
     ///
     /// # Errors
     ///

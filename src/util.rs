@@ -2,6 +2,13 @@ use std::{error::Error as StdError, fs::File, str::FromStr};
 
 use crate::{Error, ErrorKind, Result};
 
+macro_rules! with_doc {
+    ($doc: expr, $($tt: tt)*) => {
+        #[doc = $doc]
+        $($tt)*
+    };
+}
+
 #[cfg(test)]
 macro_rules! make_cgroup_name {
     () => {
@@ -47,7 +54,7 @@ mod tests {
     fn test_make_cgroup_name() {
         assert_eq!(
             make_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-util-49")
+            std::path::PathBuf::from("cgroups_rs-util-56")
         );
     }
 

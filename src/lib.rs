@@ -3,7 +3,7 @@
 
 //! Native Rust crate for operating on cgroups.
 //!
-//! TODO
+//! Currently this crate supports only cgroup v1 hierarchy, implementes in [`v1`](v1/index.html) module.
 
 #[macro_use]
 mod util;

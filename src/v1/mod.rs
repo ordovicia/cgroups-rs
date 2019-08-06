@@ -1,7 +1,23 @@
 //! Operations on cgroups in a v1 hierarchy.
 //!
-//! See the kernel's documentation for more information about cgroup v1, found at
+//! For more information about cgroup v1, see the kernel's documentation
 //! [Documentation/cgroup-v1/cgroups.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt).
+//!
+//! Operations for each subsystem are implemented in each module. See [`cpu::Subsystem`] for
+//! example. Currently this crate supports CPU subsystem.
+//!
+//! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
+//! this trait and subsystem-specific operations.
+//!
+//! [`UnifiedRepr`] provides an access to a set of cgroups in the v1 hierarchies as if it is in the
+//! v2 hierarchy.
+//!
+//! [`Builder`] allows you to configure a cgroup in the builder pattern.
+//!
+//! [`cpu::Subsystem`]: cpu/struct.Subsystem.html
+//! [`Cgroup`]: trait.Cgroup.html
+//! [`UnifiedRepr`]: struct.UnifiedRepr.html
+//! [`Builder`]: builder/struct.Builder.html
 
 use std::fmt;
 
@@ -17,7 +33,7 @@ pub use unified_repr::UnifiedRepr;
 pub(crate) const CGROUPFS_MOUNT_POINT: &str = "/sys/fs/cgroup";
 
 /// Kinds of subsystems that are now available in this crate.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SubsystemKind {
     /// CPU subsystem.
     Cpu,

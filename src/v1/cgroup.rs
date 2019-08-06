@@ -49,8 +49,9 @@ const PROCS_FILE_NAME: &str = "cgroup.procs";
 /// cgroup.delete()?;
 /// # Ok(())
 /// # }
+/// ```
 pub trait Cgroup {
-    /// Defines a new cgroup with the path.
+    /// Defines a new cgroup with a path.
     ///
     /// Note that this method does not create a new cgroup. [`Cgroup::create`] creates the new directory for
     /// the defined cgroup.
@@ -131,7 +132,7 @@ pub trait Cgroup {
     /// ```
     fn root_cgroup(&self) -> Box<Self>;
 
-    /// Creates the directory for this cgroup.
+    /// Creates a new directory for this cgroup.
     ///
     /// This method does not create directories recursively; If a parent of the path does not
     /// exist, an error will be returned. All parent directories must be created before you call
@@ -167,7 +168,7 @@ pub trait Cgroup {
 
     // TODO: load()
 
-    /// Applies the set of resource limits and constraints to this cgroup.
+    /// Applies a set of resource limits and constraints to this cgroup.
     ///
     /// If `validate` is `true`, this method validates that the resource limits are correctly set,
     /// and returns an error if the validation failed.
@@ -208,7 +209,7 @@ pub trait Cgroup {
     /// ```
     fn apply(&mut self, resources: &Resources, validate: bool) -> Result<()>;
 
-    /// Deletes the directory for this cgroup.
+    /// Deletes a directory of this cgroup.
     ///
     /// # Errors
     ///
@@ -264,7 +265,7 @@ pub trait Cgroup {
             .and_then(read_tasks_procs)
     }
 
-    /// Attaches a task to this cgroup by writing the thread ID to `tasks` file.
+    /// Attaches a task to this cgroup by writing a thread ID to `tasks` file.
     ///
     /// # Errors
     ///
@@ -341,7 +342,7 @@ pub trait Cgroup {
             .and_then(read_tasks_procs)
     }
 
-    /// Attaches a process to this cgroup by writing the PID to `cgroup.procs` file.
+    /// Attaches a process to this cgroup by writing a PID to `cgroup.procs` file.
     ///
     /// # Errors
     ///
@@ -394,7 +395,7 @@ pub trait Cgroup {
         self.root_cgroup().add_proc(pid)
     }
 
-    /// Low-level API that opens the file with read access.
+    /// Low-level API that opens a file with read access.
     ///
     /// # Errors
     ///
@@ -422,7 +423,7 @@ pub trait Cgroup {
             .map_err(Error::io)
     }
 
-    /// Low-level API that opens the file with write access.
+    /// Low-level API that opens a file with write access.
     ///
     /// If `append` is `true`, the file is opend in append mode. Otherwise, if the file already
     /// exists, writing to the file will overwrite its contents.
@@ -465,7 +466,7 @@ pub struct CgroupPath {
 }
 
 impl CgroupPath {
-    /// Create a new `CgroupPath` with the subsystem kind and the cgroup name.
+    /// Create a new `CgroupPath` with a subsystem kind and a cgroup name.
     ///
     /// The resulting path is the concatenation of 1) the cgroup mount point `/sys/fs/cgroup`, 2)
     /// the standard directory name for the subsystem (e.g. `SubsystemKind::Cpu` => `cpu`), and 3)
@@ -483,7 +484,7 @@ impl CgroupPath {
         Self::with_subsystem_name(kind.to_string(), name)
     }
 
-    /// Create a new `CgroupPath` with the custom subsystem directory name and the cgroup name.
+    /// Create a new `CgroupPath` with a custom subsystem directory name and a cgroup name.
     ///
     /// The resulting path is the concatenation of 1) the cgroup mount point `/sys/fs/cgroup`, 2)
     /// the given custom directory name, and 3) the cgroup name (e.g. `students/charlie`).
@@ -543,11 +544,10 @@ fn add_tasks_procs(mut file: File, id: Pid) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::v1::cpu;
 
     #[test]
     fn test_cgroup_exists_create_delete() -> Result<()> {
-        use crate::v1::cpu;
-
         let mut cgroup =
             cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
         assert!(!cgroup.exists());
@@ -564,17 +564,14 @@ mod tests {
     #[test]
     #[ignore] // `cargo test` must not be executed in parallel for this test
     fn test_cgroup_add_get_remove_tasks() -> Result<()> {
-        use crate::v1::cpu;
-
-        let pid = Pid::from(std::process::id());
-
         let mut cgroup =
             cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
         cgroup.create()?;
 
+        let pid = Pid::from(std::process::id());
+
         // Add self to the cgroup
         cgroup.add_task(pid)?;
-
         // Verify that self is indeed in the cgroup
         assert_eq!(cgroup.tasks()?, vec![pid]);
 
@@ -588,8 +585,6 @@ mod tests {
 
     #[test]
     fn test_cgroup_add_get_remove_procs() -> Result<()> {
-        use crate::v1::cpu;
-
         let pid = Pid::from(std::process::id());
 
         let mut cgroup =
