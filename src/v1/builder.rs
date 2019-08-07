@@ -10,30 +10,46 @@ use crate::{
     Result,
 };
 
+// Keep the example below in sync with README.md
+
 /// Cgroup builder.
 ///
-/// By using `Builder`, you can configure a cgroup in the builder pattern. This builder creates
-/// directories for the cgroups, but only for the configured subsystems. e.g. if you call only
-/// `cpu()`, only one cgroup directory is created for the CPU subsystem.
+/// By using `Builder`, you can configure a (set of) cgroup(s) in the builder pattern. This builder
+/// creates directories for the cgroups, but only for the configured subsystems. e.g. if you call
+/// only `cpu()`, only one cgroup directory is created for the CPU subsystem.
 ///
 /// ```no_run
 /// # fn main() -> cgroups::Result<()> {
 /// use std::path::PathBuf;
 /// use cgroups::v1::Builder;
 ///
-/// let cgroup =
-///     // Start building a cgroup.
-///     Builder::new(PathBuf::from("students/charlie"))    
-///     // Start building the CPU subsystem.
+/// let mut cgroups =
+///     // Start building a (set of) cgroup(s).
+///     Builder::new(PathBuf::from("students/charlie"))
+///     // Start configurating the CPU resource limits.
 ///     .cpu()
 ///         .shares(1000)
 ///         .cfs_quota(500 * 1000)
 ///         .cfs_period(1000 * 1000)
-///         // Finish building the CPU subsystem.
+///         // Finish configurating the CPU resource limits.
 ///         .done()
-///     // Actually build a cgroup with the configuration.
+///     // Actually build cgroups with the configuration.
 ///     // Only create a directory for the CPU subsystem.
 ///     .build(true)?;
+///
+/// let pid = std::process::id().into();
+/// cgroups.add_task(pid)?;
+///
+/// // do something ...
+///
+/// // Remove self process from the cgroups.
+/// cgroups.remove_task(pid)?;
+///
+/// // And delete the cgroups.
+/// cgroups.delete()?;
+///
+/// // Note that cgroup handlers does not implement `Drop` and therefore when the
+/// // handler is dropped, the cgroup will stay around.
 /// # Ok(())
 /// # }
 /// ```
@@ -45,14 +61,14 @@ use crate::{
 /// # fn main() -> cgroups::Result<()> {
 /// # use std::path::PathBuf;
 /// # use cgroups::v1::Builder;
-/// let mut cgroup = Builder::new(PathBuf::from("students/charlie"))
-///     .cpu()  
+/// let mut cgroups = Builder::new(PathBuf::from("students/charlie"))
+///     .cpu()
 ///         .shares(1000)
 ///         .shares(2000)   // Override.
 ///         .done()
-///     .build(true)?;  
+///     .build(true)?;
 ///
-/// assert_eq!(cgroup.cpu().unwrap().shares()?, 2000);
+/// assert_eq!(cgroups.cpu().unwrap().shares()?, 2000);
 /// # Ok(())
 /// # }
 /// ```
@@ -63,17 +79,17 @@ use crate::{
 /// # fn main() -> cgroups::Result<()> {
 /// # use std::path::PathBuf;
 /// # use cgroups::v1::Builder;
-/// let mut cgroup = Builder::new(PathBuf::from("students/charlie"))
-///     .cpu()  
+/// let mut cgroups = Builder::new(PathBuf::from("students/charlie"))
+///     .cpu()
 ///         .shares(1000)
 ///         .done()
 ///     .cpu()  // Not reset shares.
 ///         .cfs_quota(500 * 1000)
 ///         .cfs_period(1000 * 1000)
 ///         .done()
-///     .build(true)?;  
+///     .build(true)?;
 ///
-/// assert_eq!(cgroup.cpu().unwrap().shares()?, 1000);
+/// assert_eq!(cgroups.cpu().unwrap().shares()?, 1000);
 /// # Ok(())
 /// # }
 /// ```
@@ -87,8 +103,8 @@ pub struct Builder {
 impl Builder {
     /// Creats a new cgroup builder.
     ///
-    /// The resulting cgroup will have the given name. For the directory name of each subsystem,
-    /// the standard name (e.g. `cpu` for CPU subsystem) is used.
+    /// The resulting (set of) cgroup(s) will have the given name. For the directory name of each
+    /// subsystem, the standard name (e.g. `cpu` for CPU subsystem) is used.
     pub fn new(name: PathBuf) -> Self {
         Self {
             name,
@@ -105,12 +121,12 @@ impl Builder {
         CpuBuilder { builder: self }
     }
 
-    /// Builds a cgroup with the configuration.
+    /// Builds a (set of) cgroup(s) with the configuration.
     ///
     /// If `validate` is `true`, this method validates that the resource limits are
     /// correctly set, and returns an error with kind [`ErrorKind::Apply`] if the validation failed.
     ///
-    /// This method creates directories for the cgroup, but only for the configured subsystems.
+    /// This method creates directories for the cgroups, but only for the configured subsystems.
     /// i.e. if you called only `cpu()`, only one cgroup directory is created for the CPU subsystem.
     ///
     /// [`ErrorKind::Apply`]: ../../enum.ErrorKind.html#variant.Apply
@@ -165,7 +181,7 @@ mod tests {
     #[test]
     fn test_builder() -> Result<()> {
         #[rustfmt::skip]
-        let mut cgroup = Builder::new(PathBuf::from(make_cgroup_name!()))
+        let mut cgroups = Builder::new(PathBuf::from(make_cgroup_name!()))
             .cpu()
                 .shares(1000)
                 .cfs_quota(500 * 1000)
@@ -173,12 +189,12 @@ mod tests {
                 .done()
             .build(true)?;
 
-        let cpu = cgroup.cpu().unwrap();
+        let cpu = cgroups.cpu().unwrap();
         assert_eq!(cpu.shares()?, 1000);
         assert_eq!(cpu.cfs_quota()?, 500 * 1000);
         assert_eq!(cpu.cfs_period()?, 1000 * 1000);
 
-        cgroup.delete()
+        cgroups.delete()
     }
 
     #[test]

@@ -11,6 +11,8 @@ use crate::{
 const TASKS_FILE_NAME: &str = "tasks";
 const PROCS_FILE_NAME: &str = "cgroup.procs";
 
+// Keep the example below in sync with README.md
+
 /// Common operations on a cgroup. Each subsystem handler implements this trait.
 ///
 /// # Examples
@@ -22,7 +24,7 @@ const PROCS_FILE_NAME: &str = "cgroup.procs";
 ///
 /// let pid = Pid::from(std::process::id());
 ///
-/// // Define and create a new cgroup for CPU subsystem.
+/// // Define and create a new cgroup controlled by the CPU subsystem.
 /// let name = PathBuf::from("my_cgroup");
 /// let mut cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name));
 /// cgroup.create()?;
@@ -42,11 +44,14 @@ const PROCS_FILE_NAME: &str = "cgroup.procs";
 ///
 /// // do something ...
 ///
-/// // Now, remove self from the cgroup.
+/// // Now, remove self process from the cgroup.
 /// cgroup.remove_task(pid)?;
 ///
 /// // And delete the cgroup.
 /// cgroup.delete()?;
+///
+/// // Note that cgroup handlers does not implement `Drop` and therefore when the
+/// // handler is dropped, the cgroup will stay around.
 /// # Ok(())
 /// # }
 /// ```
@@ -165,8 +170,6 @@ pub trait Cgroup {
     fn create(&mut self) -> Result<()> {
         fs::create_dir(self.path()).map_err(Error::io)
     }
-
-    // TODO: load()
 
     /// Applies a set of resource limits and constraints to this cgroup.
     ///
