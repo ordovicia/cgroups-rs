@@ -1,4 +1,4 @@
-use std::{error::Error as StdError, fs::File, str::FromStr};
+use std::{error::Error as StdError, str::FromStr};
 
 use crate::{Error, ErrorKind, Result};
 
@@ -23,15 +23,14 @@ macro_rules! make_cgroup_name {
     };
 }
 
-pub(crate) fn parse_file<T>(mut file: File) -> Result<T>
+pub(crate) fn parse<T, R>(mut reader: R) -> Result<T>
 where
     T: FromStr,
     <T as FromStr>::Err: StdError + Sync + Send + 'static,
+    R: std::io::Read,
 {
-    use std::io::Read;
-
     let mut buf = String::new();
-    file.read_to_string(&mut buf).map_err(Error::io)?;
+    reader.read_to_string(&mut buf).map_err(Error::io)?;
     buf.trim().parse::<T>().map_err(Error::parse)
 }
 
@@ -54,13 +53,24 @@ mod tests {
     fn test_make_cgroup_name() {
         assert_eq!(
             make_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-util-56")
+            std::path::PathBuf::from("cgroups_rs-util-57")
+        );
+    }
+
+    #[test]
+    fn test_parse() {
+        assert_eq!(parse::<i32, _>("42".as_bytes()).unwrap(), 42);
+        assert_eq!(parse::<bool, _>("true".as_bytes()).unwrap(), true);
+        assert_eq!(
+            parse::<i32, _>("".as_bytes()).unwrap_err().kind(),
+            ErrorKind::Parse
         );
     }
 
     #[test]
     fn test_parse_option() {
         assert_eq!(parse_option::<i32>(Some("42")).unwrap(), 42);
+        assert_eq!(parse_option::<bool>(Some("true")).unwrap(), true);
         assert_eq!(
             parse_option::<i32>(None).unwrap_err().kind(),
             ErrorKind::Parse

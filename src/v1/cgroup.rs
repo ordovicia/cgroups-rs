@@ -526,6 +526,16 @@ impl CgroupPath {
     }
 }
 
+pub(crate) trait CgroupHelper: Cgroup {
+    fn write_file(&mut self, name: &str, val: impl std::fmt::Display) -> Result<()> {
+        use std::io::Write;
+        self.open_file_write(name, false).and_then(|mut f| write!(f, "{}", val).map_err(Error::io))
+    }
+}
+
+impl<T: Cgroup> CgroupHelper for T {
+}
+
 fn read_tasks_procs(file: File) -> Result<Vec<Pid>> {
     use std::io::{BufRead, BufReader};
 

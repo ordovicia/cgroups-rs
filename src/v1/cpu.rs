@@ -5,18 +5,33 @@
 //! paragraph 7 ("GROUP SCHEDULER EXTENSIONS TO CFS"), and
 //! [Documentation/scheduler/sched-bwc.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt).
 
-use std::{io::Write, path::PathBuf};
+use std::path::PathBuf;
 
 use crate::{
-    util::{parse_file, parse_option},
     v1::{self, Cgroup, CgroupPath, SubsystemKind},
     Error, ErrorKind, Result,
+};
+
+use crate::{
+    util::{parse, parse_option},
+    v1::cgroup::CgroupHelper,
 };
 
 /// Handler of a CPU subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,
+}
+
+/// Throttling statistics of a cgroup.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Stat {
+    /// Number of periods (as specifiec in `Resources.cfs_period`) that have elapsed.
+    pub nr_periods: u64,
+    /// Number of times this cgroup has been throttled.
+    pub nr_throttled: u64,
+    /// Total time duration for which this cgroup has been throttled (in nanoseconds).
+    pub throttled_time: u64,
 }
 
 /// Resource limits about how CPU time is provided to a cgroup.
@@ -30,17 +45,6 @@ pub struct Resources {
     pub cfs_period: Option<u64>,
     // pub realtime_runtime: Option<i64>,
     // pub realtime_period: Option<u64>,
-}
-
-/// Throttling statistics of a cgroup.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Stat {
-    /// Number of periods (as specifiec in `Resources.cfs_period`) that have elapsed.
-    pub nr_periods: u64,
-    /// Number of times this cgroup has been throttled.
-    pub nr_throttled: u64,
-    /// Total time duration for which this cgroup has been throttled (in nanoseconds).
-    pub throttled_time: u64,
 }
 
 impl Cgroup for Subsystem {
@@ -69,9 +73,9 @@ impl Cgroup for Subsystem {
 
         macro_rules! a {
             ($resource: ident, $setter: ident) => {
-                if let Some(resource) = res.$resource {
-                    self.$setter(resource)?;
-                    if validate && resource != self.$resource()? {
+                if let Some(r) = res.$resource {
+                    self.$setter(r)?;
+                    if validate && r != self.$resource()? {
                         return Err(Error::new(ErrorKind::Apply));
                     }
                 }
@@ -173,7 +177,7 @@ impl Subsystem {
     /// # }
     /// ```
     pub fn shares(&self) -> Result<u64> {
-        self.open_file_read(SHARES_FILE_NAME).and_then(parse_file)
+        self.open_file_read(SHARES_FILE_NAME).and_then(parse)
     }
 
     /// Sets CPU time shares to this cgroup by writing to `cpu.shares` file.
@@ -196,8 +200,7 @@ impl Subsystem {
     /// # }
     /// ```
     pub fn set_shares(&mut self, shares: u64) -> Result<()> {
-        let mut file = self.open_file_write(SHARES_FILE_NAME, false)?;
-        write!(file, "{}", shares).map_err(Error::io)
+        self.write_file(SHARES_FILE_NAME, shares)
     }
 
     /// Reads the total available CPU time within a period (in microseconds) of this cgroup from
@@ -221,8 +224,7 @@ impl Subsystem {
     /// # }
     /// ```
     pub fn cfs_quota(&self) -> Result<i64> {
-        self.open_file_read(CFS_QUOTA_FILE_NAME)
-            .and_then(parse_file)
+        self.open_file_read(CFS_QUOTA_FILE_NAME).and_then(parse)
     }
 
     /// Sets total available CPU time within a period (in microseconds) of this cgroup by
@@ -245,9 +247,8 @@ impl Subsystem {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn set_cfs_quota(&mut self, us: i64) -> Result<()> {
-        let mut file = self.open_file_write(CFS_QUOTA_FILE_NAME, false)?;
-        write!(file, "{}", us).map_err(Error::io)
+    pub fn set_cfs_quota(&mut self, quota_us: i64) -> Result<()> {
+        self.write_file(CFS_QUOTA_FILE_NAME, quota_us)
     }
 
     /// Reads the length of period (in microseconds) of this cgroup from `cpu.cfs_period_us` file.
@@ -270,8 +271,7 @@ impl Subsystem {
     /// # }
     /// ```
     pub fn cfs_period(&self) -> Result<u64> {
-        self.open_file_read(CFS_PERIOD_FILE_NAME)
-            .and_then(parse_file)
+        self.open_file_read(CFS_PERIOD_FILE_NAME).and_then(parse)
     }
 
     /// Sets length of period (in microseconds) of this cgroup by writing to `cpu.cfs_period_us` file.
@@ -293,9 +293,8 @@ impl Subsystem {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn set_cfs_period(&mut self, us: u64) -> Result<()> {
-        let mut file = self.open_file_write(CFS_PERIOD_FILE_NAME, false)?;
-        write!(file, "{}", us).map_err(Error::io)
+    pub fn set_cfs_period(&mut self, period_us: u64) -> Result<()> {
+        self.write_file(CFS_PERIOD_FILE_NAME, period_us)
     }
 }
 
