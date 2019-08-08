@@ -541,7 +541,7 @@ fn read_tasks_procs(file: File) -> Result<Vec<Pid>> {
 
 fn add_tasks_procs(mut file: File, id: Pid) -> Result<()> {
     use std::io::Write;
-    write!(file, "{}", id.to_string()).map_err(Error::io)
+    write!(file, "{}", id.to_inner()).map_err(Error::io)
 }
 
 #[cfg(test)]

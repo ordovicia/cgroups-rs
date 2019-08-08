@@ -112,10 +112,17 @@ impl From<&std::process::Child> for Pid {
     }
 }
 
-impl std::ops::Deref for Pid {
-    type Target = u32;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl Pid {
+    /// Returns the underlying PID or thread ID value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cgroups::Pid;
+    /// let pid = Pid::from(42);
+    /// assert_eq!(pid.to_inner(), 42);
+    /// ```
+    pub fn to_inner(self) -> u32 {
+        self.0
     }
 }
