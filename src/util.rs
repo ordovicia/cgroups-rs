@@ -26,7 +26,7 @@ macro_rules! make_cgroup_name {
 pub(crate) fn parse_file<T>(mut file: File) -> Result<T>
 where
     T: FromStr,
-    <T as FromStr>::Err: StdError + Send + 'static,
+    <T as FromStr>::Err: StdError + Sync + Send + 'static,
 {
     use std::io::Read;
 
@@ -38,7 +38,7 @@ where
 pub(crate) fn parse_option<T>(s: Option<&str>) -> Result<T>
 where
     T: FromStr,
-    <T as FromStr>::Err: StdError + Send + 'static,
+    <T as FromStr>::Err: StdError + Sync + Send + 'static,
 {
     match s {
         Some(s) => s.parse::<T>().map_err(Error::parse),

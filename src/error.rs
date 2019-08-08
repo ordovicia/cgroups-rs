@@ -8,7 +8,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug)]
 pub struct Error {
     kind: ErrorKind,
-    source: Option<Box<dyn StdError + Send + 'static>>,
+    source: Option<Box<dyn StdError + Sync + Send + 'static>>,
 }
 
 /// Kinds of errors that can occur while operating on cgroups.
@@ -64,7 +64,10 @@ impl Error {
         Self { kind, source: None }
     }
 
-    pub(crate) fn with_source(kind: ErrorKind, source: impl StdError + Send + 'static) -> Self {
+    pub(crate) fn with_source<E>(kind: ErrorKind, source: E) -> Self
+    where
+        E: StdError + Sync + Send + 'static,
+    {
         Self {
             kind,
             source: Some(Box::new(source)),
@@ -76,11 +79,17 @@ impl Error {
         self.kind
     }
 
-    pub(crate) fn io(source: impl StdError + Send + 'static) -> Self {
+    pub(crate) fn io<E>(source: E) -> Self
+    where
+        E: StdError + Sync + Send + 'static,
+    {
         Self::with_source(ErrorKind::Io, source)
     }
 
-    pub(crate) fn parse(source: impl StdError + Send + 'static) -> Self {
+    pub(crate) fn parse<E>(source: E) -> Self
+    where
+        E: StdError + Sync + Send + 'static,
+    {
         Self::with_source(ErrorKind::Parse, source)
     }
 }
