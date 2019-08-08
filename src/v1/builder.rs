@@ -10,7 +10,7 @@ use crate::{
     Result,
 };
 
-// Keep the example below in sync with README.md
+// Keep the example below in sync with README.md and lib.rs
 
 /// Cgroup builder.
 ///

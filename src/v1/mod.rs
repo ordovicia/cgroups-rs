@@ -4,7 +4,7 @@
 //! [Documentation/cgroup-v1/cgroups.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt).
 //!
 //! Operations for each subsystem are implemented in each module. See [`cpu::Subsystem`] for
-//! example. Currently this crate supports CPU subsystem.
+//! example. Currently this crate supports CPU and Cpuset subsystems.
 //!
 //! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
 //! this trait and subsystem-specific operations.

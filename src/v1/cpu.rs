@@ -1,6 +1,6 @@
 //! Operations on a CPU subsystem.
 //!
-//! For more information about this subsystem, see the kernel's documentation at
+//! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/scheduler/sched-design-CFS.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt),
 //! paragraph 7 ("GROUP SCHEDULER EXTENSIONS TO CFS"), and
 //! [Documentation/scheduler/sched-bwc.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt).

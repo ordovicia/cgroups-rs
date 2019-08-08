@@ -11,7 +11,7 @@ use crate::{
 const TASKS_FILE_NAME: &str = "tasks";
 const PROCS_FILE_NAME: &str = "cgroup.procs";
 
-// Keep the example below in sync with README.md
+// Keep the example below in sync with README.md and lib.rs
 
 /// Common operations on a cgroup. Each subsystem handler implements this trait.
 ///
