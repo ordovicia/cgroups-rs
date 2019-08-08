@@ -104,7 +104,7 @@ impl UnifiedRepr {
             }
         }
 
-        Self { $($subsystem)* }
+        Self { $($subsystem),* }
     }
 
     /// Returns whether a subsystem is supported by this unified representation, i.e. included in
@@ -119,7 +119,7 @@ impl UnifiedRepr {
     /// let name = PathBuf::from("students/charlie");
     /// let cgroups = UnifiedRepr::with_subsystems(name, &[SubsystemKind::Cpu]);
     /// assert!(cgroups.supports(SubsystemKind::Cpu));
-    /// // TODO
+    /// assert!(!cgroups.supports(SubsystemKind::Cpuset));
     /// ```
     pub fn supports(&self, subsystem_kind: SubsystemKind) -> bool {
         match subsystem_kind {
@@ -133,8 +133,8 @@ impl UnifiedRepr {
             pub fn $subsystem(&self) -> Option<&$subsystem::Subsystem> {
                 self.$subsystem.as_ref()
             }
-        )
-    )*;
+        );
+    )*
 
     /// Creates new directories for each cgroup of the all supported subsystems.
     ///
@@ -251,7 +251,8 @@ impl UnifiedRepr {
 }
 
 gen_unified_repr! {
-    (cpu, Cpu, "CPU")
+    (cpu, Cpu, "CPU"),
+    (cpuset, Cpuset, "Cpuset")
 }
 
 #[cfg(test)]
@@ -260,19 +261,29 @@ mod tests {
 
     #[test]
     fn test_unified_repr_subsystems() {
-        // TODO
         let cgroups = UnifiedRepr::new(PathBuf::from(make_cgroup_name!()));
+
         assert!(cgroups.supports(SubsystemKind::Cpu));
         assert!(cgroups.cpu().is_some());
 
+        assert!(cgroups.supports(SubsystemKind::Cpuset));
+        assert!(cgroups.cpuset().is_some());
+
         let cgroups = UnifiedRepr::with_subsystems(PathBuf::from(make_cgroup_name!()), &[]);
+
         assert!(!cgroups.supports(SubsystemKind::Cpu));
         assert!(cgroups.cpu().is_none());
+
+        assert!(!cgroups.supports(SubsystemKind::Cpuset));
+        assert!(cgroups.cpuset().is_none());
 
         let cgroups =
             UnifiedRepr::with_subsystems(PathBuf::from(make_cgroup_name!()), &[SubsystemKind::Cpu]);
         assert!(cgroups.supports(SubsystemKind::Cpu));
         assert!(cgroups.cpu().is_some());
+
+        assert!(!cgroups.supports(SubsystemKind::Cpuset));
+        assert!(cgroups.cpuset().is_none());
     }
 
     #[test]

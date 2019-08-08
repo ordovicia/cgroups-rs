@@ -24,6 +24,7 @@ use std::fmt;
 pub mod builder;
 mod cgroup;
 pub mod cpu;
+pub mod cpuset;
 mod unified_repr;
 
 pub use builder::Builder;
@@ -37,6 +38,8 @@ pub(crate) const CGROUPFS_MOUNT_POINT: &str = "/sys/fs/cgroup";
 pub enum SubsystemKind {
     /// CPU subsystem.
     Cpu,
+    /// Cpuset subsystem.
+    Cpuset,
 }
 
 /// Resource limits and constraints that will be set on a cgroup.
@@ -44,6 +47,8 @@ pub enum SubsystemKind {
 pub struct Resources {
     /// Resource limits about how a cgroup can use CPUs.
     pub cpu: cpu::Resources,
+    /// Resource limits about which CPUs and which memory nodes a cgroup can use.
+    pub cpuset: cpuset::Resources,
 }
 
 impl fmt::Display for SubsystemKind {
@@ -52,6 +57,7 @@ impl fmt::Display for SubsystemKind {
 
         match self {
             Cpu => write!(f, "cpu"),
+            Cpuset => write!(f, "cpuset"),
         }
     }
 }

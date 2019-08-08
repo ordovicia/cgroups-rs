@@ -398,6 +398,25 @@ pub trait Cgroup {
         self.root_cgroup().add_proc(pid)
     }
 
+    /// Returns whether a file with the given name exists in this cgroup.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    ///
+    /// let cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// let _ = cgroup.file_exists("cpu.stat");
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn file_exists(&self, name: &str) -> bool {
+        self.path().join(name).exists()
+    }
+
     /// Low-level API that opens a file with read access.
     ///
     /// # Errors
@@ -529,12 +548,12 @@ impl CgroupPath {
 pub(crate) trait CgroupHelper: Cgroup {
     fn write_file(&mut self, name: &str, val: impl std::fmt::Display) -> Result<()> {
         use std::io::Write;
-        self.open_file_write(name, false).and_then(|mut f| write!(f, "{}", val).map_err(Error::io))
+        self.open_file_write(name, false)
+            .and_then(|mut f| write!(f, "{}", val).map_err(Error::io))
     }
 }
 
-impl<T: Cgroup> CgroupHelper for T {
-}
+impl<T: Cgroup> CgroupHelper for T {}
 
 fn read_tasks_procs(file: File) -> Result<Vec<Pid>> {
     use std::io::{BufRead, BufReader};
@@ -609,6 +628,18 @@ mod tests {
 
         cgroup.remove_proc(pid)?;
         assert!(cgroup.procs()?.is_empty());
+
+        cgroup.delete()
+    }
+
+    #[test]
+    fn test_cgroup_file_exists() -> Result<()> {
+        let mut cgroup =
+            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
+        cgroup.create()?;
+
+        assert!(cgroup.file_exists("cpu.stat"));
+        assert!(!cgroup.file_exists("does_not_exist"));
 
         cgroup.delete()
     }

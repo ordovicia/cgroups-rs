@@ -65,9 +65,6 @@ impl Cgroup for Subsystem {
     }
 
     /// Apply the `Some` fields in `resources.cpu`.
-    ///
-    /// If `validate` is `true`, this method validates that the resource limits are
-    /// correctly set, and returns an error with kind `ErrorKind::Apply` if the validation failed.
     fn apply(&mut self, resources: &v1::Resources, validate: bool) -> Result<()> {
         let res: &self::Resources = &resources.cpu;
 

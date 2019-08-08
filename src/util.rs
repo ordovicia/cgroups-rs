@@ -45,6 +45,14 @@ where
     }
 }
 
+pub(crate) fn parse_01_bool<R: std::io::Read>(reader: R) -> Result<bool> {
+    parse::<i32, _>(reader).and_then(|n| match n {
+        0 => Ok(false),
+        1 => Ok(true),
+        _ => Err(Error::new(ErrorKind::Parse)),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -53,7 +61,7 @@ mod tests {
     fn test_make_cgroup_name() {
         assert_eq!(
             make_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-util-57")
+            std::path::PathBuf::from("cgroups_rs-util-63")
         );
     }
 
@@ -73,6 +81,20 @@ mod tests {
         assert_eq!(parse_option::<bool>(Some("true")).unwrap(), true);
         assert_eq!(
             parse_option::<i32>(None).unwrap_err().kind(),
+            ErrorKind::Parse
+        );
+    }
+
+    #[test]
+    fn test_parse_01_bool() {
+        assert_eq!(parse_01_bool("0".as_bytes()).unwrap(), false);
+        assert_eq!(parse_01_bool("1".as_bytes()).unwrap(), true);
+        assert_eq!(
+            parse_01_bool("2".as_bytes()).unwrap_err().kind(),
+            ErrorKind::Parse
+        );
+        assert_eq!(
+            parse_01_bool("invalid".as_bytes()).unwrap_err().kind(),
             ErrorKind::Parse
         );
     }
