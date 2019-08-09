@@ -1,7 +1,7 @@
 //! Operations on a CPU subsystem.
 //!
 //! For more information about this subsystem, see the kernel's documentation
-//! [Documentation/scheduler/sched-design-CFS.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt),
+//! [Documentation/scheduler/sched-design-CFS.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt)
 //! paragraph 7 ("GROUP SCHEDULER EXTENSIONS TO CFS"), and
 //! [Documentation/scheduler/sched-bwc.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt).
 
@@ -88,7 +88,7 @@ impl Cgroup for Subsystem {
 }
 
 #[rustfmt::skip]
-macro_rules! d {
+macro_rules! gen_doc {
     ($desc: literal, $resource: ident) => { concat!(
 "Reads ", $desc, " of this cgroup from `cpu.", stringify!($resource), "` file.
 
@@ -102,7 +102,7 @@ Returns an error if failed to read and parse `cpu.", stringify!($resource), "` f
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
 use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
-    
+
 let cgroup = cpu::Subsystem::new(
     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from(\"students/charlie\")));
 let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
@@ -123,7 +123,7 @@ Returns an error if failed to write to `cpu.", stringify!($resource), "` file of
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
 use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
-    
+
 let mut cgroup = cpu::Subsystem::new(
     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from(\"students/charlie\")));
 cgroup.set_", stringify!($resource), "(", stringify!($val), ")?;
@@ -139,17 +139,13 @@ const CFS_QUOTA_FILE_NAME: &str = "cpu.cfs_quota_us";
 
 impl Subsystem {
     with_doc! {
-        d!("throttling statistics", stat),
+        gen_doc!("throttling statistics", stat),
         pub fn stat(&self) -> Result<Stat> {
             use std::io::{BufRead, BufReader};
 
-            let mut nr_periods = None;
-            let mut nr_throttled = None;
-            let mut throttled_time = None;
+            let (mut nr_periods, mut nr_throttled, mut throttled_time) = (None, None, None);
 
-            let file = self.open_file_read(STAT_FILE_NAME)?;
-            let buf = BufReader::new(file);
-
+            let buf = BufReader::new(self.open_file_read(STAT_FILE_NAME)?);
             for line in buf.lines() {
                 let line = line.map_err(Error::io)?;
                 let mut entry = line.split_whitespace();
@@ -184,42 +180,42 @@ impl Subsystem {
     }
 
     with_doc! {
-        d!("the CPU time shares", shares),
+        gen_doc!("the CPU time shares", shares),
         pub fn shares(&self) -> Result<u64> {
             self.open_file_read(SHARES_FILE_NAME).and_then(parse)
         }
     }
 
     with_doc! {
-        d!("CPU time shares", shares, 2048),
+        gen_doc!("CPU time shares", shares, 2048),
         pub fn set_shares(&mut self, shares: u64) -> Result<()> {
             self.write_file(SHARES_FILE_NAME, shares)
         }
     }
 
     with_doc! {
-        d!("the total available CPU time within a period (in microseconds)", cfs_quota_us),
+        gen_doc!("the total available CPU time within a period (in microseconds)", cfs_quota_us),
         pub fn cfs_quota_us(&self) -> Result<i64> {
             self.open_file_read(CFS_QUOTA_FILE_NAME).and_then(parse)
         }
     }
 
     with_doc! {
-        d!("total available CPU time within a period (in microseconds)", cfs_quota_us, 500 * 1000),
+        gen_doc!("total available CPU time within a period (in microseconds)", cfs_quota_us, 500 * 1000),
         pub fn set_cfs_quota_us(&mut self, quota_us: i64) -> Result<()> {
             self.write_file(CFS_QUOTA_FILE_NAME, quota_us)
         }
     }
 
     with_doc! {
-        d!("the length of period (in microseconds)", cfs_period_us),
+        gen_doc!("the length of period (in microseconds)", cfs_period_us),
         pub fn cfs_period_us(&self) -> Result<u64> {
             self.open_file_read(CFS_PERIOD_FILE_NAME).and_then(parse)
         }
     }
 
     with_doc! {
-        d!("length of period (in microseconds)", cfs_period_us, 1000 * 1000),
+        gen_doc!("length of period (in microseconds)", cfs_period_us, 1000 * 1000),
         pub fn set_cfs_period_us(&mut self, period_us: u64) -> Result<()> {
             self.write_file(CFS_PERIOD_FILE_NAME, period_us)
         }

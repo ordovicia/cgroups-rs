@@ -200,16 +200,16 @@ impl Cgroup for Subsystem {
 }
 
 #[rustfmt::skip]
-macro_rules! d {
+macro_rules! gen_doc {
     ($desc: literal, $resource: ident) => { concat!(
-        d!(reads; $desc, $resource), "\n\n",
-        d!(err_read; $resource), "\n\n",
-        d!(eg; $resource), "\n",
+        gen_doc!(reads; $desc, $resource), "\n\n",
+        gen_doc!(err_read; $resource), "\n\n",
+        gen_doc!(eg; $resource), "\n",
     ) };
     ($desc: literal, $resource: ident, $val: expr) => { concat!(
-        d!(sets; $desc, $resource), "\n\n",
-        d!(err_write; $resource), "\n\n",
-        d!(eg; $resource, $val), "\n",
+        gen_doc!(sets; $desc, $resource), "\n\n",
+        gen_doc!(err_write; $resource), "\n\n",
+        gen_doc!(eg; $resource, $val), "\n",
     ) };
 
     // Description
@@ -295,35 +295,43 @@ const SCHED_RELAX_DOMAIN_LEVEL_FILE_NAME: &str = "cpuset.sched_relax_domain_leve
 
 impl Subsystem {
     with_doc! {
-        d!("the set of CPUs on which tasks in this cgroup can run", cpus),
+        gen_doc!("the set of CPUs on which tasks in this cgroup can run", cpus),
         pub fn cpus(&self) -> Result<IdSet> {
             self.open_file_read(CPUS_FILE_NAME).and_then(parse)
         }
     }
 
     with_doc! {
-        d!("a set of CPUs on which tasks in this cgroup can run", cpus, &"0,1".parse::<IdSet>()?),
+        gen_doc!(
+            "a set of CPUs on which tasks in this cgroup can run",
+            cpus,
+            &"0,1".parse::<IdSet>()?
+        ),
         pub fn set_cpus(&mut self, cpus: &IdSet) -> Result<()> {
             self.write_file(CPUS_FILE_NAME, cpus)
         }
     }
 
     with_doc! {
-        d!("the set of memory nodes which tasks in this cgroup can use", mems),
+        gen_doc!("the set of memory nodes which tasks in this cgroup can use", mems),
         pub fn mems(&self) -> Result<IdSet> {
             self.open_file_read(MEMS_FILE_NAME).and_then(parse)
         }
     }
 
     with_doc! {
-        d!("a set of memory nodes which tasks in this cgroup can use", mems, &"0,1".parse::<IdSet>()?),
+        gen_doc!(
+            "a set of memory nodes which tasks in this cgroup can use",
+            mems,
+            &"0,1".parse::<IdSet>()?
+        ),
         pub fn set_mems(&mut self, mems: &IdSet) -> Result<()> {
             self.write_file(MEMS_FILE_NAME, mems)
         }
     }
 
     with_doc! {
-        d!(
+        gen_doc!(
             "whether the memory used by tasks in this cgroup should beb migrated when memory selection is updated",
             memory_migrate
         ),
@@ -334,7 +342,7 @@ impl Subsystem {
     }
 
     with_doc! {
-        d!(
+        gen_doc!(
             "whether the memory used by tasks in this cgroup should beb migrated when memory selection is updated",
             memory_migrate,
             true
@@ -345,7 +353,7 @@ impl Subsystem {
     }
 
     with_doc! {
-        d!("whether the selected CPUs should be exclusive to this cgroup", cpu_exclusive),
+        gen_doc!("whether the selected CPUs should be exclusive to this cgroup", cpu_exclusive),
         pub fn cpu_exclusive(&self) -> Result<bool> {
             self.open_file_read(CPU_EXCLUSIVE_FILE_NAME)
                 .and_then(parse_01_bool)
@@ -353,14 +361,21 @@ impl Subsystem {
     }
 
     with_doc! {
-        d!("whether the selected CPUs should be exclusive to this cgroup", cpu_exclusive, true),
+        gen_doc!(
+            "whether the selected CPUs should be exclusive to this cgroup",
+            cpu_exclusive,
+            true
+        ),
         pub fn set_cpu_exclusive(&mut self, exclusive: bool) -> Result<()> {
             self.write_file(CPU_EXCLUSIVE_FILE_NAME, exclusive as i32)
         }
     }
 
     with_doc! {
-        d!("whether the selected memory nodes should be exclusive to this cgroup", mem_exclusive),
+        gen_doc!(
+            "whether the selected memory nodes should be exclusive to this cgroup",
+            mem_exclusive
+        ),
         pub fn mem_exclusive(&self) -> Result<bool> {
             self.open_file_read(MEM_EXCLUSIVE_FILE_NAME)
                 .and_then(parse_01_bool)
@@ -368,14 +383,18 @@ impl Subsystem {
     }
 
     with_doc! {
-        d!("whether the selected memory nodes should be exclusive to this cgroup", mem_exclusive, true),
+        gen_doc!(
+            "whether the selected memory nodes should be exclusive to this cgroup",
+            mem_exclusive,
+            true
+        ),
         pub fn set_mem_exclusive(&mut self, exclusive: bool) -> Result<()> {
             self.write_file(MEM_EXCLUSIVE_FILE_NAME, exclusive as i32)
         }
     }
 
     with_doc! {
-        d!("whether this cgroup is \"hardwalled\"", mem_hardwall),
+        gen_doc!("whether this cgroup is \"hardwalled\"", mem_hardwall),
         pub fn mem_hardwall(&self) -> Result<bool> {
             self.open_file_read(MEM_HARDWALL_FILE_NAME)
                 .and_then(parse_01_bool)
@@ -383,14 +402,17 @@ impl Subsystem {
     }
 
     with_doc! {
-        d!("whether this cgroup is \"hardwalled\"", mem_hardwall, true),
+        gen_doc!("whether this cgroup is \"hardwalled\"", mem_hardwall, true),
         pub fn set_mem_hardwall(&mut self, enable: bool) -> Result<()> {
             self.write_file(MEM_HARDWALL_FILE_NAME, enable as i32)
         }
     }
 
     with_doc! {
-        d!("running average of the memory pressure faced by tasks in this cgroup", memory_pressure),
+        gen_doc!(
+            "running average of the memory pressure faced by tasks in this cgroup",
+            memory_pressure
+        ),
         pub fn memory_pressure(&self) -> Result<u64> {
             self.open_file_read(MEMORY_PRESSURE_FILE_NAME)
                 .and_then(parse)
@@ -399,7 +421,7 @@ impl Subsystem {
 
     with_doc! {
         concat!(
-            d!(reads; "whether the kernel computes the memory pressure of this cgroup", memory_pressure_enabled), "
+            gen_doc!(reads; "whether the kernel computes the memory pressure of this cgroup", memory_pressure_enabled), "
 
 # Errors
 
@@ -409,7 +431,7 @@ error is returned with kind `ErrorKind::InvalidOperation`.
 On the root cgroup, returns an error if failed to read and parse `cpuset.memory_pressure_enabled` file.
 
 ",
-            d!(eg; memory_pressure_enabled)
+            gen_doc!(eg; memory_pressure_enabled)
         ),
         pub fn memory_pressure_enabled(&self) -> Result<bool> {
             if self.file_exists(MEMORY_PRESSURE_ENABLED_FILE_NAME) {
@@ -423,7 +445,7 @@ On the root cgroup, returns an error if failed to read and parse `cpuset.memory_
 
     with_doc! {
         concat!(
-            d!(sets; "whether the kernel computes the memory pressure of this cgroup", memory_pressure_enabled), "
+            gen_doc!(sets; "whether the kernel computes the memory pressure of this cgroup", memory_pressure_enabled), "
 
 # Errors
 
@@ -433,7 +455,7 @@ error is returned with kind `ErrorKind::InvalidOperation`.
 On the root cgroup, returns an error if failed to write to `cpuset.memory_pressure_enabled` file.
 
 ",
-            d!(eg; memory_pressure_enabled, true)
+            gen_doc!(eg; memory_pressure_enabled, true)
         ),
         pub fn set_memory_pressure_enabled(&mut self, enable: bool) -> Result<()> {
             if self.file_exists(MEMORY_PRESSURE_ENABLED_FILE_NAME) {
@@ -445,7 +467,10 @@ On the root cgroup, returns an error if failed to write to `cpuset.memory_pressu
     }
 
     with_doc! {
-        d!("whether file system buffers are spread across the selected memory nodes", memory_spread_page),
+        gen_doc!(
+            "whether file system buffers are spread across the selected memory nodes",
+            memory_spread_page
+        ),
         pub fn memory_spread_page(&self) -> Result<bool> {
             self.open_file_read(MEMORY_SPREAD_PAGE_FILE_NAME)
                 .and_then(parse_01_bool)
@@ -453,14 +478,18 @@ On the root cgroup, returns an error if failed to write to `cpuset.memory_pressu
     }
 
     with_doc! {
-        d!("whether file system buffers are spread across the selected memory nodes", memory_spread_page, true),
+        gen_doc!(
+            "whether file system buffers are spread across the selected memory nodes",
+            memory_spread_page,
+            true
+        ),
         pub fn set_memory_spread_page(&mut self, enable: bool) -> Result<()> {
             self.write_file(MEMORY_SPREAD_PAGE_FILE_NAME, enable as i32)
         }
     }
 
     with_doc! {
-        d!(
+        gen_doc!(
             "whether the kernel slab caches for file I/O are spread across the selected memory nodes",
             memory_spread_slab
         ),
@@ -471,7 +500,7 @@ On the root cgroup, returns an error if failed to write to `cpuset.memory_pressu
     }
 
     with_doc! {
-        d!(
+        gen_doc!(
             "whether the kernel slab caches for file I/O are spread across the selected memory nodes",
             memory_spread_slab,
             true
@@ -482,7 +511,10 @@ On the root cgroup, returns an error if failed to write to `cpuset.memory_pressu
     }
 
     with_doc! {
-        d!("whether the kernel rebalances the load across the selected CPUs", sched_load_balance),
+        gen_doc!(
+            "whether the kernel rebalances the load across the selected CPUs",
+            sched_load_balance
+        ),
         pub fn sched_load_balance(&self) -> Result<bool> {
             self.open_file_read(SCHED_LOAD_BALANCE_FILE_NAME)
                 .and_then(parse_01_bool)
@@ -490,14 +522,21 @@ On the root cgroup, returns an error if failed to write to `cpuset.memory_pressu
     }
 
     with_doc! {
-        d!("whether the kernel rebalances the load across the selected CPUs", sched_load_balance, true),
+        gen_doc!(
+            "whether the kernel rebalances the load across the selected CPUs",
+            sched_load_balance,
+            true
+        ),
         pub fn set_sched_load_balance(&mut self, enable: bool) -> Result<()> {
             self.write_file(SCHED_LOAD_BALANCE_FILE_NAME, enable as i32)
         }
     }
 
     with_doc! {
-        d!("how much work the kernel do to rebalance the load on this cgroup", sched_relax_domain_level),
+        gen_doc!(
+            "how much work the kernel do to rebalance the load on this cgroup",
+            sched_relax_domain_level
+        ),
         pub fn sched_relax_domain_level(&self) -> Result<i32> {
             self.open_file_read(SCHED_RELAX_DOMAIN_LEVEL_FILE_NAME)
                 .and_then(parse)
@@ -505,7 +544,11 @@ On the root cgroup, returns an error if failed to write to `cpuset.memory_pressu
     }
 
     with_doc! {
-        d!("how much work the kernel do to rebalance the load on this cgroup", sched_relax_domain_level, -1),
+        gen_doc!(
+            "how much work the kernel do to rebalance the load on this cgroup",
+            sched_relax_domain_level,
+            -1
+        ),
         pub fn set_sched_relax_domain_level(&mut self, level: i32) -> Result<()> {
             self.write_file(SCHED_RELAX_DOMAIN_LEVEL_FILE_NAME, level)
         }
