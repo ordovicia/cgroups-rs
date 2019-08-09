@@ -252,7 +252,8 @@ impl UnifiedRepr {
 
 gen_unified_repr! {
     (cpu, Cpu, "CPU"),
-    (cpuset, Cpuset, "Cpuset")
+    (cpuset, Cpuset, "cpuset"),
+    (cpuacct, Cpuacct, "cpuacct")
 }
 
 #[cfg(test)]

@@ -24,6 +24,7 @@ use std::fmt;
 pub mod builder;
 mod cgroup;
 pub mod cpu;
+pub mod cpuacct;
 pub mod cpuset;
 mod unified_repr;
 
@@ -40,6 +41,8 @@ pub enum SubsystemKind {
     Cpu,
     /// Cpuset subsystem.
     Cpuset,
+    /// Cpuacct (CPU accounting) subsystem.
+    Cpuacct,
 }
 
 /// Resource limits and constraints that will be set on a cgroup.
@@ -58,6 +61,7 @@ impl fmt::Display for SubsystemKind {
         match self {
             Cpu => write!(f, "cpu"),
             Cpuset => write!(f, "cpuset"),
+            Cpuacct => write!(f, "cpuacct"),
         }
     }
 }

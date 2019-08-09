@@ -10,3 +10,6 @@ authors = ["Levente Kurusa <lkurusa@acm.org>", "Sam Wilson <tecywiz121@hotmail.c
 edition = "2018"
 
 [dependencies]
+
+[dev-dependencies]
+num_cpus = "1.10.1"
