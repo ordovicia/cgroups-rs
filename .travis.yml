@@ -6,3 +6,4 @@ script:
   - cargo build --verbose --all
   - cargo test --verbose --all
   - cargo test -- --ignored add_get_remove_tasks --test-threads=1
+  - cargo test -- --ignored memory_pressure_enabled

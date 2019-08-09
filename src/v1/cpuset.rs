@@ -822,13 +822,13 @@ mod tests {
     #[ignore] // overrides the root cgroup
     fn test_subsystem_memory_pressure_enabled() -> Result<()> {
         let mut root = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::new()));
-        assert_eq!(root.memory_pressure_enabled()?, false);
+        let enabled = root.memory_pressure_enabled()?;
 
-        root.set_memory_pressure_enabled(true)?;
-        assert_eq!(root.memory_pressure_enabled()?, true);
+        root.set_memory_pressure_enabled(!enabled)?;
+        assert_eq!(root.memory_pressure_enabled()?, !enabled);
 
-        root.set_memory_pressure_enabled(false)?;
-        assert_eq!(root.memory_pressure_enabled()?, false);
+        root.set_memory_pressure_enabled(enabled)?;
+        assert_eq!(root.memory_pressure_enabled()?, enabled);
 
         Ok(())
     }
