@@ -54,7 +54,7 @@
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::v1::Builder;
+//! use cgroups::v1::{cpuset::IdSet, Builder};
 //!
 //! let mut cgroups =
 //!     // Start building a (set of) cgroup(s).
@@ -65,6 +65,12 @@
 //!         .cfs_quota_us(500 * 1000)
 //!         .cfs_period_us(1000 * 1000)
 //!         // Finish configurating the CPU resource limits.
+//!         .done()
+//!     // Start configurating the cpuset resource limits.
+//!     .cpuset()
+//!         .cpus([0].iter().copied().collect::<IdSet>())
+//!         .mems([0].iter().copied().collect::<IdSet>())
+//!         .memory_migrate(true)
 //!         .done()
 //!     // Actually build cgroups with the configuration.
 //!     // Only create a directory for the CPU subsystem.

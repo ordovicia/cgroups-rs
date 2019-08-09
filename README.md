@@ -49,7 +49,7 @@ cgroup.delete()?;
 
 ```rust
 use std::path::PathBuf;
-use cgroups::v1::Builder;
+use cgroups::v1::{cpuset::IdSet, Builder};
 
 let mut cgroups =
     // Start building a (set of) cgroup(s).
@@ -60,6 +60,11 @@ let mut cgroups =
         .cfs_quota_us(500 * 1000)
         .cfs_period_us(1000 * 1000)
         // Finish configurating the CPU resource limits.
+        .done()
+    // Start configurating the cpuset resource limits.
+    .cpuset()
+        .cpus([0].iter().copied().collect::<IdSet>())
+        .mems([0].iter().copied().collect::<IdSet>())
         .done()
     // Actually build cgroups with the configuration.
     // Only create a directory for the CPU subsystem.
