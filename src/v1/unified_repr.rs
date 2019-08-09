@@ -6,7 +6,7 @@ use crate::{
 };
 
 macro_rules! gen_unified_repr {
-    ( $( ($subsystem: ident, $kind: ident, $name: literal) ),* ) => {
+    ( $( ($subsystem: ident, $subsystem_mut: ident, $kind: ident, $name: literal) ),* ) => {
 
 use crate::v1::{$($subsystem),*};
 
@@ -134,6 +134,13 @@ impl UnifiedRepr {
                 self.$subsystem.as_ref()
             }
         );
+
+        with_doc!(
+            concat!("Returns a mutable reference to the ", $name, " subsystem."),
+            pub fn $subsystem_mut(&mut self) -> Option<&mut $subsystem::Subsystem> {
+                self.$subsystem.as_mut()
+            }
+        );
     )*
 
     /// Creates new directories for each cgroup of the all supported subsystems.
@@ -251,9 +258,9 @@ impl UnifiedRepr {
 }
 
 gen_unified_repr! {
-    (cpu, Cpu, "CPU"),
-    (cpuset, Cpuset, "cpuset"),
-    (cpuacct, Cpuacct, "cpuacct")
+    (cpu, cpu_mut, Cpu, "CPU"),
+    (cpuset, cpuset_mut, Cpuset, "cpuset"),
+    (cpuacct, cpuacct_mut, Cpuacct, "cpuacct")
 }
 
 #[cfg(test)]

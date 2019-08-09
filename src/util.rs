@@ -33,6 +33,7 @@ macro_rules! gen_resource_test {
         ));
         cgroup.create()?;
         assert_eq!(cgroup.$resource()?, $default);
+
         cgroup.delete()
     }};
 
@@ -104,7 +105,7 @@ mod tests {
     fn test_make_cgroup_name() {
         assert_eq!(
             gen_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-util-106")
+            std::path::PathBuf::from("cgroups_rs-util-107")
         );
     }
 

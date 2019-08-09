@@ -65,8 +65,7 @@ const USAGE_USER_FILE_NAME: &str = "cpuacct.usage_user";
 #[rustfmt::skip]
 macro_rules! gen_doc {
     ($resource: ident) => {
-        concat!(
-            "
+        concat!("
 # Errors
 
 Returns an error if failed to read and parse `cpuacct.", stringify!($resource), "` file of this cgroup.

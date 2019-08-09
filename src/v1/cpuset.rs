@@ -214,14 +214,14 @@ macro_rules! gen_doc {
 
     // Description
     (reads; $desc: literal, $resource: ident) => { concat!(
-"Reads ", $desc, " of this cgroup, from `cpuset.", stringify!($resource), "` file.
-
-See [`Resources.", stringify!($resource), "`] and the kernel's documentation for more information.
-
-[`Resources.", stringify!($resource), "`]: struct.Resources.html#structfield.", stringify!($resource)
+"Reads ", $desc, ", from `cpuset.", stringify!($resource), "` file.",
+gen_doc!(ref; $resource)
     ) };
     (sets; $desc: literal, $resource: ident) => { concat!(
-"Sets ", $desc, " to this cgroup, by writing to `cpuset.", stringify!($resource), "` file.
+"Sets ", $desc, ", by writing to `cpuset.", stringify!($resource), "` file.",
+gen_doc!(ref; $resource)
+    ) };
+    (ref; $resource: ident) => { concat!("
 
 See [`Resources.", stringify!($resource), "`] and the kernel's documentation for more information.
 
@@ -248,7 +248,7 @@ Returns an error if failed to write to `cpuset.", stringify!($resource), "` file
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
 use cgroups::v1::{cpuset, Cgroup, CgroupPath, SubsystemKind};
-    
+
 let cgroup = cpuset::Subsystem::new(
     CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(\"students/charlie\")));
 let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
@@ -264,7 +264,7 @@ let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
 use cgroups::v1::{cpuset::{self, IdSet}, Cgroup, CgroupPath, SubsystemKind};
-    
+
 let mut cgroup = cpuset::Subsystem::new(
     CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(\"students/charlie\")));
 cgroup.set_", stringify!($resource), "(", stringify!($val), ")?;
@@ -409,9 +409,13 @@ impl Subsystem {
     }
 
     with_doc! {
-        gen_doc!(
-            "running average of the memory pressure faced by tasks in this cgroup",
-            memory_pressure
+        concat!(
+"Reads running average of the memory pressure faced by tasks in this cgroup, from `cpuset.memory_pressure` file.
+
+See the kernel's documentation for more information.
+",
+            gen_doc!(err_read; memory_pressure), "\n\n",
+            gen_doc!(eg; memory_pressure), "\n"
         ),
         pub fn memory_pressure(&self) -> Result<u64> {
             self.open_file_read(MEMORY_PRESSURE_FILE_NAME)

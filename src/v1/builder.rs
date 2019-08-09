@@ -151,7 +151,7 @@ impl Builder {
 }
 
 macro_rules! gen_setter {
-    ($subsystem: ident, $resource: ident, $ty: ty, $doc: literal) => {
+    ($subsystem: ident; $resource: ident, $ty: ty, $doc: literal) => {
         with_doc! {
             concat!("Sets ", $doc, " to this cgroup."),
             pub fn $resource(mut self, $resource: $ty) -> Self {
@@ -170,17 +170,17 @@ pub struct CpuBuilder {
 }
 
 impl CpuBuilder {
-    gen_setter!(cpu, shares, u64, "CPU time shares");
+    gen_setter!(cpu; shares, u64, "CPU time shares");
 
     gen_setter!(
-        cpu,
+        cpu;
         cfs_period_us,
         u64,
         "length of period (in microseconds)"
     );
 
     gen_setter!(
-        cpu,
+        cpu;
         cfs_quota_us,
         i64,
         "total available CPU time within a period (in microseconds)"
@@ -201,40 +201,40 @@ pub struct CpusetBuilder {
 
 impl CpusetBuilder {
     gen_setter!(
-        cpuset,
+        cpuset;
         cpus,
         IdSet,
         "a set of Cpus on which task in this cgroup can run"
     );
 
     gen_setter!(
-        cpuset,
+        cpuset;
         mems,
         IdSet,
         "a set of memory nodes which tasks in this cgroup can use"
     );
     gen_setter!(
-        cpuset,
+        cpuset;
         memory_migrate,
         bool,
         "whether the memory used by tasks in this cgroup should beb migrated when memory selection is updated"
     );
     gen_setter!(
-        cpuset,
+        cpuset;
         cpu_exclusive,
         bool,
         "whether the selected CPUs should be exclusive to this cgroup"
     );
 
     gen_setter!(
-        cpuset,
+        cpuset;
         mem_exclusive,
         bool,
         "whether the selected memory nodes should be exclusive to this cgroup"
     );
 
     gen_setter!(
-        cpuset,
+        cpuset;
         mem_hardwall,
         bool,
         "whether this cgroup is \"hardwalled\""
@@ -250,28 +250,28 @@ impl CpusetBuilder {
     }
 
     gen_setter!(
-        cpuset,
+        cpuset;
         memory_spread_page,
         bool,
         "whether file system buffers are spread across the selected memory nodes"
     );
 
     gen_setter!(
-        cpuset,
+        cpuset;
         memory_spread_slab,
         bool,
         "whether file system buffers are spread across the selected memory nodes"
     );
 
     gen_setter!(
-        cpuset,
+        cpuset;
         sched_load_balance,
         bool,
         "whether the kernel rebalances the load across the selected CPUs"
     );
 
     gen_setter!(
-        cpuset,
+        cpuset;
         sched_relax_domain_level,
         i32,
         "how much work the kernel do to rebalance the load on this cgroup"
