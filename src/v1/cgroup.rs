@@ -644,17 +644,40 @@ mod tests {
         cgroup.delete()
     }
 
-    // TODO
-    // #[test]
-    // fn test_cgroup_open_file_read() -> Result<()> {
-    //     Ok(())
-    // }
+    #[test]
+    fn test_cgroup_open_file_read_write() -> Result<()> {
+        use std::io::{Read, Write};
 
-    // TODO
-    // #[test]
-    // fn test_cgroup_open_file_write() -> Result<()> {
-    //     Ok(())
-    // }
+        let mut cgroup =
+            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
+        cgroup.create()?;
+
+        const FILE_NAME: &str = "notify_on_release";
+
+        // read
+        let mut buf = String::new();
+        cgroup
+            .open_file_read(FILE_NAME)?
+            .read_to_string(&mut buf)
+            .unwrap();
+        assert_eq!(buf, "0\n");
+
+        // write
+        let mut file = cgroup.open_file_write(FILE_NAME, false)?;
+        write!(file, "1").unwrap();
+
+        // read
+        buf.clear();
+        cgroup
+            .open_file_read(FILE_NAME)?
+            .read_to_string(&mut buf)
+            .unwrap();
+        assert_eq!(buf, "1\n");
+
+        // TODO: append
+
+        cgroup.delete()
+    }
 
     #[test]
     fn test_cgroup_path_new() {
