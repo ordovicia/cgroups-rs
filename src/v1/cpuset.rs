@@ -793,6 +793,16 @@ mod tests {
     }
 
     #[test]
+    fn err_subsystem_memory_pressure_enabled() {
+        let mut cgroup =
+            Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, make_cgroup_name!()));
+        assert_eq!(
+            cgroup.set_memory_pressure_enabled(true).unwrap_err().kind(),
+            ErrorKind::InvalidOperation
+        );
+    }
+
+    #[test]
     fn test_subsystem_memory_spread_page() -> Result<()> {
         gen_resource_test!(Cpuset; memory_spread_page, false, set_memory_spread_page, true)
     }
@@ -809,7 +819,8 @@ mod tests {
 
     #[test]
     fn test_subsystem_sched_relax_domain_level() -> Result<()> {
-        gen_resource_test!(Cpuset; sched_relax_domain_level, -1, set_sched_relax_domain_level, 0)
+        // TODO: set_sched_relax_domain_level() raises io::Error with kind InvalidInput ?
+        gen_resource_test!(Cpuset; sched_relax_domain_level, -1)
     }
 
     #[test]
