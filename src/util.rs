@@ -23,6 +23,35 @@ macro_rules! make_cgroup_name {
     };
 }
 
+#[cfg(test)]
+macro_rules! gen_resource_test {
+    // Test a read-only resource
+    ($subsystem: ident; $resource: ident, $default: expr) => {{
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            SubsystemKind::$subsystem,
+            make_cgroup_name!(),
+        ));
+        cgroup.create()?;
+        assert_eq!(cgroup.$resource()?, $default);
+        cgroup.delete()
+    }};
+
+    // Test a read-write resource
+    ($subsystem: ident; $resource: ident, $default: expr, $setter: ident, $val: expr) => {{
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            SubsystemKind::$subsystem,
+            make_cgroup_name!(),
+        ));
+        cgroup.create()?;
+        assert_eq!(cgroup.$resource()?, $default);
+
+        cgroup.$setter($val)?;
+        assert_eq!(cgroup.$resource()?, $val);
+
+        cgroup.delete()
+    }};
+}
+
 pub(crate) fn parse<T, R>(mut reader: R) -> Result<T>
 where
     T: FromStr,
@@ -61,7 +90,7 @@ mod tests {
     fn test_make_cgroup_name() {
         assert_eq!(
             make_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-util-63")
+            std::path::PathBuf::from("cgroups_rs-util-92")
         );
     }
 

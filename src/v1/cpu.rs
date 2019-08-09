@@ -231,55 +231,55 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_subsystem_stat() -> Result<()> {
+    fn test_subsystem_create_file_exists() -> Result<()> {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
         cgroup.create()?;
 
-        assert_eq!(
-            cgroup.stat()?,
+        [
+            STAT_FILE_NAME,
+            SHARES_FILE_NAME,
+            CFS_QUOTA_FILE_NAME,
+            CFS_PERIOD_FILE_NAME,
+        ]
+        .iter()
+        .all(|f| cgroup.file_exists(f));
+
+        assert!(!cgroup.file_exists("does_not_exist"));
+
+        cgroup.delete()
+    }
+
+    #[test]
+    fn test_subsystem_stat() -> Result<()> {
+        gen_resource_test!(
+            Cpu;
+            stat,
             Stat {
                 nr_periods: 0,
                 nr_throttled: 0,
                 throttled_time: 0
             }
-        );
-
-        cgroup.delete()
+        )
     }
 
     #[test]
     fn test_subsystem_shares() -> Result<()> {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
-        cgroup.create()?;
-        assert_eq!(cgroup.shares()?, 1024); // default value
-
-        cgroup.set_shares(2048)?;
-        assert_eq!(cgroup.shares()?, 2048);
-
-        cgroup.delete()
+        gen_resource_test!(Cpu; shares, 1024, set_shares, 2048)
     }
 
     #[test]
-    fn test_subsystem_quota() -> Result<()> {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
-        cgroup.create()?;
-        assert_eq!(cgroup.cfs_quota_us()?, -1);
-
-        cgroup.set_cfs_quota_us(100 * 1000)?;
-        assert_eq!(cgroup.cfs_quota_us()?, 100 * 1000);
-
-        cgroup.delete()
+    fn test_subsystem_cfs_quota_us() -> Result<()> {
+        gen_resource_test!(Cpu; cfs_quota_us, -1, set_cfs_quota_us, 100 * 1000)
     }
 
     #[test]
-    fn test_subsystem_period() -> Result<()> {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
-        cgroup.create()?;
-        assert_eq!(cgroup.cfs_period_us()?, 100 * 1000); // default value
-
-        cgroup.set_cfs_period_us(1000 * 1000)?;
-        assert_eq!(cgroup.cfs_period_us()?, 1000 * 1000);
-
-        cgroup.delete()
+    fn test_subsystem_cfs_period_us() -> Result<()> {
+        gen_resource_test!(
+            Cpu;
+            cfs_period_us,
+            100 * 1000,
+            set_cfs_period_us,
+            1000 * 1000
+        )
     }
 }

@@ -638,7 +638,7 @@ mod tests {
             cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
         cgroup.create()?;
 
-        assert!(cgroup.file_exists("cpu.stat"));
+        assert!(cgroup.file_exists("tasks"));
         assert!(!cgroup.file_exists("does_not_exist"));
 
         cgroup.delete()
