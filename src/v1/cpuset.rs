@@ -3,6 +3,8 @@
 //! For more information about Cpuset subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/cpusets.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cpusets.txt).
 
+// TODO: module-level doc
+
 use std::{collections::HashSet, fmt, iter::FromIterator, path::PathBuf};
 
 use crate::{
@@ -121,7 +123,7 @@ pub struct Resources {
 ///
 /// # Formatting
 ///
-/// `IdSet` implements [`Display`]. The resulting string is a cpuset IDs string. e.g. formatting
+/// `IdSet` implements [`Display`]. The resulting string is a cpuset IDs string. e.g. Formatting
 /// `IdSet` that consists of CPU 0, 1, 3, 4, 5, 7 will generate "0,1,3-5,7".
 ///
 /// ```
@@ -214,30 +216,26 @@ macro_rules! gen_doc {
 
     // Description
     (reads; $desc: literal, $resource: ident) => { concat!(
-"Reads ", $desc, ", from `cpuset.", stringify!($resource), "` file.",
-gen_doc!(ref; $resource)
+        "Reads ", $desc, ", from `cpuset.", stringify!($resource), "` file.\n\n",
+        gen_doc!(ref; $resource)
     ) };
     (sets; $desc: literal, $resource: ident) => { concat!(
-"Sets ", $desc, ", by writing to `cpuset.", stringify!($resource), "` file.",
-gen_doc!(ref; $resource)
+        "Sets ", $desc, ", by writing to `cpuset.", stringify!($resource), "` file.\n\n",
+        gen_doc!(ref; $resource)
     ) };
-    (ref; $resource: ident) => { concat!("
-
-See [`Resources.", stringify!($resource), "`] and the kernel's documentation for more information.
-
-[`Resources.", stringify!($resource), "`]: struct.Resources.html#structfield.", stringify!($resource)
+    (ref; $resource: ident) => { concat!(
+        "See [`Resources.", stringify!($resource), "`](struct.Resources.html#structfield.", stringify!($resource), ") ",
+        "and the kernel's documentation for more information about this field.",
     ) };
 
     // Errors
     (err_read; $resource: ident) => { concat!(
-"# Errors
-
-Returns an error if failed to read and parse `cpuset.", stringify!($resource), "` file of this cgroup."
+        "# Errors\n\n",
+        "Returns an error if failed to read and parse `cpuset.", stringify!($resource), "` file of this cgroup."
     ) };
     (err_write; $resource: ident) => { concat!(
-"# Errors
-
-Returns an error if failed to write to `cpuset.", stringify!($resource), "` file of this cgroup."
+        "# Errors\n\n",
+        "Returns an error if failed to write to `cpuset.", stringify!($resource), "` file of this cgroup."
     ) };
 
     // Examples
@@ -263,7 +261,7 @@ let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
 ```no_run
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
-use cgroups::v1::{cpuset::{self, IdSet}, Cgroup, CgroupPath, SubsystemKind};
+use cgroups::v1::{cpuset, Cgroup, CgroupPath, SubsystemKind};
 
 let mut cgroup = cpuset::Subsystem::new(
     CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(\"students/charlie\")));
@@ -305,7 +303,7 @@ impl Subsystem {
         gen_doc!(
             "a set of CPUs on which tasks in this cgroup can run",
             cpus,
-            &"0,1".parse::<IdSet>()?
+            &"0,1".parse::<cpuset::IdSet>()?
         ),
         pub fn set_cpus(&mut self, cpus: &IdSet) -> Result<()> {
             self.write_file(CPUS_FILE_NAME, cpus)
@@ -323,7 +321,7 @@ impl Subsystem {
         gen_doc!(
             "a set of memory nodes which tasks in this cgroup can use",
             mems,
-            &"0,1".parse::<IdSet>()?
+            &"0,1".parse::<cpuset::IdSet>()?
         ),
         pub fn set_mems(&mut self, mems: &IdSet) -> Result<()> {
             self.write_file(MEMS_FILE_NAME, mems)
@@ -408,14 +406,12 @@ impl Subsystem {
         }
     }
 
-    with_doc! {
-        concat!(
-"Reads running average of the memory pressure faced by tasks in this cgroup, from `cpuset.memory_pressure` file.
-
-See the kernel's documentation for more information.
-",
+    with_doc! { concat!(
+            "Reads running average of the memory pressure faced by tasks in this cgroup, from ",
+            "`cpuset.memory_pressure` file.\n\n",
+            "See the kernel's documentation for more information.\n\n",
             gen_doc!(err_read; memory_pressure), "\n\n",
-            gen_doc!(eg; memory_pressure), "\n"
+            gen_doc!(eg; memory_pressure),
         ),
         pub fn memory_pressure(&self) -> Result<u64> {
             self.open_file_read(MEMORY_PRESSURE_FILE_NAME)
@@ -425,16 +421,16 @@ See the kernel's documentation for more information.
 
     with_doc! {
         concat!(
-            gen_doc!(reads; "whether the kernel computes the memory pressure of this cgroup", memory_pressure_enabled), "
-
-# Errors
-
-This field is present only at the root cgroup. If you call this method on a non-root cgroup, an
-error is returned with kind `ErrorKind::InvalidOperation`.
-
-On the root cgroup, returns an error if failed to read and parse `cpuset.memory_pressure_enabled` file.
-
-",
+            gen_doc!(
+                reads;
+                "whether the kernel computes the memory pressure of this cgroup",
+                memory_pressure_enabled
+            ), "\n\n",
+            "# Errors\n\n",
+            "This field is present only at the root cgroup. If you call this method on a non-root ",
+            "cgroup, an error is returned with kind `ErrorKind::InvalidOperation`.\n\n",
+            "On the root cgroup, returns an error if failed to read and parse ",
+            "`cpuset.memory_pressure_enabled` file.\n\n",
             gen_doc!(eg; memory_pressure_enabled)
         ),
         pub fn memory_pressure_enabled(&self) -> Result<bool> {
@@ -449,16 +445,16 @@ On the root cgroup, returns an error if failed to read and parse `cpuset.memory_
 
     with_doc! {
         concat!(
-            gen_doc!(sets; "whether the kernel computes the memory pressure of this cgroup", memory_pressure_enabled), "
-
-# Errors
-
-This field is present only at the root cgroup. If you call this method on a non-root cgroup, an
-error is returned with kind `ErrorKind::InvalidOperation`.
-
-On the root cgroup, returns an error if failed to write to `cpuset.memory_pressure_enabled` file.
-
-",
+            gen_doc!(
+                sets;
+                "whether the kernel computes the memory pressure of this cgroup",
+                memory_pressure_enabled
+            ), "\n\n",
+            "# Errors\n\n",
+            "This field is present only at the root cgroup. If you call this method on a non-root ",
+            "cgroup, an error is returned with kind `ErrorKind::InvalidOperation`.\n\n",
+            "On the root cgroup, returns an error if failed to write to ",
+            "`cpuset.memory_pressure_enabled` file.\n\n",
             gen_doc!(eg; memory_pressure_enabled, true)
         ),
         pub fn set_memory_pressure_enabled(&mut self, enable: bool) -> Result<()> {
@@ -694,6 +690,7 @@ impl IdSet {
     ///     vec![1, 2, 3, 5, 6, 7],
     /// );
     /// ```
+    // TODO: should we provide to_hash_set() instead?
     pub fn to_vec(&self) -> Vec<usize> {
         self.0.iter().copied().collect()
     }

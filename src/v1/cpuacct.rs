@@ -3,6 +3,8 @@
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/cpuacct.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt).
 
+// TODO: module-level doc
+
 use std::path::PathBuf;
 
 use crate::{
@@ -64,15 +66,11 @@ const USAGE_USER_FILE_NAME: &str = "cpuacct.usage_user";
 
 #[rustfmt::skip]
 macro_rules! gen_doc {
-    ($resource: ident) => {
-        concat!("
-# Errors
-
-Returns an error if failed to read and parse `cpuacct.", stringify!($resource), "` file of this cgroup.
-
-# Examples
-
-```no_run
+    ($resource: ident) => { concat!(
+        "# Errors\n\n",
+        "Returns an error if failed to read and parse `cpuacct.", stringify!($resource), "` file of this cgroup.\n\n",
+        "# Examples\n\n",
+"```no_run
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
 use cgroups::v1::{cpuacct, Cgroup, CgroupPath, SubsystemKind};
@@ -89,9 +87,9 @@ let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
 
 impl Subsystem {
     with_doc! { concat!(
-        "Reads statistics about how much CPU time is consumed by this cgroup, form `cpuacct.stat` file.
-        The CPU time is divided into user and system times. The values are in `USER_HZ` unit.
-        ",
+        "Reads statistics about how much CPU time is consumed by this cgroup, form `cpuacct.stat` ",
+        "file. The CPU time is divided into user and system times. The values are in `USER_HZ` ",
+        "unit.\n\n",
         gen_doc!(stat)),
         pub fn stat(&self) -> Result<Stat> {
             use std::io::{BufRead, BufReader};
@@ -124,9 +122,8 @@ impl Subsystem {
     }
 
     with_doc! { concat!(
-        "Reads the total CPU time consumed by this cgroup, from `cpuacct.usage` file.
-        The value is in nanoseconds.
-        ",
+        "Reads the total CPU time consumed by this cgroup, from `cpuacct.usage` file.",
+        "The value is in nanoseconds.\n\n",
         gen_doc!(usage)),
         pub fn usage(&self) -> Result<u64> {
             self.open_file_read(USAGE_FILE_NAME).and_then(parse)
@@ -134,9 +131,8 @@ impl Subsystem {
     }
 
     with_doc! { concat!(
-        "Reads the per-CPU total CPU times consumed by this cgroup, from `cpuacct.usage_all` file.
-        The CPU times are divided into user and system times. The values are in nanoseconds.
-        ",
+        "Reads the per-CPU total CPU times consumed by this cgroup, from `cpuacct.usage_all` file.",
+        "The CPU times are divided into user and system times. The values are in nanoseconds.\n\n",
         gen_doc!(usage_all)),
         pub fn usage_all(&self) -> Result<Vec<Stat>> {
             use std::io::{BufRead, BufReader};
@@ -177,9 +173,8 @@ impl Subsystem {
     }
 
     with_doc! { concat!(
-        "Reads the per-CPU total CPU times consumed by this cgroup, from `cpuacct.usage_percpu` file.
-        The values are in nanoseconds.
-        ",
+        "Reads the per-CPU total CPU times consumed by this cgroup, from `cpuacct.usage_percpu` ",
+        "file. The values are in nanoseconds.\n\n",
         gen_doc!(usage_percpu)),
         pub fn usage_percpu(&self) -> Result<Vec<u64>> {
             self.open_file_read(USAGE_PERCPU_FILE_NAME)
@@ -188,9 +183,8 @@ impl Subsystem {
     }
 
     with_doc! { concat!(
-        "Reads the per-CPU total CPU times consumed by this cgroup in the system (kernel) mode,
-        from `cpuacct.usage_percpu_sys` file. The values are in nanoseconds.
-        ",
+        "Reads the per-CPU total CPU times consumed by this cgroup in the system (kernel) mode,",
+        "from `cpuacct.usage_percpu_sys` file. The values are in nanoseconds.\n\n",
         gen_doc!(usage_percpu_sys)),
         pub fn usage_percpu_sys(&self) -> Result<Vec<u64>> {
             self.open_file_read(USAGE_PERCPU_SYS_FILE_NAME)
@@ -199,9 +193,8 @@ impl Subsystem {
     }
 
     with_doc! { concat!(
-        "Reads the per-CPU total CPU times consumed by this cgroup in the user mode, from
-        `cpuacct.usage_percpu_sys` file. The values are in nanoseconds.
-        ",
+        "Reads the per-CPU total CPU times consumed by this cgroup in the user mode, from",
+        "`cpuacct.usage_percpu_sys` file. The values are in nanoseconds.\n\n",
         gen_doc!(usage_percpu_user)),
         pub fn usage_percpu_user(&self) -> Result<Vec<u64>> {
             self.open_file_read(USAGE_PERCPU_USER_FILE_NAME)
@@ -210,9 +203,8 @@ impl Subsystem {
     }
 
     with_doc! { concat!(
-        "Reads the total CPU times consumed by this cgroup in the system (kernel) mode, from
-        `cpuacct.usage_sys` file. The values are in nanoseconds.
-        ",
+        "Reads the total CPU times consumed by this cgroup in the system (kernel) mode, from",
+        "`cpuacct.usage_sys` file. The values are in nanoseconds.\n\n",
         gen_doc!(usage_sys)),
         pub fn usage_sys(&self) -> Result<u64> {
             self.open_file_read(USAGE_SYS_FILE_NAME).and_then(parse)
@@ -220,9 +212,8 @@ impl Subsystem {
     }
 
     with_doc! { concat!(
-        "Reads the total CPU times consumed by this cgroup in the user mode, from
-        `cpuacct.usage_user` file. The values are in nanoseconds.
-        ",
+        "Reads the total CPU times consumed by this cgroup in the user mode, from",
+        "`cpuacct.usage_user` file. The values are in nanoseconds.\n\n",
         gen_doc!(usage_user)),
         pub fn usage_user(&self) -> Result<u64> {
             self.open_file_read(USAGE_USER_FILE_NAME)

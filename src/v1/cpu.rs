@@ -5,6 +5,8 @@
 //! paragraph 7 ("GROUP SCHEDULER EXTENSIONS TO CFS"), and
 //! [Documentation/scheduler/sched-bwc.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt).
 
+// TODO: module-level doc
+
 use std::path::PathBuf;
 
 use crate::{
@@ -26,7 +28,9 @@ pub struct Subsystem {
 /// Throttling statistics of a cgroup.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stat {
-    /// Number of periods (as specifiec in `Resources.cfs_period_us`) that have elapsed.
+    /// Number of periods (as specifiec in [`Resources.cfs_period_us`]) that have elapsed.
+    ///
+    /// [`Resources.cfs_period_us`]: struct.Resources.html#structfield.cfs_period_us
     pub nr_periods: u64,
     /// Number of times this cgroup has been throttled.
     pub nr_throttled: u64,
@@ -90,15 +94,26 @@ impl Cgroup for Subsystem {
 #[rustfmt::skip]
 macro_rules! gen_doc {
     ($desc: literal, $resource: ident) => { concat!(
-"Reads ", $desc, " of this cgroup from `cpu.", stringify!($resource), "` file.
+        "Reads ", $desc, " of this cgroup from `cpu.", stringify!($resource), "` file.\n\n",
+        "See [`Resources.", stringify!($resource), "`](struct.Resources.html#structfield.", stringify!($resource), ") ",
+        "and the kernel's documentation for more information about this field.\n\n",
+        gen_doc!(err_eg; $resource)
+    ) };
 
-# Errors
+    ($desc: literal, $resource: ident, $val: expr) => { concat!(
+        "Sets ", $desc, " to this cgroup by writing to `cpu.", stringify!($resource), "` file.\n\n",
+        "See [`Resources.", stringify!($resource), "`](struct.Resources.html#structfield.", stringify!($resource), ") ",
+        "and the kernel's documentation for more information about this field.\n\n",
+        gen_doc!(err_eg; $resource, $val)
+    ) };
 
-Returns an error if failed to read and parse `cpu.", stringify!($resource), "` file of this cgroup.
 
-# Examples
-
-```no_run
+    // Errors and Examples
+    (err_eg; $resource: ident) => { concat!(
+        "# Errors\n\n",
+        "Returns an error if failed to read and parse `cpu.", stringify!($resource), "` file of this cgroup.\n\n",
+        "# Examples\n\n",
+"```no_run
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
 use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
@@ -110,16 +125,11 @@ let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
 # }
 ```") };
 
-    ($desc: literal, $resource: ident, $val: expr) => { concat!(
-"Sets ", $desc, " to this cgroup by writing to `cpu.", stringify!($resource), "` file.
-
-# Errors
-
-Returns an error if failed to write to `cpu.", stringify!($resource), "` file of this cgroup.
-
-# Examples
-
-```no_run
+    (err_eg; $resource: ident, $val: expr) => { concat!(
+        "# Errors\n\n",
+        "Returns an error if failed to write to `cpu.", stringify!($resource), "` file of this cgroup.\n\n",
+        "# Examples\n\n",
+"```no_run
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
 use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
@@ -138,8 +148,10 @@ const CFS_PERIOD_FILE_NAME: &str = "cpu.cfs_period_us";
 const CFS_QUOTA_FILE_NAME: &str = "cpu.cfs_quota_us";
 
 impl Subsystem {
-    with_doc! {
-        gen_doc!("throttling statistics", stat),
+    with_doc! { concat!(
+        "Reads the throttling statistics of this cgroup from `cpu.stat` file.\n\n",
+        "See the kernel's documentation for more information about this field.\n\n",
+        gen_doc!(err_eg; stat)),
         pub fn stat(&self) -> Result<Stat> {
             use std::io::{BufRead, BufReader};
 
@@ -201,7 +213,11 @@ impl Subsystem {
     }
 
     with_doc! {
-        gen_doc!("total available CPU time within a period (in microseconds)", cfs_quota_us, 500 * 1000),
+        gen_doc!(
+            "total available CPU time within a period (in microseconds)",
+            cfs_quota_us,
+            500 * 1000
+        ),
         pub fn set_cfs_quota_us(&mut self, quota_us: i64) -> Result<()> {
             self.write_file(CFS_QUOTA_FILE_NAME, quota_us)
         }

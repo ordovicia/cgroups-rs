@@ -152,7 +152,7 @@ pub trait Cgroup {
     /// lower-level source can be obtained by using [`Error::source()`] method.
     ///
     /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
-    /// [`Error::source()`]: ../struct.Error.thml#method.source
+    /// [`Error::source()`]: ../struct.Error.html#method.source
     ///
     /// # Examples
     ///
@@ -222,7 +222,7 @@ pub trait Cgroup {
     /// Deleting the directory will fail if this cgroup is in use (e.g. a task is still attached).
     ///
     /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
-    /// [`Error::source()`]: ../struct.Error.thml#method.source
+    /// [`Error::source()`]: ../struct.Error.html#method.source
     ///
     /// # Examples
     ///
