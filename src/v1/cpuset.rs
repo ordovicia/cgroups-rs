@@ -697,8 +697,7 @@ mod tests {
         let root = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::new()));
         assert!(root.file_exists(MEMORY_PRESSURE_ENABLED_FILE_NAME));
 
-        let mut cgroup =
-            Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, make_cgroup_name!()));
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, gen_cgroup_name!()));
         cgroup.create()?;
 
         [
@@ -726,8 +725,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_cpus() -> Result<()> {
-        let mut cgroup =
-            Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, make_cgroup_name!()));
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, gen_cgroup_name!()));
         cgroup.create()?;
 
         let id_set = [0].iter().copied().collect();
@@ -740,8 +738,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_mems() -> Result<()> {
-        let mut cgroup =
-            Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, make_cgroup_name!()));
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, gen_cgroup_name!()));
         cgroup.create()?;
 
         let id_set = [0].iter().copied().collect();
@@ -794,8 +791,7 @@ mod tests {
 
     #[test]
     fn err_subsystem_memory_pressure_enabled() {
-        let mut cgroup =
-            Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, make_cgroup_name!()));
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, gen_cgroup_name!()));
         assert_eq!(
             cgroup.set_memory_pressure_enabled(true).unwrap_err().kind(),
             ErrorKind::InvalidOperation

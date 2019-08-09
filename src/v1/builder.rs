@@ -186,7 +186,7 @@ mod tests {
     #[test]
     fn test_builder() -> Result<()> {
         #[rustfmt::skip]
-        let mut cgroups = Builder::new(PathBuf::from(make_cgroup_name!()))
+        let mut cgroups = Builder::new(PathBuf::from(gen_cgroup_name!()))
             .cpu()
                 .shares(1000)
                 .cfs_quota_us(500 * 1000)
@@ -205,7 +205,7 @@ mod tests {
     #[test]
     fn test_builder_override() -> Result<()> {
         #[rustfmt::skip]
-        let mut cgroup = Builder::new(PathBuf::from(make_cgroup_name!()))
+        let mut cgroup = Builder::new(PathBuf::from(gen_cgroup_name!()))
             .cpu()
                 .shares(1000)
                 .shares(2000)
@@ -218,7 +218,7 @@ mod tests {
         cgroup.delete()?;
 
         #[rustfmt::skip]
-        let mut cgroup = Builder::new(PathBuf::from(make_cgroup_name!()))
+        let mut cgroup = Builder::new(PathBuf::from(gen_cgroup_name!()))
             .cpu()
                 .shares(1000)
                 .done()
@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn test_builder_not_reset() -> Result<()> {
         #[rustfmt::skip]
-        let mut cgroup = Builder::new(PathBuf::from(make_cgroup_name!()))
+        let mut cgroup = Builder::new(PathBuf::from(gen_cgroup_name!()))
             .cpu()
                 .shares(1000)
                 .done()

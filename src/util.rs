@@ -10,7 +10,7 @@ macro_rules! with_doc {
 }
 
 #[cfg(test)]
-macro_rules! make_cgroup_name {
+macro_rules! gen_cgroup_name {
     () => {
         std::path::PathBuf::from(format!(
             "cgroups_rs-{}-{}",
@@ -29,7 +29,7 @@ macro_rules! gen_resource_test {
     ($subsystem: ident; $resource: ident, $default: expr) => {{
         let mut cgroup = Subsystem::new(CgroupPath::new(
             SubsystemKind::$subsystem,
-            make_cgroup_name!(),
+            gen_cgroup_name!(),
         ));
         cgroup.create()?;
         assert_eq!(cgroup.$resource()?, $default);
@@ -40,7 +40,7 @@ macro_rules! gen_resource_test {
     ($subsystem: ident; $resource: ident, $default: expr, $setter: ident, $val: expr) => {{
         let mut cgroup = Subsystem::new(CgroupPath::new(
             SubsystemKind::$subsystem,
-            make_cgroup_name!(),
+            gen_cgroup_name!(),
         ));
         cgroup.create()?;
         assert_eq!(cgroup.$resource()?, $default);
@@ -89,7 +89,7 @@ mod tests {
     #[test]
     fn test_make_cgroup_name() {
         assert_eq!(
-            make_cgroup_name!(),
+            gen_cgroup_name!(),
             std::path::PathBuf::from("cgroups_rs-util-92")
         );
     }

@@ -261,7 +261,7 @@ mod tests {
 
     #[test]
     fn test_unified_repr_subsystems() {
-        let cgroups = UnifiedRepr::new(PathBuf::from(make_cgroup_name!()));
+        let cgroups = UnifiedRepr::new(PathBuf::from(gen_cgroup_name!()));
 
         assert!(cgroups.supports(SubsystemKind::Cpu));
         assert!(cgroups.cpu().is_some());
@@ -269,7 +269,7 @@ mod tests {
         assert!(cgroups.supports(SubsystemKind::Cpuset));
         assert!(cgroups.cpuset().is_some());
 
-        let cgroups = UnifiedRepr::with_subsystems(PathBuf::from(make_cgroup_name!()), &[]);
+        let cgroups = UnifiedRepr::with_subsystems(PathBuf::from(gen_cgroup_name!()), &[]);
 
         assert!(!cgroups.supports(SubsystemKind::Cpu));
         assert!(cgroups.cpu().is_none());
@@ -278,7 +278,7 @@ mod tests {
         assert!(cgroups.cpuset().is_none());
 
         let cgroups =
-            UnifiedRepr::with_subsystems(PathBuf::from(make_cgroup_name!()), &[SubsystemKind::Cpu]);
+            UnifiedRepr::with_subsystems(PathBuf::from(gen_cgroup_name!()), &[SubsystemKind::Cpu]);
         assert!(cgroups.supports(SubsystemKind::Cpu));
         assert!(cgroups.cpu().is_some());
 
@@ -290,7 +290,7 @@ mod tests {
     #[ignore] // `cargo test` must not be executed in parallel for this test
     fn test_unified_repr_add_get_remove_tasks() -> Result<()> {
         let mut cgroups =
-            UnifiedRepr::with_subsystems(PathBuf::from(make_cgroup_name!()), &[SubsystemKind::Cpu]);
+            UnifiedRepr::with_subsystems(PathBuf::from(gen_cgroup_name!()), &[SubsystemKind::Cpu]);
         cgroups.create()?;
 
         let pid = Pid::from(std::process::id());
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn test_unified_repr_add_get_remove_procs() -> Result<()> {
         let mut cgroups =
-            UnifiedRepr::with_subsystems(PathBuf::from(make_cgroup_name!()), &[SubsystemKind::Cpu]);
+            UnifiedRepr::with_subsystems(PathBuf::from(gen_cgroup_name!()), &[SubsystemKind::Cpu]);
         cgroups.create()?;
 
         let pid = Pid::from(std::process::id());

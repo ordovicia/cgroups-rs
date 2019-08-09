@@ -581,7 +581,7 @@ mod tests {
     #[test]
     fn test_cgroup_exists_create_delete() -> Result<()> {
         let mut cgroup =
-            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
+            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         assert!(!cgroup.exists());
 
         cgroup.create()?;
@@ -597,7 +597,7 @@ mod tests {
     #[ignore] // `cargo test` must not be executed in parallel for this test
     fn test_cgroup_add_get_remove_tasks() -> Result<()> {
         let mut cgroup =
-            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
+            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;
 
         let pid = Pid::from(std::process::id());
@@ -620,7 +620,7 @@ mod tests {
         let pid = Pid::from(std::process::id());
 
         let mut cgroup =
-            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
+            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;
 
         cgroup.add_proc(pid)?;
@@ -635,7 +635,7 @@ mod tests {
     #[test]
     fn test_cgroup_file_exists() -> Result<()> {
         let mut cgroup =
-            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
+            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;
 
         assert!(cgroup.file_exists("tasks"));

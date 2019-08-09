@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, make_cgroup_name!()));
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;
 
         [
