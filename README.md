@@ -57,8 +57,8 @@ let mut cgroups =
     // Start configurating the CPU resource limits.
     .cpu()
         .shares(1000)
-        .cfs_quota(500 * 1000)
-        .cfs_period(1000 * 1000)
+        .cfs_quota_us(500 * 1000)
+        .cfs_period_us(1000 * 1000)
         // Finish configurating the CPU resource limits.
         .done()
     // Actually build cgroups with the configuration.

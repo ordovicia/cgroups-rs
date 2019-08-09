@@ -29,8 +29,8 @@ use crate::{
 ///     // Start configurating the CPU resource limits.
 ///     .cpu()
 ///         .shares(1000)
-///         .cfs_quota(500 * 1000)
-///         .cfs_period(1000 * 1000)
+///         .cfs_quota_us(500 * 1000)
+///         .cfs_period_us(1000 * 1000)
 ///         // Finish configurating the CPU resource limits.
 ///         .done()
 ///     // Actually build cgroups with the configuration.
@@ -84,8 +84,8 @@ use crate::{
 ///         .shares(1000)
 ///         .done()
 ///     .cpu()  // Not reset shares.
-///         .cfs_quota(500 * 1000)
-///         .cfs_period(1000 * 1000)
+///         .cfs_quota_us(500 * 1000)
+///         .cfs_period_us(1000 * 1000)
 ///         .done()
 ///     .build(true)?;
 ///
@@ -159,10 +159,15 @@ pub struct CpuBuilder {
 
 impl CpuBuilder {
     gen_setter!(cpu, shares, u64, "CPU time shares");
-    gen_setter!(cpu, cfs_period, u64, "length of period (in microseconds)");
     gen_setter!(
         cpu,
-        cfs_quota,
+        cfs_period_us,
+        u64,
+        "length of period (in microseconds)"
+    );
+    gen_setter!(
+        cpu,
+        cfs_quota_us,
         i64,
         "total available CPU time within a period (in microseconds)"
     );
@@ -184,15 +189,15 @@ mod tests {
         let mut cgroups = Builder::new(PathBuf::from(make_cgroup_name!()))
             .cpu()
                 .shares(1000)
-                .cfs_quota(500 * 1000)
-                .cfs_period(1000 * 1000)
+                .cfs_quota_us(500 * 1000)
+                .cfs_period_us(1000 * 1000)
                 .done()
             .build(true)?;
 
         let cpu = cgroups.cpu().unwrap();
         assert_eq!(cpu.shares()?, 1000);
-        assert_eq!(cpu.cfs_quota()?, 500 * 1000);
-        assert_eq!(cpu.cfs_period()?, 1000 * 1000);
+        assert_eq!(cpu.cfs_quota_us()?, 500 * 1000);
+        assert_eq!(cpu.cfs_period_us()?, 1000 * 1000);
 
         cgroups.delete()
     }
@@ -236,15 +241,15 @@ mod tests {
                 .shares(1000)
                 .done()
             .cpu()
-                .cfs_quota(500 * 1000)
-                .cfs_period(1000 * 1000)
+                .cfs_quota_us(500 * 1000)
+                .cfs_period_us(1000 * 1000)
                 .done()
             .build(true)?;
 
         let cpu = cgroup.cpu().unwrap();
         assert_eq!(cpu.shares()?, 1000);
-        assert_eq!(cpu.cfs_quota()?, 500 * 1000);
-        assert_eq!(cpu.cfs_period()?, 1000 * 1000);
+        assert_eq!(cpu.cfs_quota_us()?, 500 * 1000);
+        assert_eq!(cpu.cfs_period_us()?, 1000 * 1000);
 
         cgroup.delete()
     }

@@ -200,8 +200,8 @@ pub trait Cgroup {
     /// let resources = Resources {
     ///         cpu: cpu::Resources {
     ///             shares: Some(1000),
-    ///             cfs_quota: Some(500 * 1000),
-    ///             cfs_period: Some(1000 * 1000),
+    ///             cfs_quota_us: Some(500 * 1000),
+    ///             cfs_period_us: Some(1000 * 1000),
     ///         },
     ///         ..Resources::default()
     ///     };
