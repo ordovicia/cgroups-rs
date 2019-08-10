@@ -260,7 +260,8 @@ impl UnifiedRepr {
 gen_unified_repr! {
     (cpu, cpu_mut, Cpu, "CPU"),
     (cpuset, cpuset_mut, Cpuset, "cpuset"),
-    (cpuacct, cpuacct_mut, Cpuacct, "cpuacct")
+    (cpuacct, cpuacct_mut, Cpuacct, "cpuacct"),
+    (freezer, freezer_mut, Freezer, "freezer")
 }
 
 #[cfg(test)]

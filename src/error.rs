@@ -27,6 +27,17 @@ pub enum ErrorKind {
     /// Failed to apply a value to a cgruop.
     Apply,
 
+    /// You passed an invalid argument.
+    ///
+    /// In a future version, this variant may have some information attached, or be replaced with
+    /// more fine-grained variants.
+    ///
+    /// Note that this crate does not catch all errors caused by an invalid argument. In some cases,
+    /// the system (kernel) raises an lower-level error, and this crate returns an `Error` with
+    /// other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
+    /// `Error::source()` method.
+    InvalidArgument,
+
     /// You tried to do something invalid.
     ///
     /// In a future version, this variant may have some information attached, or be replaced with
@@ -57,6 +68,7 @@ impl fmt::Display for Error {
                 ErrorKind::Io => "unable to do an I/O operation on a cgroup file system",
                 ErrorKind::Parse => "unable to parse contents in a cgroup file",
                 ErrorKind::Apply => "unable to apply a value to a cgroup",
+                ErrorKind::InvalidArgument => "invalid argument",
                 ErrorKind::InvalidOperation => "the requested operation is invalid",
             }
         )?;

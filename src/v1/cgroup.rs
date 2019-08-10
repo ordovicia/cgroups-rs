@@ -674,7 +674,7 @@ mod tests {
             .unwrap();
         assert_eq!(buf, "1\n");
 
-        // TODO: append
+        // TODO: test append
 
         cgroup.delete()
     }
