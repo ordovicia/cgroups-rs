@@ -799,27 +799,27 @@ mod tests {
 
     #[test]
     fn test_subsystem_memory_migrate() -> Result<()> {
-        gen_resource_test!(Cpuset; memory_migrate, false, set_memory_migrate, true)
+        gen_subsystem_test!(Cpuset; memory_migrate, false, set_memory_migrate, true)
     }
 
     #[test]
     fn test_subsystem_cpu_exclusive() -> Result<()> {
-        gen_resource_test!(Cpuset; cpu_exclusive, false, set_cpu_exclusive, true)
+        gen_subsystem_test!(Cpuset; cpu_exclusive, false, set_cpu_exclusive, true)
     }
 
     #[test]
     fn test_subsystem_mem_exclusive() -> Result<()> {
-        gen_resource_test!(Cpuset; mem_exclusive, false, set_mem_exclusive, true)
+        gen_subsystem_test!(Cpuset; mem_exclusive, false, set_mem_exclusive, true)
     }
 
     #[test]
     fn test_subsystem_mem_hardwall() -> Result<()> {
-        gen_resource_test!(Cpuset; mem_hardwall, false, set_mem_hardwall, true)
+        gen_subsystem_test!(Cpuset; mem_hardwall, false, set_mem_hardwall, true)
     }
 
     #[test]
     fn test_subsystem_memory_pressure() -> Result<()> {
-        gen_resource_test!(Cpuset; memory_pressure, 0)
+        gen_subsystem_test!(Cpuset; memory_pressure, 0)
     }
 
     #[test]
@@ -848,23 +848,23 @@ mod tests {
 
     #[test]
     fn test_subsystem_memory_spread_page() -> Result<()> {
-        gen_resource_test!(Cpuset; memory_spread_page, false, set_memory_spread_page, true)
+        gen_subsystem_test!(Cpuset; memory_spread_page, false, set_memory_spread_page, true)
     }
 
     #[test]
     fn test_subsystem_memory_spread_slab() -> Result<()> {
-        gen_resource_test!(Cpuset; memory_spread_slab, false, set_memory_spread_slab, true)
+        gen_subsystem_test!(Cpuset; memory_spread_slab, false, set_memory_spread_slab, true)
     }
 
     #[test]
     fn test_subsystem_sched_load_balance() -> Result<()> {
-        gen_resource_test!(Cpuset; sched_load_balance, true, set_sched_load_balance, false)
+        gen_subsystem_test!(Cpuset; sched_load_balance, true, set_sched_load_balance, false)
     }
 
     #[test]
     fn test_subsystem_sched_relax_domain_level() -> Result<()> {
         // TODO: `set_sched_relax_domain_level()` raises io::Error with kind InvalidInput ?
-        gen_resource_test!(Cpuset; sched_relax_domain_level, -1)
+        gen_subsystem_test!(Cpuset; sched_relax_domain_level, -1)
     }
 
     #[test]

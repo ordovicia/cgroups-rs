@@ -279,49 +279,49 @@ mod tests {
 
     #[test]
     fn test_subsystem_stat() -> Result<()> {
-        gen_resource_test!(Cpuacct; stat, Stat { system: 0, user: 0 })
+        gen_subsystem_test!(Cpuacct; stat, Stat { system: 0, user: 0 })
         // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage() -> Result<()> {
-        gen_resource_test!(Cpuacct; usage, 0)
+        gen_subsystem_test!(Cpuacct; usage, 0)
         // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage_all() -> Result<()> {
-        gen_resource_test!(Cpuacct; usage_all, vec![Stat { system: 0, user: 0}; num_cpus::get()])
+        gen_subsystem_test!(Cpuacct; usage_all, vec![Stat { system: 0, user: 0}; num_cpus::get()])
         // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage_percpu() -> Result<()> {
-        gen_resource_test!(Cpuacct; usage_percpu, vec![0; num_cpus::get()])
+        gen_subsystem_test!(Cpuacct; usage_percpu, vec![0; num_cpus::get()])
         // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage_percpu_sys() -> Result<()> {
-        gen_resource_test!(Cpuacct; usage_percpu_sys, vec![0; num_cpus::get()])
+        gen_subsystem_test!(Cpuacct; usage_percpu_sys, vec![0; num_cpus::get()])
         // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage_percpu_user() -> Result<()> {
-        gen_resource_test!(Cpuacct; usage_percpu_user, vec![0; num_cpus::get()])
+        gen_subsystem_test!(Cpuacct; usage_percpu_user, vec![0; num_cpus::get()])
         // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage_sys() -> Result<()> {
-        gen_resource_test!(Cpuacct; usage_sys, 0)
+        gen_subsystem_test!(Cpuacct; usage_sys, 0)
         // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage_user() -> Result<()> {
-        gen_resource_test!(Cpuacct; usage_user, 0)
+        gen_subsystem_test!(Cpuacct; usage_user, 0)
         // TODO: add task
     }
 

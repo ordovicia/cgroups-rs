@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_stat() -> Result<()> {
-        gen_resource_test!(
+        gen_subsystem_test!(
             Cpu;
             stat,
             Stat {
@@ -278,17 +278,17 @@ mod tests {
 
     #[test]
     fn test_subsystem_shares() -> Result<()> {
-        gen_resource_test!(Cpu; shares, 1024, set_shares, 2048)
+        gen_subsystem_test!(Cpu; shares, 1024, set_shares, 2048)
     }
 
     #[test]
     fn test_subsystem_cfs_quota_us() -> Result<()> {
-        gen_resource_test!(Cpu; cfs_quota_us, -1, set_cfs_quota_us, 100 * 1000)
+        gen_subsystem_test!(Cpu; cfs_quota_us, -1, set_cfs_quota_us, 100 * 1000)
     }
 
     #[test]
     fn test_subsystem_cfs_period_us() -> Result<()> {
-        gen_resource_test!(
+        gen_subsystem_test!(
             Cpu;
             cfs_period_us,
             100 * 1000,

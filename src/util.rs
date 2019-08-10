@@ -24,7 +24,7 @@ macro_rules! gen_cgroup_name {
 }
 
 #[cfg(test)]
-macro_rules! gen_resource_test {
+macro_rules! gen_subsystem_test {
     // Test a read-only resource
     ($subsystem: ident; $resource: ident, $default: expr) => {{
         let mut cgroup = Subsystem::new(CgroupPath::new(
