@@ -49,7 +49,7 @@ cgroup.delete()?;
 
 ```rust
 use std::path::PathBuf;
-use cgroups::v1::{cpuset::IdSet, Builder};
+use cgroups::v1::{cpuset::IdSet, pids, Builder};
 
 let mut cgroups =
     // Start building a (set of) cgroup(s).
@@ -65,7 +65,16 @@ let mut cgroups =
     .cpuset()
         .cpus([0].iter().copied().collect::<IdSet>())
         .mems([0].iter().copied().collect::<IdSet>())
+        .memory_migrate(true)
         .done()
+    // Start configurating the pids resource limits.
+    .pids()
+        .max(pids::Max::Number(42))
+        .done()
+    // Enable monitoring this cgroup via `perf` tool.
+    .perf_event()
+        // perf_event subsystem has no parameter, so this method does not return a subsystem
+        // builder, just enable the monitoring.
     // Actually build cgroups with the configuration.
     // Only create a directory for the CPU subsystem.
     .build(true)?;

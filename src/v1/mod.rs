@@ -37,6 +37,7 @@ pub mod cpu;
 pub mod cpuacct;
 pub mod cpuset;
 pub mod freezer;
+pub mod perf_event;
 pub mod pids;
 mod unified_repr;
 
@@ -59,6 +60,8 @@ pub enum SubsystemKind {
     Pids,
     /// Freezer subsystem.
     Freezer,
+    /// Perf_event subsystem.
+    PerfEvent,
 }
 
 /// Resource limits and constraints that will be set on a cgroup.
@@ -84,6 +87,7 @@ impl fmt::Display for SubsystemKind {
             Cpuacct => write!(f, "cpuacct"),
             Pids => write!(f, "pids"),
             Freezer => write!(f, "freezer",),
+            PerfEvent => write!(f, "perf_event",),
         }
     }
 }

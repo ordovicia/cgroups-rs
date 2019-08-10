@@ -262,7 +262,8 @@ gen_unified_repr! {
     (cpuset, cpuset_mut, Cpuset, "cpuset"),
     (cpuacct, cpuacct_mut, Cpuacct, "cpuacct"),
     (pids, pids_mut, Pids, "pids"),
-    (freezer, freezer_mut, Freezer, "freezer")
+    (freezer, freezer_mut, Freezer, "freezer"),
+    (perf_event, perf_event_mut, PerfEvent, "perf_event")
 }
 
 #[cfg(test)]

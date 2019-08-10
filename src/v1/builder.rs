@@ -29,6 +29,10 @@
 //!     .pids()
 //!         .max(pids::Max::Number(42))
 //!         .done()
+//!     // Enable monitoring this cgroup via `perf` tool.
+//!     .perf_event()
+//!         // perf_event subsystem has no parameter, so this method does not return a subsystem
+//!         // builder, just enable the monitoring.
 //!     // Actually build cgroups with the configuration.
 //!     // Only create a directory for the CPU subsystem.
 //!     .build(true)?;
@@ -145,6 +149,11 @@ impl Builder {
 
     // Calling `cpu()` twice will push duplicated `SubsystemKind::Cpu`, but it is not a problem for
     // `UnifiedRepr::with_subsystems()`.
+
+    /// Enables monitoring this cgroup via `perf` tool.
+    pub fn perf_event(mut self) -> Self {
+        self.subsystem_kinds.push(SubsystemKind::PerfEvent);
+        self
     }
 
     /// Builds a (set of) cgroup(s) with the configuration.
