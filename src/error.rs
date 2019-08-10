@@ -3,8 +3,10 @@ use std::{error::Error as StdError, fmt};
 /// Result type returned from this crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// Error type that can be returned from this crate, in the `Result::Err` variant. The lower-level
-/// source of this error can be obtained by using `source` method.
+/// Error type that can be returned from this crate, in the [`Result::Err`] variant. The lower-level
+/// source of this error can be obtained via `source()` method.
+///
+/// [`Result::Err`]: https://doc.rust-lang.org/std/result/enum.Result.html#variant.Err
 #[derive(Debug)]
 pub struct Error {
     kind: ErrorKind,
@@ -19,13 +21,21 @@ pub enum ErrorKind {
 
     /// Failed to parse contents in a cgroup file into a value.
     ///
-    /// In the future, there will be some information attached to this variant.
+    /// In a future version, there will be some information attached to this variant.
     Parse,
 
     /// Failed to apply a value to a cgruop.
     Apply,
 
     /// You tried to do something invalid.
+    ///
+    /// In a future version, this variant may have some information attached, or be replaced with
+    /// more fine-grained variants.
+    ///
+    /// Note that this crate does not catch all errors caused by an invalid operation. In some
+    /// cases, the system (kernel) raises an lower-level error, and this crate returns an `Error`
+    /// with other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
+    /// `Error::source()` method.
     InvalidOperation,
 }
 

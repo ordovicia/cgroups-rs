@@ -19,6 +19,8 @@
 //! [`UnifiedRepr`]: struct.UnifiedRepr.html
 //! [`Builder`]: builder/struct.Builder.html
 
+// TODO: more module-level doc
+
 use std::fmt;
 
 pub mod builder;

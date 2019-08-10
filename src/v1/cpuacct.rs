@@ -49,7 +49,11 @@ impl Cgroup for Subsystem {
         Box::new(Self::new(self.path.subsystem_root()))
     }
 
-    /// Does nothing as cpuacct subsystem is basically read-only.
+    /// Does nothing as a cpuacct subsystem is basically read-only.
+    ///
+    /// See [`Cgroup.apply()`] for general information.
+    ///
+    /// [`Cgroup.apply()`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, _resource: &v1::Resources, _validate: bool) -> Result<()> {
         Ok(())
     }
@@ -157,7 +161,7 @@ impl Subsystem {
             for line in buf.lines() {
                 let entry = line.map_err(Error::io)?;
                 let mut entry = entry.split_whitespace().skip(1); // skip CPU ID
-                // TODO: are the CPU IDs guaranteed to be sorted ?
+                // TODO: are the IDs guaranteed to be sorted ?
 
                 let usage_0 = parse_option(entry.next())?;
                 let usage_1 = parse_option(entry.next())?;

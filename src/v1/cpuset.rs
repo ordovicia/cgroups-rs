@@ -163,6 +163,10 @@ impl Cgroup for Subsystem {
     }
 
     /// Apply the `Some` fields in `resources.cpuset`.
+    ///
+    /// See [`Cgroup.apply()`] for general information.
+    ///
+    /// [`Cgroup.apply()`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources, validate: bool) -> Result<()> {
         let res: &self::Resources = &resources.cpuset;
 
@@ -690,7 +694,7 @@ impl IdSet {
     ///     vec![1, 2, 3, 5, 6, 7],
     /// );
     /// ```
-    // TODO: should we provide to_hash_set() instead?
+    // TODO: should we provide `to_hash_set()` instead?
     pub fn to_vec(&self) -> Vec<usize> {
         self.0.iter().copied().collect()
     }
@@ -859,7 +863,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_sched_relax_domain_level() -> Result<()> {
-        // TODO: set_sched_relax_domain_level() raises io::Error with kind InvalidInput ?
+        // TODO: `set_sched_relax_domain_level()` raises io::Error with kind InvalidInput ?
         gen_resource_test!(Cpuset; sched_relax_domain_level, -1)
     }
 

@@ -28,9 +28,7 @@ pub struct Subsystem {
 /// Throttling statistics of a cgroup.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stat {
-    /// Number of periods (as specifiec in [`Resources.cfs_period_us`]) that have elapsed.
-    ///
-    /// [`Resources.cfs_period_us`]: struct.Resources.html#structfield.cfs_period_us
+    /// Number of periods (as specifiec in `Resources.cfs_period_us`) that have elapsed.
     pub nr_periods: u64,
     /// Number of times this cgroup has been throttled.
     pub nr_throttled: u64,
@@ -69,6 +67,10 @@ impl Cgroup for Subsystem {
     }
 
     /// Apply the `Some` fields in `resources.cpu`.
+    /// 
+    /// See [`Cgroup.apply()`] for general information.
+    ///
+    /// [`Cgroup.apply()`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources, validate: bool) -> Result<()> {
         let res: &self::Resources = &resources.cpu;
 
