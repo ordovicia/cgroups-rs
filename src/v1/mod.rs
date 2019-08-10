@@ -4,7 +4,7 @@
 //! [Documentation/cgroup-v1/cgroups.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt).
 //!
 //! Operations for each subsystem are implemented in each module. See [`cpu::Subsystem`] for
-//! example. Currently this crate supports CPU, cpuset, cpuacct, and freezer subsystems.
+//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], and [freezer] subsystems.
 //!
 //! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
 //! this trait and subsystem-specific operations.
@@ -15,6 +15,11 @@
 //! [`Builder`] allows you to configure a cgroup in the builder pattern.
 //!
 //! [`cpu::Subsystem`]: cpu/struct.Subsystem.html
+//! [CPU]: cpu/index.html
+//! [cpuset]: cpuset/index.html
+//! [cpuacct]: cpuacct/index.html
+//! [freezer]: freezer/index.html
+//!
 //! [`Cgroup`]: trait.Cgroup.html
 //! [`UnifiedRepr`]: struct.UnifiedRepr.html
 //! [`Builder`]: builder/struct.Builder.html

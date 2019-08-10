@@ -603,6 +603,37 @@ mod tests {
     use crate::v1::cpu;
 
     #[test]
+    fn test_cgroup_path() {
+        let name = gen_cgroup_name!();
+        let cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name.clone()));
+        assert_eq!(cgroup.path(), PathBuf::from("/sys/fs/cgroup/cpu").join(name));
+    }
+
+
+    #[test]
+    fn test_cgroup_root_cgroup() {
+        let cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
+        assert_eq!(cgroup.root_cgroup().path(), PathBuf::from("/sys/fs/cgroup/cpu"));
+    }
+    
+    #[test]
+    fn test_cgroup_subsytem_kind() {
+        macro_rules! t {
+            ( $( ($subsystem: ident, $kind: ident) ),* ) => {{ $(
+                let cgroup = crate::v1::$subsystem::Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
+                assert_eq!(cgroup.subsystem_kind(), SubsystemKind::$kind);
+            )* }};
+        }
+
+        t! {
+            (cpu, Cpu),
+            (cpuset, Cpuset),
+            (cpuacct, Cpuacct),
+            (freezer, Freezer)
+        }
+    }
+
+    #[test]
     fn test_cgroup_exists_create_delete() -> Result<()> {
         let mut cgroup =
             cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
