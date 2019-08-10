@@ -545,6 +545,30 @@ impl CgroupPath {
     }
 }
 
+macro_rules! impl_cgroup {
+    ($subsystem: ident, $($tt: tt)*) => {
+        impl Cgroup for Subsystem {
+            fn new(path: CgroupPath) -> Self {
+                Self { path }
+            }
+
+            fn subsystem_kind(&self) -> SubsystemKind {
+                SubsystemKind::$subsystem
+            }
+
+            fn path(&self) -> PathBuf {
+                self.path.to_path_buf()
+            }
+
+            fn root_cgroup(&self) -> Box<Self> {
+                Box::new(Self::new(self.path.subsystem_root()))
+            }
+
+            $($tt)*
+        }
+    };
+}
+
 pub(crate) trait CgroupHelper: Cgroup {
     fn write_file(&mut self, name: &str, val: impl std::fmt::Display) -> Result<()> {
         use std::io::Write;

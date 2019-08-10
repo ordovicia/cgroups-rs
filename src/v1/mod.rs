@@ -23,8 +23,9 @@
 
 use std::fmt;
 
-pub mod builder;
+#[macro_use]
 mod cgroup;
+pub mod builder;
 pub mod cpu;
 pub mod cpuacct;
 pub mod cpuset;
