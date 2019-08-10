@@ -606,16 +606,21 @@ mod tests {
     fn test_cgroup_path() {
         let name = gen_cgroup_name!();
         let cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name.clone()));
-        assert_eq!(cgroup.path(), PathBuf::from("/sys/fs/cgroup/cpu").join(name));
+        assert_eq!(
+            cgroup.path(),
+            PathBuf::from("/sys/fs/cgroup/cpu").join(name)
+        );
     }
-
 
     #[test]
     fn test_cgroup_root_cgroup() {
         let cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
-        assert_eq!(cgroup.root_cgroup().path(), PathBuf::from("/sys/fs/cgroup/cpu"));
+        assert_eq!(
+            cgroup.root_cgroup().path(),
+            PathBuf::from("/sys/fs/cgroup/cpu")
+        );
     }
-    
+
     #[test]
     fn test_cgroup_subsytem_kind() {
         macro_rules! t {
@@ -629,6 +634,7 @@ mod tests {
             (cpu, Cpu),
             (cpuset, Cpuset),
             (cpuacct, Cpuacct),
+            (pids, Pids),
             (freezer, Freezer)
         }
     }

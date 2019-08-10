@@ -261,6 +261,7 @@ gen_unified_repr! {
     (cpu, cpu_mut, Cpu, "CPU"),
     (cpuset, cpuset_mut, Cpuset, "cpuset"),
     (cpuacct, cpuacct_mut, Cpuacct, "cpuacct"),
+    (pids, pids_mut, Pids, "pids"),
     (freezer, freezer_mut, Freezer, "freezer")
 }
 

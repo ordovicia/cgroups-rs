@@ -40,7 +40,7 @@ impl_cgroup! {
     /// See [`Cgroup.apply()`] for general information.
     ///
     /// [`Cgroup.apply()`]: ../trait.Cgroup.html#tymethod.apply
-    fn apply(&mut self, _resource: &v1::Resources, _validate: bool) -> Result<()> {
+    fn apply(&mut self, _resources: &v1::Resources, _validate: bool) -> Result<()> {
         Ok(())
     }
 }

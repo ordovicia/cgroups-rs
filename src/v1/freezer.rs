@@ -52,6 +52,12 @@ pub struct Subsystem {
 /// assert_eq!(freezer::State::Freezing.to_string(), "FREEZING");
 /// assert_eq!(freezer::State::Frozen.to_string(), "FROZEN");
 /// ```
+///
+/// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
+/// [`parse()`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
+/// [`ErrorKind::Parse`]: ../../enum.ErrorKind.html#variant.Parse
+///
+/// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum State {
     /// Tasks in this cgroup are thawed, i.e. not frozen.
@@ -73,7 +79,7 @@ pub struct Resources {
 impl_cgroup! {
     Freezer,
 
-    /// Freeze or thaw tasks in this cgroup according to `resource.freezer.state`.
+    /// Freeze or thaw tasks in this cgroup according to `resources.freezer.state`.
     ///
     /// Note that only `State::Frozen` and `State::Thawed` are valid. Applying `State::Freezing`
     /// will return an error with kind [`ErrorKind::InvalidArgument`].
@@ -82,10 +88,10 @@ impl_cgroup! {
     ///
     /// [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument
     /// [`Cgroup.apply()`]: ../trait.Cgroup.html#tymethod.apply
-    fn apply(&mut self, resource: &v1::Resources, validate: bool) -> Result<()> {
+    fn apply(&mut self, resources: &v1::Resources, validate: bool) -> Result<()> {
         use State::*;
 
-        match resource.freezer.state {
+        match resources.freezer.state {
             Some(Frozen) => {
                 self.freeze()?;
                 if validate && !self.self_freezing()? {

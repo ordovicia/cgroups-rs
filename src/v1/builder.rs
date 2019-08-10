@@ -7,7 +7,7 @@
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::v1::{cpuset::IdSet, Builder};
+//! use cgroups::v1::{cpuset::IdSet, pids, Builder};
 //!
 //! let mut cgroups =
 //!     // Start building a (set of) cgroup(s).
@@ -24,6 +24,10 @@
 //!         .cpus([0].iter().copied().collect::<IdSet>())
 //!         .mems([0].iter().copied().collect::<IdSet>())
 //!         .memory_migrate(true)
+//!         .done()
+//!     // Start configurating the pids resource limits.
+//!     .pids()
+//!         .max(pids::Max::Number(42))
 //!         .done()
 //!     // Actually build cgroups with the configuration.
 //!     // Only create a directory for the CPU subsystem.
@@ -94,7 +98,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    v1::{cpuset::IdSet, Resources, SubsystemKind, UnifiedRepr},
+    v1::{cpuset, pids, Resources, SubsystemKind, UnifiedRepr},
     Result,
 };
 
@@ -106,6 +110,18 @@ pub struct Builder {
     name: PathBuf,
     subsystem_kinds: Vec<SubsystemKind>,
     resources: Resources,
+}
+
+macro_rules! gen_subsystem_builder_call {
+    ( $( ($subsystem: ident, $kind: ident, $builder: ident, $name: literal) ),* ) => { $(
+        with_doc! {
+            concat!("Starts configurating the ", $name, " subsytem."),
+            pub fn $subsystem(mut self) -> $builder {
+                self.subsystem_kinds.push(SubsystemKind::$kind);
+                $builder { builder: self }
+            }
+        }
+    )* }
 }
 
 impl Builder {
@@ -121,18 +137,14 @@ impl Builder {
         }
     }
 
-    /// Starts configurating the CPU subsystem.
-    pub fn cpu(mut self) -> CpuBuilder {
-        // Calling `cpu()` twice will push duplicated `SubsystemKind::Cpu`, but it is not a problem
-        // for `UnifiedRepr::with_subsystems()`.
-        self.subsystem_kinds.push(SubsystemKind::Cpu);
-        CpuBuilder { builder: self }
+    gen_subsystem_builder_call! {
+        (cpu, Cpu, CpuBuilder, "CPU"),
+        (cpuset, Cpuset, CpusetBuilder, "cpuset"),
+        (pids, Pids, PidsBuilder, "pids")
     }
 
-    /// Starts configurating the cpuset subsystem.
-    pub fn cpuset(mut self) -> CpusetBuilder {
-        self.subsystem_kinds.push(SubsystemKind::Cpuset);
-        CpusetBuilder { builder: self }
+    // Calling `cpu()` twice will push duplicated `SubsystemKind::Cpu`, but it is not a problem for
+    // `UnifiedRepr::with_subsystems()`.
     }
 
     /// Builds a (set of) cgroup(s) with the configuration.
@@ -153,9 +165,9 @@ impl Builder {
 }
 
 macro_rules! gen_setter {
-    ($subsystem: ident; $resource: ident, $ty: ty, $doc: literal) => { with_doc! {
+    ($subsystem: ident; $resource: ident, $ty: ty, $desc: literal) => { with_doc! {
         concat!(
-"Sets ", $doc, " to this cgroup.
+"Sets ", $desc, ".
 
 See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($resource), "()`](../", stringify!($subsystem), "/struct.Subsystem.html#method.set_", stringify!($resource), ")
 for more information."
@@ -208,14 +220,14 @@ impl CpusetBuilder {
     gen_setter!(
         cpuset;
         cpus,
-        IdSet,
+        cpuset::IdSet,
         "a set of Cpus on which task in this cgroup can run"
     );
 
     gen_setter!(
         cpuset;
         mems,
-        IdSet,
+        cpuset::IdSet,
         "a set of memory nodes which tasks in this cgroup can use"
     );
     gen_setter!(
@@ -282,7 +294,28 @@ impl CpusetBuilder {
         "how much work the kernel do to rebalance the load on this cgroup"
     );
 
-    /// Finishes configurating this CPU subsystem.
+    /// Finishes configurating this cpuset subsystem.
+    pub fn done(self) -> Builder {
+        self.builder
+    }
+}
+
+/// Pids subsystem builder.
+///
+/// This struct is created by [`Builder::pids()`](struct.Builder.html#method.pids) method.
+pub struct PidsBuilder {
+    builder: Builder,
+}
+
+impl PidsBuilder {
+    gen_setter!(
+        pids;
+        max,
+        pids::Max,
+        "a maximum number of tasks this cgroup can have"
+    );
+
+    /// Finishes configurating this pids subsystem.
     pub fn done(self) -> Builder {
         self.builder
     }
@@ -295,7 +328,7 @@ mod tests {
 
     #[test]
     fn test_builder() -> Result<()> {
-        let id_set = [0].iter().copied().collect::<IdSet>();
+        let id_set = [0].iter().copied().collect::<cpuset::IdSet>();
 
         #[rustfmt::skip]
         let mut cgroups = Builder::new(PathBuf::from(gen_cgroup_name!()))

@@ -23,8 +23,7 @@ pub struct Subsystem {
     path: CgroupPath,
 }
 
-/// Resource limits about which CPUs and which memory nodes a cgroup can use, and how they are
-/// controlled by the kernel.
+/// Which CPUs and which memory nodes a cgroup can use, and how they are controlled by the kernel.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// Set of CPUs the tasks of the cgroup can run on.
@@ -134,8 +133,8 @@ pub struct Resources {
 /// assert_eq!(id_set.to_string(), "0,1,3-5,7");
 /// ```
 ///
-/// [`parse()`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
 /// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
+/// [`parse()`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
 /// [`ErrorKind::Parse`]: ../../enum.ErrorKind.html#variant.Parse
 ///
 /// [`FromIterator`]: https://doc.rust-lang.org/std/iter/trait.FromIterator.html

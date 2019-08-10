@@ -36,7 +36,7 @@ pub struct Stat {
     pub throttled_time: u64,
 }
 
-/// Resource limits about how CPU time is provided to a cgroup.
+/// How CPU time is provided to a cgroup.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// Weight of how much of the total CPU time should be provided to this cgroup.
@@ -53,7 +53,7 @@ impl_cgroup! {
     Cpu,
 
     /// Apply the `Some` fields in `resources.cpu`.
-    /// 
+    ///
     /// See [`Cgroup.apply()`] for general information.
     ///
     /// [`Cgroup.apply()`]: ../trait.Cgroup.html#tymethod.apply

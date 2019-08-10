@@ -4,7 +4,8 @@
 //! [Documentation/cgroup-v1/cgroups.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt).
 //!
 //! Operations for each subsystem are implemented in each module. See [`cpu::Subsystem`] for
-//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], and [freezer] subsystems.
+//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [pids], and [freezer]
+//! subsystems.
 //!
 //! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
 //! this trait and subsystem-specific operations.
@@ -18,6 +19,7 @@
 //! [CPU]: cpu/index.html
 //! [cpuset]: cpuset/index.html
 //! [cpuacct]: cpuacct/index.html
+//! [pids]: pids/index.html
 //! [freezer]: freezer/index.html
 //!
 //! [`Cgroup`]: trait.Cgroup.html
@@ -35,6 +37,7 @@ pub mod cpu;
 pub mod cpuacct;
 pub mod cpuset;
 pub mod freezer;
+pub mod pids;
 mod unified_repr;
 
 pub use builder::Builder;
@@ -52,6 +55,8 @@ pub enum SubsystemKind {
     Cpuset,
     /// Cpuacct (CPU accounting) subsystem.
     Cpuacct,
+    /// Pids subsystem,
+    Pids,
     /// Freezer subsystem.
     Freezer,
 }
@@ -59,10 +64,12 @@ pub enum SubsystemKind {
 /// Resource limits and constraints that will be set on a cgroup.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
-    /// Resource limits about how this cgroup can use CPUs.
+    /// How this cgroup can use CPUs.
     pub cpu: cpu::Resources,
-    /// Resource limits about which CPUs and which memory nodes this cgroup can use.
+    /// Which CPUs and which memory nodes this cgroup can use.
     pub cpuset: cpuset::Resources,
+    /// How many tasks this cgroup can have.
+    pub pids: pids::Resources,
     /// Whether tasks in this cgruop is freezed.
     pub freezer: freezer::Resources,
 }
@@ -75,6 +82,7 @@ impl fmt::Display for SubsystemKind {
             Cpu => write!(f, "cpu"),
             Cpuset => write!(f, "cpuset"),
             Cpuacct => write!(f, "cpuacct"),
+            Pids => write!(f, "pids"),
             Freezer => write!(f, "freezer",),
         }
     }
