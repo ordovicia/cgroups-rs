@@ -15,7 +15,7 @@ const PROCS: &str = "cgroup.procs";
 const NOTIFY_ON_RELEASE: &str = "notify_on_release";
 const RELEASE_AGENT: &str = "release_agent";
 
-// Keep the example below in sync with README.md and lib.rs
+// NOTE: Keep the example below in sync with README.md and lib.rs
 
 /// Common operations on a cgroup. Each subsystem handler implements this trait.
 ///
@@ -62,10 +62,8 @@ const RELEASE_AGENT: &str = "release_agent";
 pub trait Cgroup {
     /// Defines a new cgroup with a path.
     ///
-    /// Note that this method does not create a new cgroup. [`Cgroup::create`] creates the new directory for
-    /// the defined cgroup.
-    ///
-    /// [`Cgroup::create`]: #method.create
+    /// Note that this method does not create a new cgroup. `Cgroup::create()` creates the new
+    /// directory for the defined cgroup.
     ///
     /// # Examples
     ///
@@ -153,11 +151,9 @@ pub trait Cgroup {
     ///
     /// # Errors
     ///
-    /// Returns an error if failed to create the directory, with kind [`ErrorKind::Io`]. The
-    /// lower-level source can be obtained by using [`Error::source()`] method.
+    /// Returns an error if failed to create the directory, with kind [`ErrorKind::Io`].
     ///
     /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
-    /// [`Error::source()`]: ../struct.Error.html#method.source
     ///
     /// # Examples
     ///
@@ -221,13 +217,11 @@ pub trait Cgroup {
     ///
     /// # Errors
     ///
-    /// Returns an error if failed to delete the directory, with kind [`ErrorKind::Io`]. The
-    /// lower-level source can be obtained by using [`Error::source()`] method.
+    /// Returns an error if failed to delete the directory, with kind [`ErrorKind::Io`].
     ///
     /// Deleting the directory will fail if this cgroup is in use (e.g. a task is still attached).
     ///
     /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
-    /// [`Error::source()`]: ../struct.Error.html#method.source
     ///
     /// # Examples
     ///
@@ -604,7 +598,7 @@ pub trait Cgroup {
     }
 }
 
-/// Path to a cgroup on the cgroup file system.
+/// Path to a cgroup in a cgroup file system.
 #[derive(Debug, PartialEq, Eq)]
 pub struct CgroupPath {
     subsystem_root: PathBuf, // e.g. /sys/fs/cgroup/cpu
@@ -769,7 +763,8 @@ mod tests {
             (cpuset, Cpuset),
             (cpuacct, Cpuacct),
             (pids, Pids),
-            (freezer, Freezer)
+            (freezer, Freezer),
+            (perf_event, PerfEvent)
         }
     }
 

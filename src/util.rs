@@ -102,7 +102,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_cgroup_name() {
+    fn test_gen_cgroup_name() {
         assert_eq!(
             gen_cgroup_name!(),
             std::path::PathBuf::from("cgroups_rs-util-107")

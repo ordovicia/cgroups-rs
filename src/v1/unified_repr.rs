@@ -272,7 +272,8 @@ mod tests {
 
     #[test]
     fn test_unified_repr_subsystems() {
-        let cgroups = UnifiedRepr::new(PathBuf::from(gen_cgroup_name!()));
+        // with all subsystems
+        let cgroups = UnifiedRepr::new(gen_cgroup_name!());
 
         assert!(cgroups.supports(SubsystemKind::Cpu));
         assert!(cgroups.cpu().is_some());
@@ -280,7 +281,8 @@ mod tests {
         assert!(cgroups.supports(SubsystemKind::Cpuset));
         assert!(cgroups.cpuset().is_some());
 
-        let cgroups = UnifiedRepr::with_subsystems(PathBuf::from(gen_cgroup_name!()), &[]);
+        // without any subsystems
+        let cgroups = UnifiedRepr::with_subsystems(gen_cgroup_name!(), &[]);
 
         assert!(!cgroups.supports(SubsystemKind::Cpu));
         assert!(cgroups.cpu().is_none());
@@ -288,8 +290,9 @@ mod tests {
         assert!(!cgroups.supports(SubsystemKind::Cpuset));
         assert!(cgroups.cpuset().is_none());
 
-        let cgroups =
-            UnifiedRepr::with_subsystems(PathBuf::from(gen_cgroup_name!()), &[SubsystemKind::Cpu]);
+        // with only CPU subsystem
+        let cgroups = UnifiedRepr::with_subsystems(gen_cgroup_name!(), &[SubsystemKind::Cpu]);
+
         assert!(cgroups.supports(SubsystemKind::Cpu));
         assert!(cgroups.cpu().is_some());
 
@@ -298,10 +301,67 @@ mod tests {
     }
 
     #[test]
+    fn test_unified_repr_create_delete() -> Result<()> {
+        // with CPU and cpuset subsystems
+        //
+        // we don't enable all SubsystemKind because CPU and cpuacct subsystems, and net_cls
+        // and net_prio subsystems are aliased in some systems
+        let mut cgroups = UnifiedRepr::with_subsystems(
+            gen_cgroup_name!(),
+            &[SubsystemKind::Cpu, SubsystemKind::Cpuset],
+        );
+        cgroups.create()?;
+
+        assert!(cgroups.cpu().unwrap().path().exists());
+        assert!(cgroups.cpuset().unwrap().path().exists());
+
+        cgroups.delete()?;
+
+        assert!(!cgroups.cpu().unwrap().path().exists());
+        assert!(!cgroups.cpuset().unwrap().path().exists());
+
+        // without any subsystems
+        let name = gen_cgroup_name!();
+        let mut cgroups = UnifiedRepr::with_subsystems(name.clone(), &[]);
+        cgroups.create()?;
+
+        let cpu = cpu::Subsystem::new(CgroupPath::new(
+            SubsystemKind::Cpu,
+            PathBuf::from(name.clone()),
+        ));
+        assert!(!cpu.path().exists());
+        let cpuset =
+            cpuset::Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(name)));
+        assert!(!cpuset.path().exists());
+
+        cgroups.delete()?;
+
+        // with only CPU subsystems
+        let name = gen_cgroup_name!();
+        let mut cgroups = UnifiedRepr::with_subsystems(name.clone(), &[SubsystemKind::Cpu]);
+        cgroups.create()?;
+
+        let cpu = cpu::Subsystem::new(CgroupPath::new(
+            SubsystemKind::Cpu,
+            PathBuf::from(name.clone()),
+        ));
+        assert!(cpu.path().exists());
+        let cpuset =
+            cpuset::Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(name)));
+        assert!(!cpuset.path().exists());
+
+        cgroups.delete()?;
+
+        assert!(!cpu.path().exists());
+        assert!(!cpuset.path().exists());
+
+        Ok(())
+    }
+
+    #[test]
     #[ignore] // `cargo test` must not be executed in parallel for this test
     fn test_unified_repr_add_get_remove_tasks() -> Result<()> {
-        let mut cgroups =
-            UnifiedRepr::with_subsystems(PathBuf::from(gen_cgroup_name!()), &[SubsystemKind::Cpu]);
+        let mut cgroups = UnifiedRepr::with_subsystems(gen_cgroup_name!(), &[SubsystemKind::Cpu]);
         cgroups.create()?;
 
         let pid = Pid::from(std::process::id());
@@ -329,8 +389,7 @@ mod tests {
 
     #[test]
     fn test_unified_repr_add_get_remove_procs() -> Result<()> {
-        let mut cgroups =
-            UnifiedRepr::with_subsystems(PathBuf::from(gen_cgroup_name!()), &[SubsystemKind::Cpu]);
+        let mut cgroups = UnifiedRepr::with_subsystems(gen_cgroup_name!(), &[SubsystemKind::Cpu]);
         cgroups.create()?;
 
         let pid = Pid::from(std::process::id());

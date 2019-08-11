@@ -97,7 +97,7 @@
 //! [`Builder`]: struct.Builder.html
 //! [`cpu()`]: struct.Builder.html#method.cpu
 
-// Keep the example above in sync with README.md and lib.rs
+// NOTE: Keep the example above in sync with README.md and lib.rs
 
 use std::path::PathBuf;
 
@@ -336,14 +336,15 @@ impl PidsBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
     #[test]
     fn test_builder() -> Result<()> {
+        use crate::v1::Cgroup;
+
         let id_set = [0].iter().copied().collect::<cpuset::IdSet>();
 
         #[rustfmt::skip]
-        let mut cgroups = Builder::new(PathBuf::from(gen_cgroup_name!()))
+        let mut cgroups = Builder::new(gen_cgroup_name!())
             .cpu()
                 .shares(1000)
                 .cfs_quota_us(500 * 1000)
@@ -357,11 +358,13 @@ mod tests {
             .build(true)?;
 
         let cpu = cgroups.cpu().unwrap();
+        assert!(cpu.path().exists());
         assert_eq!(cpu.shares()?, 1000);
         assert_eq!(cpu.cfs_quota_us()?, 500 * 1000);
         assert_eq!(cpu.cfs_period_us()?, 1000 * 1000);
 
         let cpuset = cgroups.cpuset().unwrap();
+        assert!(cpuset.path().exists());
         assert_eq!(cpuset.cpus()?, id_set.clone());
         assert_eq!(cpuset.mems()?, id_set.clone());
         assert_eq!(cpuset.memory_migrate()?, true);
@@ -376,7 +379,7 @@ mod tests {
             ErrorKind,
         };
 
-        let name = PathBuf::from(gen_cgroup_name!());
+        let name = gen_cgroup_name!();
 
         #[rustfmt::skip]
         let cgroups = Builder::new(name.clone())
@@ -393,9 +396,28 @@ mod tests {
     }
 
     #[test]
+    fn test_builder_not_create_unused_subsystem_directory() -> Result<()> {
+        use crate::v1::{pids, Cgroup, CgroupPath};
+
+        let name = gen_cgroup_name!();
+        #[rustfmt::skip]
+        let mut cgroups = Builder::new(name.clone())
+            .cpu()
+                .done()
+            .cpuset()
+                .done()
+            .build(true)?;
+
+        let pids = pids::Subsystem::new(CgroupPath::new(SubsystemKind::Pids, name));
+        assert!(!pids.path().exists());
+
+        cgroups.delete()
+    }
+
+    #[test]
     fn test_builder_override() -> Result<()> {
         #[rustfmt::skip]
-        let mut cgroup = Builder::new(PathBuf::from(gen_cgroup_name!()))
+        let mut cgroup = Builder::new(gen_cgroup_name!())
             .cpu()
                 .shares(1000)
                 .shares(2000)
@@ -408,7 +430,7 @@ mod tests {
         cgroup.delete()?;
 
         #[rustfmt::skip]
-        let mut cgroup = Builder::new(PathBuf::from(gen_cgroup_name!()))
+        let mut cgroup = Builder::new(gen_cgroup_name!())
             .cpu()
                 .shares(1000)
                 .done()
@@ -426,7 +448,7 @@ mod tests {
     #[test]
     fn test_builder_not_reset() -> Result<()> {
         #[rustfmt::skip]
-        let mut cgroup = Builder::new(PathBuf::from(gen_cgroup_name!()))
+        let mut cgroup = Builder::new(gen_cgroup_name!())
             .cpu()
                 .shares(1000)
                 .done()
