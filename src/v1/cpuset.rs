@@ -423,8 +423,8 @@ impl Subsystem {
             gen_doc!(eg; memory_pressure_enabled)
         ),
         pub fn memory_pressure_enabled(&self) -> Result<bool> {
-            if self.file_exists(MEMORY_PRESSURE_ENABLED_FILE_NAME) {
-                self.open_file_read(MEMORY_PRESSURE_ENABLED_FILE_NAME)
+            if self.is_root() {
+                self.open_file_read(MEMORY_PRESSURE_ENABLED)
                     .and_then(parse_01_bool)
             } else {
                 Err(Error::new(ErrorKind::InvalidOperation))
@@ -447,8 +447,8 @@ impl Subsystem {
             gen_doc!(eg; memory_pressure_enabled, true)
         ),
         pub fn set_memory_pressure_enabled(&mut self, enable: bool) -> Result<()> {
-            if self.file_exists(MEMORY_PRESSURE_ENABLED_FILE_NAME) {
-                self.write_file(MEMORY_PRESSURE_ENABLED_FILE_NAME, enable as i32)
+            if self.is_root() {
+                self.write_file(MEMORY_PRESSURE_ENABLED, enable as i32)
             } else {
                 Err(Error::new(ErrorKind::InvalidOperation))
             }

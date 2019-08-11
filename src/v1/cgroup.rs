@@ -122,7 +122,24 @@ pub trait Cgroup {
         self.path().exists()
     }
 
-    /// Returns the definition of the root cgroup for the subsystem of this cgroup..
+    /// Returns whether this cgroup is a root cgroup of a subsystem.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    ///
+    /// let root = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, PathBuf::new()));
+    /// assert!(root.is_root());
+    ///
+    /// let cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// assert!(!cgroup.is_root());
+    /// ```
+    fn is_root(&self) -> bool;
+
+    /// Returns the definition of the root cgroup for the subsystem of this cgroup.
     ///
     /// # Examples
     ///
@@ -523,7 +540,11 @@ impl CgroupPath {
     pub fn with_subsystem_name(subsystem_name: String, name: PathBuf) -> Self {
         Self {
             subsystem_root: Path::new(v1::CGROUPFS_MOUNT_POINT).join(subsystem_name),
-            name: Some(name),
+            name: if name.as_os_str().is_empty() {
+                None
+            } else {
+                Some(name)
+            },
         }
     }
 
@@ -533,6 +554,10 @@ impl CgroupPath {
         } else {
             self.subsystem_root.clone()
         }
+    }
+
+    pub(crate) fn is_subsystem_root(&self) -> bool {
+        self.name.is_none()
     }
 
     pub(crate) fn subsystem_root(&self) -> Self {
@@ -556,6 +581,10 @@ macro_rules! impl_cgroup {
 
             fn path(&self) -> PathBuf {
                 self.path.to_path_buf()
+            }
+
+            fn is_root(&self) -> bool {
+                self.path.is_subsystem_root()
             }
 
             fn root_cgroup(&self) -> Box<Self> {
