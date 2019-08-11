@@ -110,22 +110,6 @@ pub trait Cgroup {
     /// ```
     fn path(&self) -> PathBuf;
 
-    /// Returns whether the directory already exists for this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let cgroup = cpu::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("does/not/exist")));
-    /// assert!(!cgroup.exists());
-    /// ```
-    fn exists(&self) -> bool {
-        self.path().exists()
-    }
-
     /// Returns whether this cgroup is a root cgroup of a subsystem.
     ///
     /// # Examples
@@ -533,7 +517,6 @@ pub trait Cgroup {
         if !self.is_root() {
             return Err(Error::new(ErrorKind::InvalidOperation));
         }
-
         fs::write(self.path().join(RELEASE_AGENT), agent_path.as_ref()).map_err(Error::io)
     }
 
@@ -791,16 +774,16 @@ mod tests {
     }
 
     #[test]
-    fn test_cgroup_exists_create_delete() -> Result<()> {
+    fn test_cgroup_create_delete() -> Result<()> {
         let mut cgroup =
             cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
-        assert!(!cgroup.exists());
+        assert!(!cgroup.path().exists());
 
         cgroup.create()?;
-        assert!(cgroup.exists());
+        assert!(cgroup.path().exists());
 
         cgroup.delete()?;
-        assert!(!cgroup.exists());
+        assert!(!cgroup.path().exists());
 
         Ok(())
     }
