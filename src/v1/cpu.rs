@@ -54,19 +54,16 @@ impl_cgroup! {
 
     /// Apply the `Some` fields in `resources.cpu`.
     ///
-    /// See [`Cgroup.apply()`] for general information.
+    /// See [`Cgroup::apply`] for general information.
     ///
-    /// [`Cgroup.apply()`]: ../trait.Cgroup.html#tymethod.apply
-    fn apply(&mut self, resources: &v1::Resources, validate: bool) -> Result<()> {
+    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
+    fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         let res: &self::Resources = &resources.cpu;
 
         macro_rules! a {
             ($resource: ident, $setter: ident) => {
                 if let Some(r) = res.$resource {
                     self.$setter(r)?;
-                    if validate && r != self.$resource()? {
-                        return Err(Error::new(ErrorKind::Apply));
-                    }
                 }
             };
         }

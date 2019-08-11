@@ -34,7 +34,7 @@
 //! let resources = Resources::default();
 //!
 //! // Apply the resource limits.
-//! cgroup.apply(&resources, true)?;
+//! cgroup.apply(&resources)?;
 //!
 //! // Low-level file operations are also supported.
 //! let stat_file = cgroup.open_file_read("cpu.stat")?;
@@ -88,7 +88,7 @@
 //!         // builder, just enable the monitoring.
 //!     // Actually build cgroups with the configuration.
 //!     // Only create a directory for the CPU subsystem.
-//!     .build(true)?;
+//!     .build()?;
 //!
 //! // Attach the self process to the cgroups.
 //! let pid = std::process::id().into();

@@ -49,7 +49,7 @@ use crate::v1::{$($subsystem),*};
 /// let resources = Resources::default();
 ///
 /// // Apply the resource limits.
-/// cgroups.apply(&resources, true)?;
+/// cgroups.apply(&resources)?;
 ///
 /// // Do something ...
 ///
@@ -157,11 +157,13 @@ impl UnifiedRepr {
 
     /// Applies resource limits and constraints to each cgroup of the all supported subsystems.
     ///
-    /// See [`Cgroup::apply()`](trait.Cgroup.html#method.apply) for more information.
-    pub fn apply(&mut self, resources: &v1::Resources, validate: bool) -> Result<()> {
+    /// See [`Cgroup::apply`] for more information.
+    ///
+    /// [`Cgroup::apply`]: trait.Cgroup.html#tymethod.apply
+    pub fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
-                s.apply(&resources, validate)?;
+                s.apply(&resources)?;
             }
         )*
         Ok(())

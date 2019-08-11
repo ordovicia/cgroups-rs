@@ -41,7 +41,7 @@ const RELEASE_AGENT: &str = "release_agent";
 /// let resources = Resources::default();
 ///
 /// // Apply the resource limits.
-/// cgroup.apply(&resources, true)?;
+/// cgroup.apply(&resources)?;
 ///
 /// // Low-level file operations are also supported.
 /// let stat_file = cgroup.open_file_read("cpu.stat")?;
@@ -174,19 +174,17 @@ pub trait Cgroup {
 
     /// Applies a set of resource limits and constraints to this cgroup.
     ///
-    /// If `validate` is `true`, this method validates that the resource limits are correctly set,
-    /// and returns an error if the validation failed.
-    ///
     /// See also implementors' documentations for their specific behavior.
     ///
     /// # Errors
     ///
-    /// Returns an error with kind [`ErrorKind::Apply`] if `validate` is `true` and the validation
-    /// failed.
+    /// Returns an erorr if failed to apply the resource configuration. The kind and lower-level
+    /// source of the error can be obtained with [`Error::kind`] and [`Error::source`] methods.
     ///
     /// See also implementors' documentation for their specific behavior.
     ///
-    /// [`ErrorKind::Apply`]: ../enum.ErrorKind.html#variant.Apply
+    /// [`Error::kind`]: ../enum.ErrorKind.html#method.kind
+    /// [`Error::source`]: ../enum.ErrorKind.html#method.source
     ///
     /// # Examples
     ///
@@ -200,18 +198,18 @@ pub trait Cgroup {
     ///
     /// let resources = Resources {
     ///         cpu: cpu::Resources {
-    ///             shares: Some(1000),
-    ///             cfs_quota_us: Some(500 * 1000),
-    ///             cfs_period_us: Some(1000 * 1000),
+    ///             shares: Some(1024),
+    ///             cfs_quota_us: Some(500_000),
+    ///             cfs_period_us: Some(1_000_000),
     ///         },
     ///         ..Resources::default()
     ///     };
-    /// cgroup.apply(&resources, true)?;
+    /// cgroup.apply(&resources)?;
     ///
     /// # Ok(())
     /// # }
     /// ```
-    fn apply(&mut self, resources: &Resources, validate: bool) -> Result<()>;
+    fn apply(&mut self, resources: &Resources) -> Result<()>;
 
     /// Deletes a directory of this cgroup.
     ///

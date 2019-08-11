@@ -56,10 +56,10 @@ impl_cgroup! {
 
     /// Does nothing as a perf_event cgroup has no parameters.
     ///
-    /// See [`Cgroup.apply()`] for general information.
+    /// See [`Cgroup::apply`] for general information.
     ///
-    /// [`Cgroup.apply()`]: ../trait.Cgroup.html#tymethod.apply
-    fn apply(&mut self, _resources: &v1::Resources, _validate: bool) -> Result<()> {
+    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
+    fn apply(&mut self, _resources: &v1::Resources) -> Result<()> {
         Ok(())
     }
 }

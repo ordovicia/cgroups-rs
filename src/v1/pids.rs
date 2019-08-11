@@ -36,7 +36,7 @@ use std::{fmt, path::PathBuf};
 
 use crate::{
     v1::{self, Cgroup, CgroupPath, SubsystemKind},
-    Error, ErrorKind, Result,
+    Error, Result,
 };
 
 use crate::{
@@ -112,15 +112,12 @@ impl_cgroup! {
 
     /// Sets a maximum number of processes this cgroup can have according to `resources.pids.max`.
     ///
-    /// See [`Cgroup.apply()`] for general information.
+    /// See [`Cgroup::apply`] method for general information.
     ///
-    /// [`Cgroup.apply()`]: ../trait.Cgroup.html#tymethod.apply
-    fn apply(&mut self, resources: &v1::Resources, validate: bool) -> Result<()> {
+    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
+    fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         if let Some(max) = resources.pids.max {
             self.set_max(max)?;
-            if validate && self.max()? != max {
-                return Err(Error::new(ErrorKind::Apply));
-            }
         }
 
         Ok(())

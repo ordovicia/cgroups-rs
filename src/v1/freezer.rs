@@ -115,31 +115,19 @@ impl_cgroup! {
     /// Note that only `State::Frozen` and `State::Thawed` are valid. Applying `State::Freezing`
     /// will return an error with kind [`ErrorKind::InvalidArgument`].
     ///
-    /// See [`Cgroup.apply()`] for general information.
+    /// See [`Cgroup::apply`] for general information.
     ///
     /// [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument
-    /// [`Cgroup.apply()`]: ../trait.Cgroup.html#tymethod.apply
-    fn apply(&mut self, resources: &v1::Resources, validate: bool) -> Result<()> {
+    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
+    fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         use State::*;
 
         match resources.freezer.state {
-            Some(Frozen) => {
-                self.freeze()?;
-                if validate && !self.self_freezing()? {
-                    return Err(Error::new(ErrorKind::Apply));
-                }
-            }
-            Some(Thawed) => {
-                self.thaw()?;
-                if validate && self.self_freezing()? {
-                    return Err(Error::new(ErrorKind::Apply));
-                }
-            }
-            Some(Freezing) => return Err(Error::new(ErrorKind::InvalidArgument)),
-            _ => {}
+            Some(Frozen) => self.freeze(),
+            Some(Thawed) => self.thaw(),
+            Some(Freezing) => Err(Error::new(ErrorKind::InvalidArgument)),
+            None => Ok(())
         }
-
-        Ok(())
     }
 }
 

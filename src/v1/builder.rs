@@ -34,8 +34,8 @@
 //!         // perf_event subsystem has no parameter, so this method does not return a subsystem
 //!         // builder, just enable the monitoring.
 //!     // Actually build cgroups with the configuration.
-//!     // Only create a directory for the CPU subsystem.
-//!     .build(true)?;
+//!     // Only create a directory for the CPU, cpuset, and pids subsystem.
+//!     .build()?;
 //!
 //! let pid = std::process::id().into();
 //! cgroups.add_task(pid)?;
@@ -66,7 +66,7 @@
 //!         .shares(1000)
 //!         .shares(2000)   // Override.
 //!         .done()
-//!     .build(true)?;
+//!     .build()?;
 //!
 //! assert_eq!(cgroups.cpu().unwrap().shares()?, 2000);
 //! # Ok(())
@@ -87,7 +87,7 @@
 //!         .cfs_quota_us(500 * 1000)
 //!         .cfs_period_us(1000 * 1000)
 //!         .done()
-//!     .build(true)?;
+//!     .build()?;
 //!
 //! assert_eq!(cgroups.cpu().unwrap().shares()?, 1000);
 //! # Ok(())
@@ -158,17 +158,12 @@ impl Builder {
 
     /// Builds a (set of) cgroup(s) with the configuration.
     ///
-    /// If `validate` is `true`, this method validates that the resource limits are
-    /// correctly set, and returns an error with kind [`ErrorKind::Apply`] if the validation failed.
-    ///
     /// This method creates directories for the cgroups, but only for the configured subsystems.
-    /// i.e. if you called only `cpu()`, only one cgroup directory is created for the CPU subsystem.
-    ///
-    /// [`ErrorKind::Apply`]: ../../enum.ErrorKind.html#variant.Apply
-    pub fn build(self, validate: bool) -> Result<UnifiedRepr> {
+    /// i.e. if you called only `cpu`, only one cgroup directory is created for the CPU subsystem.
+    pub fn build(self) -> Result<UnifiedRepr> {
         let mut unified_repr = UnifiedRepr::with_subsystems(self.name, &self.subsystem_kinds);
         unified_repr.create()?;
-        unified_repr.apply(&self.resources, validate)?;
+        unified_repr.apply(&self.resources)?;
         Ok(unified_repr)
     }
 }
@@ -355,7 +350,7 @@ mod tests {
                 .mems(id_set.clone())
                 .memory_migrate(true)
                 .done()
-            .build(true)?;
+            .build()?;
 
         let cpu = cgroups.cpu().unwrap();
         assert!(cpu.path().exists());
@@ -386,7 +381,7 @@ mod tests {
             .cpuset()
                 .memory_pressure_enabled(true)
                 .done()
-            .build(false);
+            .build();
 
         assert_eq!(cgroups.unwrap_err().kind(), ErrorKind::InvalidOperation);
 
@@ -406,7 +401,7 @@ mod tests {
                 .done()
             .cpuset()
                 .done()
-            .build(true)?;
+            .build()?;
 
         let pids = pids::Subsystem::new(CgroupPath::new(SubsystemKind::Pids, name));
         assert!(!pids.path().exists());
@@ -422,7 +417,7 @@ mod tests {
                 .shares(1000)
                 .shares(2000)
                 .done()
-            .build(true)?;
+            .build()?;
 
         let cpu = cgroup.cpu().unwrap();
         assert_eq!(cpu.shares()?, 2000);
@@ -437,7 +432,7 @@ mod tests {
             .cpu()
                 .shares(2000)
                 .done()
-            .build(true)?;
+            .build()?;
 
         let cpu = cgroup.cpu().unwrap();
         assert_eq!(cpu.shares()?, 2000);
@@ -456,7 +451,7 @@ mod tests {
                 .cfs_quota_us(500 * 1000)
                 .cfs_period_us(1000 * 1000)
                 .done()
-            .build(true)?;
+            .build()?;
 
         let cpu = cgroup.cpu().unwrap();
         assert_eq!(cpu.shares()?, 1000);
