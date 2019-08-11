@@ -90,8 +90,8 @@ pub struct Resources {
 ///
 /// let id_set = "0,1,3-5,7".parse::<IdSet>().unwrap();
 /// assert_eq!(
-///     { let mut v = id_set.to_vec(); v.sort(); v },
-///     vec![0, 1, 3, 4, 5, 7],
+///     id_set.to_hash_set(),
+///     [0, 1, 3, 4, 5, 7].iter().copied().collect(),
 /// );
 /// ```
 ///
@@ -105,8 +105,8 @@ pub struct Resources {
 ///
 /// let id_set = [0, 1, 3, 4, 5, 7].iter().copied().collect::<IdSet>();
 /// assert_eq!(
-///     { let mut v = id_set.to_vec(); v.sort(); v },
-///     vec![0, 1, 3, 4, 5, 7],
+///     id_set.to_hash_set(),
+///     [0, 1, 3, 4, 5, 7].iter().copied().collect(),
 /// );
 /// ```
 ///
@@ -659,7 +659,7 @@ impl IdSet {
     /// use cgroups::v1::cpuset::IdSet;
     ///
     /// let id_set = IdSet::new();
-    /// assert!(id_set.to_vec().is_empty());
+    /// assert!(id_set.to_hash_set().is_empty());
     /// ```
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
@@ -675,13 +675,12 @@ impl IdSet {
     ///
     /// let id_set = [1, 2, 3, 5, 6, 7].iter().copied().collect::<IdSet>();
     /// assert_eq!(
-    ///     { let mut v = id_set.to_vec(); v.sort(); v },
-    ///     vec![1, 2, 3, 5, 6, 7],
+    ///     id_set.to_hash_set(),
+    ///     [1, 2, 3, 5, 6, 7].iter().copied().collect(),
     /// );
     /// ```
-    // TODO: should we provide `to_hash_set()` instead?
-    pub fn to_vec(&self) -> Vec<usize> {
-        self.0.iter().copied().collect()
+    pub fn to_hash_set(&self) -> HashSet<usize> {
+        self.0.clone()
     }
 
     /// Add a cpuset ID to this set.
@@ -693,7 +692,7 @@ impl IdSet {
     ///
     /// let mut id_set = IdSet::new();
     /// id_set.add(7);
-    /// assert_eq!(id_set.to_vec(), vec![7]);
+    /// assert_eq!(id_set.to_hash_set(), [7].iter().copied().collect());
     /// ```
     pub fn add(&mut self, id: usize) {
         self.0.insert(id);
@@ -710,8 +709,8 @@ impl IdSet {
     /// let mut id_set = "0,1,3-5,7".parse::<IdSet>()?;
     /// id_set.remove(0);
     /// assert_eq!(
-    ///     { let mut v = id_set.to_vec(); v.sort(); v },
-    ///     vec![1, 3, 4, 5, 7],
+    ///     id_set.to_hash_set(),
+    ///     [1, 3, 4, 5, 7].iter().copied().collect(),
     /// );
     /// # Ok(())
     /// # }
@@ -854,23 +853,32 @@ mod tests {
 
     #[test]
     fn test_id_set_from_str() {
+        macro_rules! hashset {
+            ($($x: expr),*) => {{
+                #![allow(unused_mut)]
+                let mut s = HashSet::new();
+                $(
+                    s.insert($x);
+                )*
+                s
+            }};
+        }
+
         let test_cases = vec![
-            ("", vec![]),
-            ("0", vec![0]),
-            ("1,2", vec![1, 2]),
-            ("0,2,4,6", vec![0, 2, 4, 6]),
-            ("2-6", vec![2, 3, 4, 5, 6]),
-            ("0-2,5-7", vec![0, 1, 2, 5, 6, 7]),
-            ("2-3,4-5,6-7", vec![2, 3, 4, 5, 6, 7]),
-            ("1,3,5-7,9,10", vec![1, 3, 5, 6, 7, 9, 10]),
+            ("", hashset! {}),
+            ("0", hashset! {0}),
+            ("1,2", hashset! {1, 2}),
+            ("0,2,4,6", hashset! {0, 2, 4, 6}),
+            ("2-6", hashset! {2, 3, 4, 5, 6}),
+            ("0-2,5-7", hashset! {0, 1, 2, 5, 6, 7}),
+            ("2-3,4-5,6-7", hashset! {2, 3, 4, 5, 6, 7}),
+            ("1,3,5-7,9,10", hashset! {1, 3, 5, 6, 7, 9, 10}),
             ("0-65535", (0..65536).collect()),
         ]
         .into_iter();
 
         for (case, expected) in test_cases {
-            let mut ids = case.parse::<IdSet>().unwrap().to_vec();
-            ids.sort();
-            assert_eq!(ids, expected);
+            assert_eq!(case.parse::<IdSet>().unwrap().to_hash_set(), expected);
         }
     }
 
