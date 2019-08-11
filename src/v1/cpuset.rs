@@ -808,7 +808,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // overrides the root cgroup
+    #[ignore] // (temporarily) overrides the root cgroup
     fn test_subsystem_memory_pressure_enabled() -> Result<()> {
         let mut root = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::new()));
         let enabled = root.memory_pressure_enabled()?;

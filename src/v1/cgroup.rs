@@ -4,12 +4,16 @@ use std::{
 };
 
 use crate::{
+    util::parse_01_bool,
     v1::{self, Resources, SubsystemKind},
-    Error, Pid, Result,
+    Error, ErrorKind, Pid, Result,
 };
 
 const TASKS: &str = "tasks";
 const PROCS: &str = "cgroup.procs";
+
+const NOTIFY_ON_RELEASE: &str = "notify_on_release";
+const RELEASE_AGENT: &str = "release_agent";
 
 // Keep the example below in sync with README.md and lib.rs
 
@@ -413,6 +417,126 @@ pub trait Cgroup {
         self.root_cgroup().add_proc(pid)
     }
 
+    /// Reads whether the system executes the executable written in `release_agent` file when a
+    /// cgroup no longer has any task, from `notify_on_release` file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if failed to read and parse `notify_on_release` file.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    ///
+    /// let cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// let notify_on_release = cgroup.notify_on_release()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn notify_on_release(&self) -> Result<bool> {
+        self.open_file_read(NOTIFY_ON_RELEASE)
+            .and_then(parse_01_bool)
+    }
+
+    /// Sets whether the system executes the executable written in `release_agent` file when a
+    /// cgroup no longer has any task, from `notify_on_release` file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if failed to write to `notify_on_release` file.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    ///
+    /// let mut cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// cgroup.set_notify_on_release(true)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn set_notify_on_release(&mut self, enable: bool) -> Result<()> {
+        use std::io::Write;
+
+        self.open_file_write(NOTIFY_ON_RELEASE, false)
+            .and_then(|mut f| write!(f, "{}", enable as i32).map_err(Error::io))
+    }
+
+    /// Reads the command to be executed when "notify on release" is triggered, i.e. this cgroup is
+    /// emptied of all tasks, from `release_agent` file.
+    ///
+    /// # Errors
+    ///
+    /// This file is present only in the root cgroup. If you call this method on a non-root cgroup,
+    /// an error is returned with kind `ErrorKind::InvalidOperation`.
+    ///
+    /// On the root cgroup, returns an error if failed to read `release_agent` file.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    ///
+    /// let cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// cgroup.release_agent()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn release_agent(&self) -> Result<String> {
+        use std::io::Read;
+
+        if !self.is_root() {
+            return Err(Error::new(ErrorKind::InvalidOperation));
+        }
+
+        let mut file = self.open_file_read(RELEASE_AGENT)?;
+        let mut buf = String::new();
+        file.read_to_string(&mut buf).map_err(Error::io)?;
+
+        Ok(buf)
+    }
+
+    /// Sets a path of executable to be executed when "notify on release" is triggered, i.e. this
+    /// cgroup is emptied of all tasks, by writing to `release_agent` file.
+    ///
+    /// # Errors
+    ///
+    /// This file is present only in the root cgroup. If you call this method on a non-root cgroup,
+    /// an error is returned with kind `ErrorKind::InvalidOperation`.
+    ///
+    /// On the root cgroup, returns an error if failed to write to `release_agent` file.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    ///
+    /// let mut cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    /// cgroup.set_release_agent(b"/usr/local/bin/foo.sh")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn set_release_agent(&mut self, agent_path: impl AsRef<[u8]>) -> Result<()> {
+        if !self.is_root() {
+            return Err(Error::new(ErrorKind::InvalidOperation));
+        }
+
+        fs::write(self.path().join(RELEASE_AGENT), agent_path.as_ref()).map_err(Error::io)
+    }
+
     /// Returns whether a file with the given name exists in this cgroup.
     ///
     /// # Examples
@@ -716,6 +840,52 @@ mod tests {
 
         cgroup.remove_proc(pid)?;
         assert!(cgroup.procs()?.is_empty());
+
+        cgroup.delete()
+    }
+
+    #[test]
+    fn test_cgroup_notify_on_release() -> Result<()> {
+        let mut cgroup =
+            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
+        cgroup.create()?;
+        assert_eq!(cgroup.notify_on_release()?, false);
+
+        cgroup.set_notify_on_release(true)?;
+        assert_eq!(cgroup.notify_on_release()?, true);
+
+        cgroup.delete()
+    }
+
+    #[test]
+    #[ignore] // (temporarily) overrides the root cgroup
+    fn test_cgroup_release_agent() -> Result<()> {
+        let mut root = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, PathBuf::new()));
+        let agent = root.release_agent()?;
+
+        root.set_release_agent(b"foo")?;
+        assert_eq!(root.release_agent()?, "foo\n".to_string());
+
+        root.set_release_agent(&agent)?;
+        assert_eq!(root.release_agent()?, agent);
+
+        Ok(())
+    }
+
+    #[test]
+    fn err_cgroup_release_agent() -> Result<()> {
+        let mut cgroup =
+            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
+        cgroup.create()?;
+
+        assert_eq!(
+            cgroup.release_agent().unwrap_err().kind(),
+            ErrorKind::InvalidOperation
+        );
+        assert_eq!(
+            cgroup.set_release_agent(b"foo").unwrap_err().kind(),
+            ErrorKind::InvalidOperation
+        );
 
         cgroup.delete()
     }
