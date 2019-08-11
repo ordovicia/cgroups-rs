@@ -269,7 +269,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn tasks(&self) -> Result<Vec<Pid>> {
-        self.open_file_read(TASKS).and_then(read_tasks_procs)
+        self.open_file_read(TASKS).and_then(parse_tasks_procs)
     }
 
     /// Attaches a task to this cgroup by writing a thread ID to `tasks` file.
@@ -345,7 +345,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn procs(&self) -> Result<Vec<Pid>> {
-        self.open_file_read(PROCS).and_then(read_tasks_procs)
+        self.open_file_read(PROCS).and_then(parse_tasks_procs)
     }
 
     /// Attaches a process to this cgroup by writing a PID to `cgroup.procs` file.
@@ -447,10 +447,11 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn set_notify_on_release(&mut self, enable: bool) -> Result<()> {
-        use std::io::Write;
-
-        self.open_file_write(NOTIFY_ON_RELEASE, false)
-            .and_then(|mut f| write!(f, "{}", enable as i32).map_err(Error::io))
+        fs::write(
+            self.path().join(NOTIFY_ON_RELEASE),
+            format!("{}", enable as i32),
+        )
+        .map_err(Error::io)
     }
 
     /// Reads the command to be executed when "notify on release" is triggered, i.e. this cgroup is
@@ -483,9 +484,10 @@ pub trait Cgroup {
             return Err(Error::new(ErrorKind::InvalidOperation));
         }
 
-        let mut file = self.open_file_read(RELEASE_AGENT)?;
         let mut buf = String::new();
-        file.read_to_string(&mut buf).map_err(Error::io)?;
+        self.open_file_read(RELEASE_AGENT)?
+            .read_to_string(&mut buf)
+            .map_err(Error::io)?;
 
         Ok(buf)
     }
@@ -705,15 +707,13 @@ macro_rules! impl_cgroup {
 
 pub(crate) trait CgroupHelper: Cgroup {
     fn write_file(&mut self, name: &str, val: impl std::fmt::Display) -> Result<()> {
-        use std::io::Write;
-        self.open_file_write(name, false)
-            .and_then(|mut f| write!(f, "{}", val).map_err(Error::io))
+        fs::write(self.path().join(name), format!("{}", val)).map_err(Error::io)
     }
 }
 
 impl<T: Cgroup> CgroupHelper for T {}
 
-fn read_tasks_procs(file: File) -> Result<Vec<Pid>> {
+fn parse_tasks_procs(file: File) -> Result<Vec<Pid>> {
     use std::io::{BufRead, BufReader};
 
     let mut ids = vec![];
