@@ -46,7 +46,7 @@ const RELEASE_AGENT: &str = "release_agent";
 /// // Low-level file operations are also supported.
 /// let stat_file = cgroup.open_file_read("cpu.stat")?;
 ///
-/// // do something ...
+/// // Do something ...
 ///
 /// // Now, remove self process from the cgroup.
 /// cgroup.remove_task(pid)?;

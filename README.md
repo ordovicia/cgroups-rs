@@ -31,7 +31,7 @@ cgroup.apply(&resources, true)?;
 // Low-level file operations are also supported.
 let stat_file = cgroup.open_file_read("cpu.stat")?;
 
-// do something ...
+// Do something ...
 
 // Now, remove self process from the cgroup.
 cgroup.remove_task(pid)?;
@@ -83,7 +83,7 @@ let mut cgroups =
 let pid = std::process::id().into();
 cgroups.add_task(pid)?;
 
-// do something ...
+// Do something ...
 
 // Remove self process from the cgroups.
 cgroups.remove_task(pid)?;

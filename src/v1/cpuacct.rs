@@ -2,8 +2,36 @@
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/cpuacct.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt).
-
-// TODO: module-level doc
+//!
+//! # Examples
+//!
+//! ```no_run
+//! # fn main() -> cgroups::Result<()> {
+//! use std::path::PathBuf;
+//! use cgroups::{Pid, v1::{cpuacct, Cgroup, CgroupPath, SubsystemKind}};
+//!
+//! let mut cpuacct_cgroup = cpuacct::Subsystem::new(
+//!     CgroupPath::new(SubsystemKind::Cpuacct, PathBuf::from("cpu_accouting")));
+//! cpuacct_cgroup.create()?;
+//!
+//! // Add a task to this cgroup to monitor CPU usage.
+//! let pid = Pid::from(std::process::id());
+//! cpuacct_cgroup.add_task(pid)?;
+//!
+//! // Do something ...
+//!
+//! // Get the statistics on CPU usage.
+//! let stat_hz = cpuacct_cgroup.stat()?;
+//! println!(
+//!     "cgroup used {} USER_HZ in system mode, {} USER_HZ in user mode.",
+//!     stat_hz.system, stat_hz.user
+//! );
+//!
+//! cpuacct_cgroup.remove_task(pid)?;
+//! cpuacct_cgroup.delete()?;
+//! # Ok(())
+//! # }
+//! ```
 
 use std::path::PathBuf;
 
@@ -263,52 +291,46 @@ mod tests {
         cgroup.delete()
     }
 
+    // TODO: test adding tasks
+
     #[test]
     fn test_subsystem_stat() -> Result<()> {
         gen_subsystem_test!(Cpuacct; stat, Stat { system: 0, user: 0 })
-        // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage() -> Result<()> {
         gen_subsystem_test!(Cpuacct; usage, 0)
-        // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage_all() -> Result<()> {
         gen_subsystem_test!(Cpuacct; usage_all, vec![Stat { system: 0, user: 0}; num_cpus::get()])
-        // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage_percpu() -> Result<()> {
         gen_subsystem_test!(Cpuacct; usage_percpu, vec![0; num_cpus::get()])
-        // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage_percpu_sys() -> Result<()> {
         gen_subsystem_test!(Cpuacct; usage_percpu_sys, vec![0; num_cpus::get()])
-        // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage_percpu_user() -> Result<()> {
         gen_subsystem_test!(Cpuacct; usage_percpu_user, vec![0; num_cpus::get()])
-        // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage_sys() -> Result<()> {
         gen_subsystem_test!(Cpuacct; usage_sys, 0)
-        // TODO: add task
     }
 
     #[test]
     fn test_subsystem_usage_user() -> Result<()> {
         gen_subsystem_test!(Cpuacct; usage_user, 0)
-        // TODO: add task
     }
 
     #[test]

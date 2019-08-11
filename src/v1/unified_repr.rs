@@ -51,7 +51,7 @@ use crate::v1::{$($subsystem),*};
 /// // Apply the resource limits.
 /// cgroups.apply(&resources, true)?;
 ///
-/// // do something ...
+/// // Do something ...
 ///
 /// // Now, remove self from the cgroup set.
 /// cgroups.remove_task(pid)?;

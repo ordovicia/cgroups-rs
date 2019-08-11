@@ -1,5 +1,11 @@
 #![cfg(target_os = "linux")]
-#![warn(missing_docs)]
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    unused,
+    nonstandard_style,
+    rust_2018_idioms
+)]
 
 //! Native Rust crate for operating on cgroups.
 //!
@@ -33,7 +39,7 @@
 //! // Low-level file operations are also supported.
 //! let stat_file = cgroup.open_file_read("cpu.stat")?;
 //!
-//! // do something ...
+//! // Do something ...
 //!
 //! // Now, remove self process from the cgroup.
 //! cgroup.remove_task(pid)?;
@@ -88,7 +94,7 @@
 //! let pid = std::process::id().into();
 //! cgroups.add_task(pid)?;
 //!
-//! // do something ...
+//! // Do something ...
 //!
 //! // Remove self process from the cgroups.
 //! cgroups.remove_task(pid)?;

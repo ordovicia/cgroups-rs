@@ -71,7 +71,7 @@ pub struct Resources {
     pub cpu: cpu::Resources,
     /// Which CPUs and which memory nodes this cgroup can use.
     pub cpuset: cpuset::Resources,
-    /// How many tasks this cgroup can have.
+    /// How many processes this cgroup can have.
     pub pids: pids::Resources,
     /// Whether tasks in this cgruop is freezed.
     pub freezer: freezer::Resources,

@@ -2,8 +2,35 @@
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/pids.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/pids.txt).
-
-// TODO: module-level doc
+//!
+//! # Examples
+//!
+//! ```no_run
+//! # fn main() -> cgroups::Result<()> {
+//! use std::path::PathBuf;
+//! use cgroups::{Pid, v1::{pids, Cgroup, CgroupPath, SubsystemKind}};
+//!
+//! let mut pids_cgroup = pids::Subsystem::new(
+//!     CgroupPath::new(SubsystemKind::Pids, PathBuf::from("limit_process_number")));
+//! pids_cgroup.create()?;
+//!
+//! // Limit the maximum number of processes this cgroup can have.
+//! pids_cgroup.set_max(pids::Max::Number(42))?;
+//!
+//! // Add a task to this cgroup.
+//! let pid = Pid::from(std::process::id());
+//! pids_cgroup.add_task(pid)?;
+//!
+//! // Do something ...
+//!
+//! println!("cgroup now has {} processes", pids_cgroup.current()?);
+//! println!("cgroup has hit the limit {} times", pids_cgroup.events()?.1);
+//!
+//! pids_cgroup.remove_task(pid)?;
+//! pids_cgroup.delete()?;
+//! # Ok(())
+//! # }
+//! ```
 
 use std::{fmt, path::PathBuf};
 
@@ -23,7 +50,7 @@ pub struct Subsystem {
     path: CgroupPath,
 }
 
-/// Limit on the number of tasks a cgroup can have.
+/// Limit on the number of processes a cgroup can have.
 ///
 /// `Max` implements [`FromStr`], so you can [`parse()`] a string into a `Max`. If failed,
 /// `parse()` returns an error with kind [`ErrorKind::Parse`].
@@ -66,24 +93,24 @@ pub struct Subsystem {
 /// [`Default`]: https://doc.rust-lang.org/std/default/trait.Default.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Max {
-    /// Not limit the number of tasks this cgroup can have.
+    /// Not limit the number of processes this cgroup can have.
     Max,
-    /// Limits the number of tasks this cgroup can have to this number.
+    /// Limits the number of processes this cgroup can have to this number.
     Number(u32),
 }
 
-/// How many tasks a cgroup can have.
+/// How many processes a cgroup can have.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
-    /// If `Max::Max`, the system does not limit the number of tasks this cgroup can have. If
-    /// `Max::Number(n)`, this cgroup can have `n` tasks at most.
+    /// If `Max::Max`, the system does not limit the number of processes this cgroup can have. If
+    /// `Max::Number(n)`, this cgroup can have `n` processes at most.
     pub max: Option<Max>,
 }
 
 impl_cgroup! {
     Pids,
 
-    /// Sets a maximum number of tasks this cgroup can have according to `resources.pids.max`.
+    /// Sets a maximum number of processes this cgroup can have according to `resources.pids.max`.
     ///
     /// See [`Cgroup.apply()`] for general information.
     ///
@@ -127,13 +154,13 @@ const EVENTS: &str = "pids.events";
 
 impl Subsystem {
     with_doc! {
-        gen_doc!("the maximum number of tasks this cgroup can have", max),
+        gen_doc!("the maximum number of processes this cgroup can have", max),
         pub fn max(&self) -> Result<Max> {
             self.open_file_read(MAX).and_then(parse)
         }
     }
 
-    /// Sets the maximum number of tasks this cgroup can have, by writing to `pids.max` file.
+    /// Sets the maximum number of processes this cgroup can have, by writing to `pids.max` file.
     ///
     /// See the kernel's documentation for more information about this field.
     ///
@@ -167,7 +194,7 @@ impl Subsystem {
 
     with_doc! {
         gen_doc!(
-            "the event counter, i.e. a pair of the maximum number of tasks, and the number of times fork failed due to the limit",
+            "the event counter, i.e. a pair of the maximum number of processes, and the number of times fork failed due to the limit",
             events
         ),
         pub fn events(&self) -> Result<(Max, u64)> {

@@ -2,8 +2,39 @@
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/freezer-subsystem.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/freezer-subsystem.txt).
-
-// TODO: module-level doc
+//!
+//! # Examples
+//!
+//! ```no_run
+//! # fn main() -> cgroups::Result<()> {
+//! use std::{path::PathBuf, process::{self, Command}};
+//! use cgroups::{Pid, v1::{freezer, Cgroup, CgroupPath, SubsystemKind}};
+//!
+//! let mut freezer_cgroup = freezer::Subsystem::new(
+//!     CgroupPath::new(SubsystemKind::Freezer, PathBuf::from("freezer")));
+//! freezer_cgroup.create()?;
+//!
+//! // Add a task to this cgroup.
+//! let mut child = Command::new("sleep")
+//!                     .arg("10")
+//!                     .spawn()
+//!                     .expect("command failed");
+//! let child_pid = Pid::from(&child);
+//! freezer_cgroup.add_task(child_pid)?;
+//!
+//! freezer_cgroup.freeze()?;
+//! // Child process is now frozen.
+//!
+//! freezer_cgroup.thaw()?;
+//! // Child process has been thawed.
+//!
+//! println!("cgroup is now {}", freezer_cgroup.state()?);
+//!
+//! freezer_cgroup.remove_task(child_pid)?;
+//! freezer_cgroup.delete()?;
+//! # Ok(())
+//! # }
+//! ```
 
 use std::{fmt, path::PathBuf};
 

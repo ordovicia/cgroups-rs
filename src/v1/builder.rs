@@ -40,7 +40,7 @@
 //! let pid = std::process::id().into();
 //! cgroups.add_task(pid)?;
 //!
-//! // do something ...
+//! // Do something ...
 //!
 //! // Remove self process from the cgroups.
 //! cgroups.remove_task(pid)?;
@@ -191,6 +191,7 @@ for more information."
 /// CPU subsystem builder.
 ///
 /// This struct is created by [`Builder::cpu()`](struct.Builder.html#method.cpu) method.
+#[derive(Debug)]
 pub struct CpuBuilder {
     builder: Builder,
 }
@@ -220,7 +221,8 @@ impl CpuBuilder {
 
 /// Cpuset subsystem builder.
 ///
-/// This struct is created by [`Builder::cpuset()`](struct.Builder.html#method.cpu) method.
+/// This struct is created by [`Builder::cpuset()`](struct.Builder.html#method.cpuset) method.
+#[derive(Debug)]
 pub struct CpusetBuilder {
     builder: Builder,
 }
@@ -312,6 +314,7 @@ impl CpusetBuilder {
 /// Pids subsystem builder.
 ///
 /// This struct is created by [`Builder::pids()`](struct.Builder.html#method.pids) method.
+#[derive(Debug)]
 pub struct PidsBuilder {
     builder: Builder,
 }
