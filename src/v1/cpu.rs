@@ -130,10 +130,10 @@ cgroup.set_", stringify!($resource), "(", stringify!($val), ")?;
 ```") };
 }
 
-const STAT_FILE_NAME: &str = "cpu.stat";
-const SHARES_FILE_NAME: &str = "cpu.shares";
-const CFS_PERIOD_FILE_NAME: &str = "cpu.cfs_period_us";
-const CFS_QUOTA_FILE_NAME: &str = "cpu.cfs_quota_us";
+const STAT: &str = "cpu.stat";
+const SHARES: &str = "cpu.shares";
+const CFS_PERIOD: &str = "cpu.cfs_period_us";
+const CFS_QUOTA: &str = "cpu.cfs_quota_us";
 
 impl Subsystem {
     with_doc! { concat!(
@@ -145,7 +145,7 @@ impl Subsystem {
 
             let (mut nr_periods, mut nr_throttled, mut throttled_time) = (None, None, None);
 
-            let buf = BufReader::new(self.open_file_read(STAT_FILE_NAME)?);
+            let buf = BufReader::new(self.open_file_read(STAT)?);
             for line in buf.lines() {
                 let line = line.map_err(Error::io)?;
                 let mut entry = line.split_whitespace();
@@ -182,21 +182,21 @@ impl Subsystem {
     with_doc! {
         gen_doc!("the CPU time shares", shares),
         pub fn shares(&self) -> Result<u64> {
-            self.open_file_read(SHARES_FILE_NAME).and_then(parse)
+            self.open_file_read(SHARES).and_then(parse)
         }
     }
 
     with_doc! {
         gen_doc!("CPU time shares", shares, 2048),
         pub fn set_shares(&mut self, shares: u64) -> Result<()> {
-            self.write_file(SHARES_FILE_NAME, shares)
+            self.write_file(SHARES, shares)
         }
     }
 
     with_doc! {
         gen_doc!("the total available CPU time within a period (in microseconds)", cfs_quota_us),
         pub fn cfs_quota_us(&self) -> Result<i64> {
-            self.open_file_read(CFS_QUOTA_FILE_NAME).and_then(parse)
+            self.open_file_read(CFS_QUOTA).and_then(parse)
         }
     }
 
@@ -207,21 +207,21 @@ impl Subsystem {
             500 * 1000
         ),
         pub fn set_cfs_quota_us(&mut self, quota_us: i64) -> Result<()> {
-            self.write_file(CFS_QUOTA_FILE_NAME, quota_us)
+            self.write_file(CFS_QUOTA, quota_us)
         }
     }
 
     with_doc! {
         gen_doc!("the length of period (in microseconds)", cfs_period_us),
         pub fn cfs_period_us(&self) -> Result<u64> {
-            self.open_file_read(CFS_PERIOD_FILE_NAME).and_then(parse)
+            self.open_file_read(CFS_PERIOD).and_then(parse)
         }
     }
 
     with_doc! {
         gen_doc!("length of period (in microseconds)", cfs_period_us, 1000 * 1000),
         pub fn set_cfs_period_us(&mut self, period_us: u64) -> Result<()> {
-            self.write_file(CFS_PERIOD_FILE_NAME, period_us)
+            self.write_file(CFS_PERIOD, period_us)
         }
     }
 }
@@ -235,14 +235,9 @@ mod tests {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;
 
-        [
-            STAT_FILE_NAME,
-            SHARES_FILE_NAME,
-            CFS_QUOTA_FILE_NAME,
-            CFS_PERIOD_FILE_NAME,
-        ]
-        .iter()
-        .all(|f| cgroup.file_exists(f));
+        [STAT, SHARES, CFS_QUOTA, CFS_PERIOD]
+            .iter()
+            .all(|f| cgroup.file_exists(f));
 
         assert!(!cgroup.file_exists("does_not_exist"));
 

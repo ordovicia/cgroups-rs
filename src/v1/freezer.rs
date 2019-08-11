@@ -151,22 +151,22 @@ cgroup.", stringify!($setter), "()?;
 ```") };
 }
 
-const STATE_FILE_NAME: &str = "freezer.state";
-const SELF_FREEZING_FILE_NAME: &str = "freezer.self_freezing";
-const PARENT_FREEZING_FILE_NAME: &str = "freezer.parent_freezing";
+const STATE: &str = "freezer.state";
+const SELF_FREEZING: &str = "freezer.self_freezing";
+const PARENT_FREEZING: &str = "freezer.parent_freezing";
 
 impl Subsystem {
     with_doc! {
         gen_doc!(reads; "the current state of this cgroup", state),
         pub fn state(&self) -> Result<State> {
-            self.open_file_read(STATE_FILE_NAME).and_then(parse)
+            self.open_file_read(STATE).and_then(parse)
         }
     }
 
     with_doc! {
         gen_doc!(reads; "whether this cgroup itself is being freezing or frozen", self_freezing),
         pub fn self_freezing(&self) -> Result<bool> {
-            self.open_file_read(SELF_FREEZING_FILE_NAME)
+            self.open_file_read(SELF_FREEZING)
                 .and_then(parse_01_bool)
         }
     }
@@ -178,7 +178,7 @@ impl Subsystem {
             parent_freezing
         ),
         pub fn parent_freezing(&self) -> Result<bool> {
-            self.open_file_read(PARENT_FREEZING_FILE_NAME)
+            self.open_file_read(PARENT_FREEZING)
                 .and_then(parse_01_bool)
         }
     }
@@ -186,14 +186,14 @@ impl Subsystem {
     with_doc! {
         gen_doc!(sets; "Freezes", freeze),
         pub fn freeze(&mut self) -> Result<()> {
-            self.write_file(STATE_FILE_NAME, State::Frozen)
+            self.write_file(STATE, State::Frozen)
         }
     }
 
     with_doc! {
         gen_doc!(sets; "Thaws, i.e. un-freezes", thaw),
         pub fn thaw(&mut self) -> Result<()> {
-            self.write_file(STATE_FILE_NAME, State::Thawed)
+            self.write_file(STATE, State::Thawed)
         }
     }
 }
@@ -233,13 +233,9 @@ mod tests {
             Subsystem::new(CgroupPath::new(SubsystemKind::Freezer, gen_cgroup_name!()));
         cgroup.create()?;
 
-        [
-            STATE_FILE_NAME,
-            SELF_FREEZING_FILE_NAME,
-            PARENT_FREEZING_FILE_NAME,
-        ]
-        .iter()
-        .all(|n| cgroup.file_exists(n));
+        [STATE, SELF_FREEZING, PARENT_FREEZING]
+            .iter()
+            .all(|n| cgroup.file_exists(n));
 
         assert!(!cgroup.file_exists("does_not_exist"));
 

@@ -121,15 +121,15 @@ let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
 ```") };
 }
 
-const MAX_FILE_NAME: &str = "pids.max";
-const CURRENT_FILE_NAME: &str = "pids.current";
-const EVENTS_FILE_NAME: &str = "pids.events";
+const MAX: &str = "pids.max";
+const CURRENT: &str = "pids.current";
+const EVENTS: &str = "pids.events";
 
 impl Subsystem {
     with_doc! {
         gen_doc!("the maximum number of tasks this cgroup can have", max),
         pub fn max(&self) -> Result<Max> {
-            self.open_file_read(MAX_FILE_NAME).and_then(parse)
+            self.open_file_read(MAX).and_then(parse)
         }
     }
 
@@ -155,13 +155,13 @@ impl Subsystem {
     /// # }
     /// ```
     pub fn set_max(&mut self, max: Max) -> Result<()> {
-        self.write_file(MAX_FILE_NAME, max)
+        self.write_file(MAX, max)
     }
 
     with_doc! {
         gen_doc!("the number of processes this cgroup currently has", current),
         pub fn current(&self) -> Result<u32> {
-            self.open_file_read(CURRENT_FILE_NAME).and_then(parse)
+            self.open_file_read(CURRENT).and_then(parse)
         }
     }
 
@@ -173,7 +173,7 @@ impl Subsystem {
         pub fn events(&self) -> Result<(Max, u64)> {
             use std::io::Read;
 
-            let mut file = self.open_file_read(EVENTS_FILE_NAME)?;
+            let mut file = self.open_file_read(EVENTS)?;
             let mut buf = String::new();
             file.read_to_string(&mut buf).map_err(Error::io)?;
 
@@ -230,9 +230,7 @@ mod tests {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Pids, gen_cgroup_name!()));
         cgroup.create()?;
 
-        [MAX_FILE_NAME, CURRENT_FILE_NAME, EVENTS_FILE_NAME]
-            .iter()
-            .all(|n| cgroup.file_exists(n));
+        [MAX, CURRENT, EVENTS].iter().all(|n| cgroup.file_exists(n));
 
         assert!(!cgroup.file_exists("does_not_exist"));
 

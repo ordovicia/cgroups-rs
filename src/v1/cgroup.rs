@@ -8,8 +8,8 @@ use crate::{
     Error, Pid, Result,
 };
 
-const TASKS_FILE_NAME: &str = "tasks";
-const PROCS_FILE_NAME: &str = "cgroup.procs";
+const TASKS: &str = "tasks";
+const PROCS: &str = "cgroup.procs";
 
 // Keep the example below in sync with README.md and lib.rs
 
@@ -264,8 +264,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn tasks(&self) -> Result<Vec<Pid>> {
-        self.open_file_read(TASKS_FILE_NAME)
-            .and_then(read_tasks_procs)
+        self.open_file_read(TASKS).and_then(read_tasks_procs)
     }
 
     /// Attaches a task to this cgroup by writing a thread ID to `tasks` file.
@@ -288,7 +287,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn add_task(&mut self, pid: Pid) -> Result<()> {
-        self.open_file_write(TASKS_FILE_NAME, true)
+        self.open_file_write(TASKS, true)
             .and_then(|f| add_tasks_procs(f, pid))
     }
 
@@ -341,8 +340,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn procs(&self) -> Result<Vec<Pid>> {
-        self.open_file_read(PROCS_FILE_NAME)
-            .and_then(read_tasks_procs)
+        self.open_file_read(PROCS).and_then(read_tasks_procs)
     }
 
     /// Attaches a process to this cgroup by writing a PID to `cgroup.procs` file.
@@ -365,7 +363,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn add_proc(&mut self, pid: Pid) -> Result<()> {
-        self.open_file_write(PROCS_FILE_NAME, true)
+        self.open_file_write(PROCS, true)
             .and_then(|f| add_tasks_procs(f, pid))
     }
 
@@ -713,24 +711,22 @@ mod tests {
             cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;
 
-        const FILE_NAME: &str = "notify_on_release";
-
         // read
         let mut buf = String::new();
         cgroup
-            .open_file_read(FILE_NAME)?
+            .open_file_read(NOTIFY_ON_RELEASE)?
             .read_to_string(&mut buf)
             .unwrap();
         assert_eq!(buf, "0\n");
 
         // write
-        let mut file = cgroup.open_file_write(FILE_NAME, false)?;
+        let mut file = cgroup.open_file_write(NOTIFY_ON_RELEASE, false)?;
         write!(file, "1").unwrap();
 
         // read
         buf.clear();
         cgroup
-            .open_file_read(FILE_NAME)?
+            .open_file_read(NOTIFY_ON_RELEASE)?
             .read_to_string(&mut buf)
             .unwrap();
         assert_eq!(buf, "1\n");

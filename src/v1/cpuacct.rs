@@ -45,14 +45,14 @@ impl_cgroup! {
     }
 }
 
-const STAT_FILE_NAME: &str = "cpuacct.stat";
-const USAGE_FILE_NAME: &str = "cpuacct.usage";
-const USAGE_ALL_FILE_NAME: &str = "cpuacct.usage_all";
-const USAGE_PERCPU_FILE_NAME: &str = "cpuacct.usage_percpu";
-const USAGE_PERCPU_SYS_FILE_NAME: &str = "cpuacct.usage_percpu_sys";
-const USAGE_PERCPU_USER_FILE_NAME: &str = "cpuacct.usage_percpu_user";
-const USAGE_SYS_FILE_NAME: &str = "cpuacct.usage_sys";
-const USAGE_USER_FILE_NAME: &str = "cpuacct.usage_user";
+const STAT: &str = "cpuacct.stat";
+const USAGE: &str = "cpuacct.usage";
+const USAGE_ALL: &str = "cpuacct.usage_all";
+const USAGE_PERCPU: &str = "cpuacct.usage_percpu";
+const USAGE_PERCPU_SYS: &str = "cpuacct.usage_percpu_sys";
+const USAGE_PERCPU_USER: &str = "cpuacct.usage_percpu_user";
+const USAGE_SYS: &str = "cpuacct.usage_sys";
+const USAGE_USER: &str = "cpuacct.usage_user";
 
 #[rustfmt::skip]
 macro_rules! gen_doc {
@@ -86,7 +86,7 @@ impl Subsystem {
 
             let (mut system, mut user) = (None, None);
 
-            let buf = BufReader::new(self.open_file_read(STAT_FILE_NAME)?);
+            let buf = BufReader::new(self.open_file_read(STAT)?);
             for line in buf.lines() {
                 let line = line.map_err(Error::io)?;
                 let mut entry = line.split_whitespace();
@@ -116,7 +116,7 @@ impl Subsystem {
         "The value is in nanoseconds.\n\n",
         gen_doc!(usage)),
         pub fn usage(&self) -> Result<u64> {
-            self.open_file_read(USAGE_FILE_NAME).and_then(parse)
+            self.open_file_read(USAGE).and_then(parse)
         }
     }
 
@@ -127,7 +127,7 @@ impl Subsystem {
         pub fn usage_all(&self) -> Result<Vec<Stat>> {
             use std::io::{BufRead, BufReader};
 
-            let mut buf = BufReader::new(self.open_file_read(USAGE_ALL_FILE_NAME)?);
+            let mut buf = BufReader::new(self.open_file_read(USAGE_ALL)?);
 
             let mut header = String::new();
             buf.read_line(&mut header).map_err(Error::parse)?;
@@ -167,7 +167,7 @@ impl Subsystem {
         "file. The values are in nanoseconds.\n\n",
         gen_doc!(usage_percpu)),
         pub fn usage_percpu(&self) -> Result<Vec<u64>> {
-            self.open_file_read(USAGE_PERCPU_FILE_NAME)
+            self.open_file_read(USAGE_PERCPU)
                 .and_then(parse_vec)
         }
     }
@@ -177,7 +177,7 @@ impl Subsystem {
         "from `cpuacct.usage_percpu_sys` file. The values are in nanoseconds.\n\n",
         gen_doc!(usage_percpu_sys)),
         pub fn usage_percpu_sys(&self) -> Result<Vec<u64>> {
-            self.open_file_read(USAGE_PERCPU_SYS_FILE_NAME)
+            self.open_file_read(USAGE_PERCPU_SYS)
                 .and_then(parse_vec)
         }
     }
@@ -187,7 +187,7 @@ impl Subsystem {
         "`cpuacct.usage_percpu_sys` file. The values are in nanoseconds.\n\n",
         gen_doc!(usage_percpu_user)),
         pub fn usage_percpu_user(&self) -> Result<Vec<u64>> {
-            self.open_file_read(USAGE_PERCPU_USER_FILE_NAME)
+            self.open_file_read(USAGE_PERCPU_USER)
                 .and_then(parse_vec)
         }
     }
@@ -197,7 +197,7 @@ impl Subsystem {
         "`cpuacct.usage_sys` file. The values are in nanoseconds.\n\n",
         gen_doc!(usage_sys)),
         pub fn usage_sys(&self) -> Result<u64> {
-            self.open_file_read(USAGE_SYS_FILE_NAME).and_then(parse)
+            self.open_file_read(USAGE_SYS).and_then(parse)
         }
     }
 
@@ -206,7 +206,7 @@ impl Subsystem {
         "`cpuacct.usage_user` file. The values are in nanoseconds.\n\n",
         gen_doc!(usage_user)),
         pub fn usage_user(&self) -> Result<u64> {
-            self.open_file_read(USAGE_USER_FILE_NAME)
+            self.open_file_read(USAGE_USER)
                 .and_then(parse)
         }
     }
@@ -231,7 +231,7 @@ impl Subsystem {
     /// # }
     /// ```
     pub fn reset(&mut self) -> Result<()> {
-        self.write_file(USAGE_FILE_NAME, 0)
+        self.write_file(USAGE, 0)
     }
 }
 
@@ -246,14 +246,14 @@ mod tests {
         cgroup.create()?;
 
         [
-            STAT_FILE_NAME,
-            USAGE_FILE_NAME,
-            USAGE_ALL_FILE_NAME,
-            USAGE_PERCPU_FILE_NAME,
-            USAGE_PERCPU_SYS_FILE_NAME,
-            USAGE_PERCPU_USER_FILE_NAME,
-            USAGE_SYS_FILE_NAME,
-            USAGE_USER_FILE_NAME,
+            STAT,
+            USAGE,
+            USAGE_ALL,
+            USAGE_PERCPU,
+            USAGE_PERCPU_SYS,
+            USAGE_PERCPU_USER,
+            USAGE_SYS,
+            USAGE_USER,
         ]
         .iter()
         .all(|f| cgroup.file_exists(f));

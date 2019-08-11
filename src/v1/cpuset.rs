@@ -261,30 +261,30 @@ cgroup.set_", stringify!($resource), "(", stringify!($val), ")?;
     ) };
 }
 
-const CPUS_FILE_NAME: &str = "cpuset.cpus";
-const MEMS_FILE_NAME: &str = "cpuset.mems";
+const CPUS: &str = "cpuset.cpus";
+const MEMS: &str = "cpuset.mems";
 
-const MEMORY_MIGRATE_FILE_NAME: &str = "cpuset.memory_migrate";
+const MEMORY_MIGRATE: &str = "cpuset.memory_migrate";
 
-const CPU_EXCLUSIVE_FILE_NAME: &str = "cpuset.cpu_exclusive";
-const MEM_EXCLUSIVE_FILE_NAME: &str = "cpuset.mem_exclusive";
+const CPU_EXCLUSIVE: &str = "cpuset.cpu_exclusive";
+const MEM_EXCLUSIVE: &str = "cpuset.mem_exclusive";
 
-const MEM_HARDWALL_FILE_NAME: &str = "cpuset.mem_hardwall";
+const MEM_HARDWALL: &str = "cpuset.mem_hardwall";
 
-const MEMORY_PRESSURE_FILE_NAME: &str = "cpuset.memory_pressure";
-const MEMORY_PRESSURE_ENABLED_FILE_NAME: &str = "cpuset.memory_pressure_enabled";
+const MEMORY_PRESSURE: &str = "cpuset.memory_pressure";
+const MEMORY_PRESSURE_ENABLED: &str = "cpuset.memory_pressure_enabled";
 
-const MEMORY_SPREAD_PAGE_FILE_NAME: &str = "cpuset.memory_spread_page";
-const MEMORY_SPREAD_SLAB_FILE_NAME: &str = "cpuset.memory_spread_slab";
+const MEMORY_SPREAD_PAGE: &str = "cpuset.memory_spread_page";
+const MEMORY_SPREAD_SLAB: &str = "cpuset.memory_spread_slab";
 
-const SCHED_LOAD_BALANCE_FILE_NAME: &str = "cpuset.sched_load_balance";
-const SCHED_RELAX_DOMAIN_LEVEL_FILE_NAME: &str = "cpuset.sched_relax_domain_level";
+const SCHED_LOAD_BALANCE: &str = "cpuset.sched_load_balance";
+const SCHED_RELAX_DOMAIN_LEVEL: &str = "cpuset.sched_relax_domain_level";
 
 impl Subsystem {
     with_doc! {
         gen_doc!("the set of CPUs on which tasks in this cgroup can run", cpus),
         pub fn cpus(&self) -> Result<IdSet> {
-            self.open_file_read(CPUS_FILE_NAME).and_then(parse)
+            self.open_file_read(CPUS).and_then(parse)
         }
     }
 
@@ -295,14 +295,14 @@ impl Subsystem {
             &"0,1".parse::<cpuset::IdSet>()?
         ),
         pub fn set_cpus(&mut self, cpus: &IdSet) -> Result<()> {
-            self.write_file(CPUS_FILE_NAME, cpus)
+            self.write_file(CPUS, cpus)
         }
     }
 
     with_doc! {
         gen_doc!("the set of memory nodes which tasks in this cgroup can use", mems),
         pub fn mems(&self) -> Result<IdSet> {
-            self.open_file_read(MEMS_FILE_NAME).and_then(parse)
+            self.open_file_read(MEMS).and_then(parse)
         }
     }
 
@@ -313,7 +313,7 @@ impl Subsystem {
             &"0,1".parse::<cpuset::IdSet>()?
         ),
         pub fn set_mems(&mut self, mems: &IdSet) -> Result<()> {
-            self.write_file(MEMS_FILE_NAME, mems)
+            self.write_file(MEMS, mems)
         }
     }
 
@@ -323,7 +323,7 @@ impl Subsystem {
             memory_migrate
         ),
         pub fn memory_migrate(&self) -> Result<bool> {
-            self.open_file_read(MEMORY_MIGRATE_FILE_NAME)
+            self.open_file_read(MEMORY_MIGRATE)
                 .and_then(parse_01_bool)
         }
     }
@@ -335,14 +335,14 @@ impl Subsystem {
             true
         ),
         pub fn set_memory_migrate(&mut self, enable: bool) -> Result<()> {
-            self.write_file(MEMORY_MIGRATE_FILE_NAME, enable as i32)
+            self.write_file(MEMORY_MIGRATE, enable as i32)
         }
     }
 
     with_doc! {
         gen_doc!("whether the selected CPUs should be exclusive to this cgroup", cpu_exclusive),
         pub fn cpu_exclusive(&self) -> Result<bool> {
-            self.open_file_read(CPU_EXCLUSIVE_FILE_NAME)
+            self.open_file_read(CPU_EXCLUSIVE)
                 .and_then(parse_01_bool)
         }
     }
@@ -354,7 +354,7 @@ impl Subsystem {
             true
         ),
         pub fn set_cpu_exclusive(&mut self, exclusive: bool) -> Result<()> {
-            self.write_file(CPU_EXCLUSIVE_FILE_NAME, exclusive as i32)
+            self.write_file(CPU_EXCLUSIVE, exclusive as i32)
         }
     }
 
@@ -364,7 +364,7 @@ impl Subsystem {
             mem_exclusive
         ),
         pub fn mem_exclusive(&self) -> Result<bool> {
-            self.open_file_read(MEM_EXCLUSIVE_FILE_NAME)
+            self.open_file_read(MEM_EXCLUSIVE)
                 .and_then(parse_01_bool)
         }
     }
@@ -376,14 +376,14 @@ impl Subsystem {
             true
         ),
         pub fn set_mem_exclusive(&mut self, exclusive: bool) -> Result<()> {
-            self.write_file(MEM_EXCLUSIVE_FILE_NAME, exclusive as i32)
+            self.write_file(MEM_EXCLUSIVE, exclusive as i32)
         }
     }
 
     with_doc! {
         gen_doc!("whether this cgroup is \"hardwalled\"", mem_hardwall),
         pub fn mem_hardwall(&self) -> Result<bool> {
-            self.open_file_read(MEM_HARDWALL_FILE_NAME)
+            self.open_file_read(MEM_HARDWALL)
                 .and_then(parse_01_bool)
         }
     }
@@ -391,7 +391,7 @@ impl Subsystem {
     with_doc! {
         gen_doc!("whether this cgroup is \"hardwalled\"", mem_hardwall, true),
         pub fn set_mem_hardwall(&mut self, enable: bool) -> Result<()> {
-            self.write_file(MEM_HARDWALL_FILE_NAME, enable as i32)
+            self.write_file(MEM_HARDWALL, enable as i32)
         }
     }
 
@@ -403,7 +403,7 @@ impl Subsystem {
             gen_doc!(eg; memory_pressure),
         ),
         pub fn memory_pressure(&self) -> Result<u64> {
-            self.open_file_read(MEMORY_PRESSURE_FILE_NAME)
+            self.open_file_read(MEMORY_PRESSURE)
                 .and_then(parse)
         }
     }
@@ -416,7 +416,7 @@ impl Subsystem {
                 memory_pressure_enabled
             ), "\n\n",
             "# Errors\n\n",
-            "This field is present only at the root cgroup. If you call this method on a non-root ",
+            "This field is present only in the root cgroup. If you call this method on a non-root ",
             "cgroup, an error is returned with kind `ErrorKind::InvalidOperation`.\n\n",
             "On the root cgroup, returns an error if failed to read and parse ",
             "`cpuset.memory_pressure_enabled` file.\n\n",
@@ -440,7 +440,7 @@ impl Subsystem {
                 memory_pressure_enabled
             ), "\n\n",
             "# Errors\n\n",
-            "This field is present only at the root cgroup. If you call this method on a non-root ",
+            "This field is present only in the root cgroup. If you call this method on a non-root ",
             "cgroup, an error is returned with kind `ErrorKind::InvalidOperation`.\n\n",
             "On the root cgroup, returns an error if failed to write to ",
             "`cpuset.memory_pressure_enabled` file.\n\n",
@@ -461,7 +461,7 @@ impl Subsystem {
             memory_spread_page
         ),
         pub fn memory_spread_page(&self) -> Result<bool> {
-            self.open_file_read(MEMORY_SPREAD_PAGE_FILE_NAME)
+            self.open_file_read(MEMORY_SPREAD_PAGE)
                 .and_then(parse_01_bool)
         }
     }
@@ -473,7 +473,7 @@ impl Subsystem {
             true
         ),
         pub fn set_memory_spread_page(&mut self, enable: bool) -> Result<()> {
-            self.write_file(MEMORY_SPREAD_PAGE_FILE_NAME, enable as i32)
+            self.write_file(MEMORY_SPREAD_PAGE, enable as i32)
         }
     }
 
@@ -483,7 +483,7 @@ impl Subsystem {
             memory_spread_slab
         ),
         pub fn memory_spread_slab(&self) -> Result<bool> {
-            self.open_file_read(MEMORY_SPREAD_SLAB_FILE_NAME)
+            self.open_file_read(MEMORY_SPREAD_SLAB)
                 .and_then(parse_01_bool)
         }
     }
@@ -495,7 +495,7 @@ impl Subsystem {
             true
         ),
         pub fn set_memory_spread_slab(&mut self, enable: bool) -> Result<()> {
-            self.write_file(MEMORY_SPREAD_SLAB_FILE_NAME, enable as i32)
+            self.write_file(MEMORY_SPREAD_SLAB, enable as i32)
         }
     }
 
@@ -505,7 +505,7 @@ impl Subsystem {
             sched_load_balance
         ),
         pub fn sched_load_balance(&self) -> Result<bool> {
-            self.open_file_read(SCHED_LOAD_BALANCE_FILE_NAME)
+            self.open_file_read(SCHED_LOAD_BALANCE)
                 .and_then(parse_01_bool)
         }
     }
@@ -517,7 +517,7 @@ impl Subsystem {
             true
         ),
         pub fn set_sched_load_balance(&mut self, enable: bool) -> Result<()> {
-            self.write_file(SCHED_LOAD_BALANCE_FILE_NAME, enable as i32)
+            self.write_file(SCHED_LOAD_BALANCE, enable as i32)
         }
     }
 
@@ -527,7 +527,7 @@ impl Subsystem {
             sched_relax_domain_level
         ),
         pub fn sched_relax_domain_level(&self) -> Result<i32> {
-            self.open_file_read(SCHED_RELAX_DOMAIN_LEVEL_FILE_NAME)
+            self.open_file_read(SCHED_RELAX_DOMAIN_LEVEL)
                 .and_then(parse)
         }
     }
@@ -539,7 +539,7 @@ impl Subsystem {
             -1
         ),
         pub fn set_sched_relax_domain_level(&mut self, level: i32) -> Result<()> {
-            self.write_file(SCHED_RELAX_DOMAIN_LEVEL_FILE_NAME, level)
+            self.write_file(SCHED_RELAX_DOMAIN_LEVEL, level)
         }
     }
 }
@@ -728,29 +728,29 @@ mod tests {
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
         let root = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::new()));
-        assert!(root.file_exists(MEMORY_PRESSURE_ENABLED_FILE_NAME));
+        assert!(root.file_exists(MEMORY_PRESSURE_ENABLED));
 
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, gen_cgroup_name!()));
         cgroup.create()?;
 
         [
-            CPUS_FILE_NAME,
-            MEMS_FILE_NAME,
-            MEMORY_MIGRATE_FILE_NAME,
-            CPU_EXCLUSIVE_FILE_NAME,
-            MEM_EXCLUSIVE_FILE_NAME,
-            MEM_HARDWALL_FILE_NAME,
-            MEMORY_PRESSURE_FILE_NAME,
-            // MEMORY_PRESSURE_ENABLED_FILE_NAME,
-            MEMORY_SPREAD_PAGE_FILE_NAME,
-            MEMORY_SPREAD_SLAB_FILE_NAME,
-            SCHED_LOAD_BALANCE_FILE_NAME,
-            SCHED_RELAX_DOMAIN_LEVEL_FILE_NAME,
+            CPUS,
+            MEMS,
+            MEMORY_MIGRATE,
+            CPU_EXCLUSIVE,
+            MEM_EXCLUSIVE,
+            MEM_HARDWALL,
+            MEMORY_PRESSURE,
+            // MEMORY_PRESSURE_ENABLED,
+            MEMORY_SPREAD_PAGE,
+            MEMORY_SPREAD_SLAB,
+            SCHED_LOAD_BALANCE,
+            SCHED_RELAX_DOMAIN_LEVEL,
         ]
         .iter()
         .all(|n| cgroup.file_exists(n));
 
-        assert!(!cgroup.file_exists(MEMORY_PRESSURE_ENABLED_FILE_NAME));
+        assert!(!cgroup.file_exists(MEMORY_PRESSURE_ENABLED));
         assert!(!cgroup.file_exists("does_not_exist"));
 
         cgroup.delete()
