@@ -2,7 +2,7 @@
 //!
 //! By using [`Builder`], you can configure a (set of) cgroup(s) in the builder pattern. This
 //! builder creates directories for the cgroups, but only for the configured subsystems. e.g. If
-//! you call only [`cpu()`], only one cgroup directory is created for the CPU subsystem.
+//! you call only [`cpu`], only one cgroup directory is created for the CPU subsystem.
 //!
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
@@ -34,7 +34,7 @@
 //!         // perf_event subsystem has no parameter, so this method does not return a subsystem
 //!         // builder, just enable the monitoring.
 //!     // Actually build cgroups with the configuration.
-//!     // Only create a directory for the CPU, cpuset, and pids subsystem.
+//!     // Only create a directory for the CPU, cpuset, and pids subsystems.
 //!     .build()?;
 //!
 //! let pid = std::process::id().into();
@@ -95,7 +95,7 @@
 //! ```
 //!
 //! [`Builder`]: struct.Builder.html
-//! [`cpu()`]: struct.Builder.html#method.cpu
+//! [`cpu`]: struct.Builder.html#method.cpu
 
 // NOTE: Keep the example above in sync with README.md and lib.rs
 
@@ -173,7 +173,7 @@ macro_rules! gen_setter {
         concat!(
 "Sets ", $desc, ".
 
-See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($resource), "()`](../", stringify!($subsystem), "/struct.Subsystem.html#method.set_", stringify!($resource), ")
+See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($resource), "`](../", stringify!($subsystem), "/struct.Subsystem.html#method.set_", stringify!($resource), ")
 for more information."
 ),
         pub fn $resource(mut self, $resource: $ty) -> Self {
@@ -185,7 +185,7 @@ for more information."
 
 /// CPU subsystem builder.
 ///
-/// This struct is created by [`Builder::cpu()`](struct.Builder.html#method.cpu) method.
+/// This struct is created by [`Builder::cpu`](struct.Builder.html#method.cpu) method.
 #[derive(Debug)]
 pub struct CpuBuilder {
     builder: Builder,
@@ -216,7 +216,7 @@ impl CpuBuilder {
 
 /// Cpuset subsystem builder.
 ///
-/// This struct is created by [`Builder::cpuset()`](struct.Builder.html#method.cpuset) method.
+/// This struct is created by [`Builder::cpuset`](struct.Builder.html#method.cpuset) method.
 #[derive(Debug)]
 pub struct CpusetBuilder {
     builder: Builder,
@@ -266,7 +266,9 @@ impl CpusetBuilder {
     /// Sets whether the kernel computes the memory pressure of this cgroup.
     ///
     /// This field is valid only for the root cgroup. Building a non-root cgroup with memory
-    /// pressure computation enabled will raises an error with kind `ErrorKind::InvalidOperation`.
+    /// pressure computation enabled will raises an error with kind [`ErrorKind::InvalidOperation`].
+    ///
+    /// [`ErrorKind::InvalidOperation`]: ../../enum.ErrorKind.html#variant.InvalidOperation
     pub fn memory_pressure_enabled(mut self, enabled: bool) -> Self {
         self.builder.resources.cpuset.memory_pressure_enabled = Some(enabled);
         self
@@ -308,7 +310,7 @@ impl CpusetBuilder {
 
 /// Pids subsystem builder.
 ///
-/// This struct is created by [`Builder::pids()`](struct.Builder.html#method.pids) method.
+/// This struct is created by [`Builder::pids`](struct.Builder.html#method.pids) method.
 #[derive(Debug)]
 pub struct PidsBuilder {
     builder: Builder,

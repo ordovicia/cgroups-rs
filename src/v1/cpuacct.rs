@@ -11,14 +11,12 @@
 //! use cgroups::{Pid, v1::{cpuacct, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut cpuacct_cgroup = cpuacct::Subsystem::new(
-//!     CgroupPath::new(SubsystemKind::Cpuacct, PathBuf::from("cpu_accouting")));
+//!     CgroupPath::new(SubsystemKind::Cpuacct, PathBuf::from("students/charlie")));
 //! cpuacct_cgroup.create()?;
 //!
 //! // Add a task to this cgroup to monitor CPU usage.
 //! let pid = Pid::from(std::process::id());
 //! cpuacct_cgroup.add_task(pid)?;
-//!
-//! // Do something ...
 //!
 //! // Get the statistics on CPU usage.
 //! let stat_hz = cpuacct_cgroup.stat()?;

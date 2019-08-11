@@ -29,7 +29,7 @@ const RELEASE_AGENT: &str = "release_agent";
 /// let pid = Pid::from(std::process::id());
 ///
 /// // Define and create a new cgroup controlled by the CPU subsystem.
-/// let name = PathBuf::from("my_cgroup");
+/// let name = PathBuf::from("students/charlie");
 /// let mut cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name));
 /// cgroup.create()?;
 ///
@@ -62,7 +62,7 @@ const RELEASE_AGENT: &str = "release_agent";
 pub trait Cgroup {
     /// Defines a new cgroup with a path.
     ///
-    /// Note that this method does not create a new cgroup. `Cgroup::create()` creates the new
+    /// Note that this method does not create a new cgroup. `create` method creates the new
     /// directory for the defined cgroup.
     ///
     /// # Examples
@@ -86,6 +86,7 @@ pub trait Cgroup {
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// assert_eq!(cgroup.subsystem_kind(), SubsystemKind::Cpu);
     /// ```
     fn subsystem_kind(&self) -> SubsystemKind;
@@ -104,6 +105,7 @@ pub trait Cgroup {
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// assert_eq!(cgroup.path(), PathBuf::from("/sys/fs/cgroup/cpu/students/charlie"));
     /// ```
     fn path(&self) -> PathBuf;
@@ -135,6 +137,7 @@ pub trait Cgroup {
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// let root = cgroup.root_cgroup();
     /// assert_eq!(root.path(), PathBuf::from("/sys/fs/cgroup/cpu"));
     /// ```
@@ -164,6 +167,7 @@ pub trait Cgroup {
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// cgroup.create()?;
     /// # Ok(())
     /// # }
@@ -230,6 +234,7 @@ pub trait Cgroup {
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// cgroup.create()?;
     ///
     /// cgroup.delete()?;
@@ -256,6 +261,7 @@ pub trait Cgroup {
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// println!("{:?}", cgroup.tasks()?);
     /// # Ok(())
     /// # }
@@ -279,13 +285,13 @@ pub trait Cgroup {
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// cgroup.add_task(Pid::from(std::process::id()));
     /// # Ok(())
     /// # }
     /// ```
     fn add_task(&mut self, pid: Pid) -> Result<()> {
-        self.open_file_write(TASKS, true)
-            .and_then(|f| add_tasks_procs(f, pid))
+        fs::write(self.path().join(TASKS), format!("{}", pid.to_inner())).map_err(Error::io)
     }
 
     /// Removes a task from this cgroup. The task is represented by its thread ID.
@@ -303,11 +309,12 @@ pub trait Cgroup {
     /// use std::path::PathBuf;
     /// use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
     ///
-    /// let pid = Pid::from(std::process::id());
-    ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
+    /// let pid = Pid::from(std::process::id());
     /// cgroup.add_task(pid)?;
+    ///
     /// cgroup.remove_task(pid)?;
     /// # Ok(())
     /// # }
@@ -332,6 +339,7 @@ pub trait Cgroup {
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// println!("{:?}", cgroup.procs()?);
     /// # Ok(())
     /// # }
@@ -355,13 +363,13 @@ pub trait Cgroup {
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// cgroup.add_proc(Pid::from(std::process::id()));
     /// # Ok(())
     /// # }
     /// ```
     fn add_proc(&mut self, pid: Pid) -> Result<()> {
-        self.open_file_write(PROCS, true)
-            .and_then(|f| add_tasks_procs(f, pid))
+        fs::write(self.path().join(PROCS), format!("{}", pid.to_inner())).map_err(Error::io)
     }
 
     /// Removes a process from this cgroup, with all threads in the same thread group at once. The
@@ -380,11 +388,12 @@ pub trait Cgroup {
     /// use std::path::PathBuf;
     /// use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
     ///
-    /// let pid = Pid::from(std::process::id());
-    ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
+    /// let pid = Pid::from(std::process::id());
     /// cgroup.add_proc(pid)?;
+    ///
     /// cgroup.remove_proc(pid)?;
     /// # Ok(())
     /// # }
@@ -409,6 +418,7 @@ pub trait Cgroup {
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// let notify_on_release = cgroup.notify_on_release()?;
     /// # Ok(())
     /// # }
@@ -434,6 +444,7 @@ pub trait Cgroup {
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// cgroup.set_notify_on_release(true)?;
     /// # Ok(())
     /// # }
@@ -465,6 +476,7 @@ pub trait Cgroup {
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// cgroup.release_agent()?;
     /// # Ok(())
     /// # }
@@ -503,6 +515,7 @@ pub trait Cgroup {
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
     /// cgroup.set_release_agent(b"/usr/local/bin/foo.sh")?;
     /// # Ok(())
     /// # }
@@ -525,7 +538,8 @@ pub trait Cgroup {
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
-    /// let _ = cgroup.file_exists("cpu.stat");
+    ///
+    /// let cpu_stat_exists = cgroup.file_exists("cpu.stat");
     /// # Ok(())
     /// # }
     /// ```
@@ -550,7 +564,8 @@ pub trait Cgroup {
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
-    /// let cpu_stat = cgroup.open_file_read("cpu.stat")?;
+    ///
+    /// let cpu_stat_file = cgroup.open_file_read("cpu.stat")?;
     /// # Ok(())
     /// # }
     /// ```
@@ -581,7 +596,8 @@ pub trait Cgroup {
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
-    /// let cpu_shares = cgroup.open_file_write("cpu.shares", false)?;
+    ///
+    /// let cpu_shares_file = cgroup.open_file_write("cpu.shares", false)?;
     /// # Ok(())
     /// # }
     /// ```
@@ -610,6 +626,8 @@ impl CgroupPath {
     /// the standard directory name for the subsystem (e.g. `SubsystemKind::Cpu` => `cpu`), and 3)
     /// the cgroup name (e.g. `students/charlie`).
     ///
+    /// If the name is empty, the resulting path points to the root cgroup of the subsystem.
+    ///
     /// # Examples
     ///
     /// ```
@@ -626,6 +644,8 @@ impl CgroupPath {
     ///
     /// The resulting path is the concatenation of 1) the cgroup mount point `/sys/fs/cgroup`, 2)
     /// the given custom directory name, and 3) the cgroup name (e.g. `students/charlie`).
+    ///
+    /// If the name is empty, the resulting path points to the root cgroup of the subsystem.
     ///
     /// # Examples
     ///
@@ -716,11 +736,6 @@ fn parse_tasks_procs(file: File) -> Result<Vec<Pid>> {
     }
 
     Ok(ids)
-}
-
-fn add_tasks_procs(mut file: File, id: Pid) -> Result<()> {
-    use std::io::Write;
-    write!(file, "{}", id.to_inner()).map_err(Error::io)
 }
 
 #[cfg(test)]

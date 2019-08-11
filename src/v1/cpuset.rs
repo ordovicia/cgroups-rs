@@ -2,8 +2,46 @@
 //!
 //! For more information about Cpuset subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/cpusets.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cpusets.txt).
-
-// TODO: module-level doc
+//!
+//! # Examples
+//!
+//! ```no_run
+//! # fn main() -> cgroups::Result<()> {
+//! use std::path::PathBuf;
+//! use cgroups::{Pid, v1::{self, cpuset, Cgroup, CgroupPath, SubsystemKind}};
+//!
+//! let mut cpuset_cgroup = cpuset::Subsystem::new(
+//!     CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from("students/charlie")));
+//! cpuset_cgroup.create()?;
+//!
+//! // Define a resource limit about which CPU and memory nodes a cgroup can use.
+//! let id_set = {
+//!     let mut id_set = cpuset::IdSet::new();
+//!     id_set.add(0);
+//!     id_set
+//! };
+//!
+//! let cpuset_resources = v1::Resources {
+//!     cpuset: cpuset::Resources {
+//!         cpus: Some(id_set.clone()),
+//!         mems: Some(id_set),
+//!         memory_migrate: Some(true),
+//!         ..Default::default()
+//!     },
+//!     ..Default::default()
+//! };
+//!
+//! // Apply the resource limit.
+//! cpuset_cgroup.apply(&cpuset_resources)?;
+//!
+//! let pid = Pid::from(std::process::id());
+//! cpuset_cgroup.add_task(pid)?;
+//!
+//! cpuset_cgroup.remove_task(pid)?;
+//! cpuset_cgroup.delete()?;
+//! # Ok(())
+//! # }
+//! ```
 
 use std::{collections::HashSet, fmt, iter::FromIterator, path::PathBuf};
 
@@ -82,8 +120,8 @@ pub struct Resources {
 ///
 /// ### Parse a cpuset IDs string (e.g. "0,1,3-5,7")
 ///
-/// `IdSet` implements [`FromStr`], so you can [`parse()`] a string into a `IdSet`. If failed,
-/// `parse()` returns an error with kind [`ErrorKind::Parse`].
+/// `IdSet` implements [`FromStr`], so you can [`parse`] a string into a `IdSet`. If failed,
+/// `parse` returns an error with kind [`ErrorKind::Parse`].
 ///
 /// ```
 /// use cgroups::v1::cpuset::IdSet;
@@ -97,7 +135,7 @@ pub struct Resources {
 ///
 /// ### Collect an iterator
 ///
-/// `IdSet` implements [`FromIterator`], so you can [`collect()`] an iterator over `usize` into
+/// `IdSet` implements [`FromIterator`], so you can [`collect`] an iterator over `usize` into
 /// an `IdSet`.
 ///
 /// ```
@@ -110,7 +148,7 @@ pub struct Resources {
 /// );
 /// ```
 ///
-/// ### Use `new()` to create an empty set and then `add()` IDs one by one
+/// ### Use `new` to create an empty set and then `add` IDs one by one
 ///
 /// ```
 /// use cgroups::v1::cpuset::IdSet;
@@ -134,11 +172,11 @@ pub struct Resources {
 /// ```
 ///
 /// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
-/// [`parse()`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
+/// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
 /// [`ErrorKind::Parse`]: ../../enum.ErrorKind.html#variant.Parse
 ///
 /// [`FromIterator`]: https://doc.rust-lang.org/std/iter/trait.FromIterator.html
-/// [`collect()`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.collect
+/// [`collect`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.collect
 ///
 /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1,15 +1,18 @@
 #![cfg(target_os = "linux")]
 #![warn(
+    future_incompatible,
     missing_docs,
     missing_debug_implementations,
-    unused,
     nonstandard_style,
-    rust_2018_idioms
+    rust_2018_idioms,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused
 )]
 
 //! Native Rust crate for operating on cgroups.
 //!
-//! Currently this crate supports only cgroup v1 hierarchy, implementes in [`v1`](v1/index.html) module.
+//! Currently this crate supports only cgroup v1 hierarchy, implementes in [`v1`] module.
 //!
 //! ## Examples for v1 hierarchy
 //!
@@ -21,7 +24,7 @@
 //! use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
 //!
 //! // Define and create a new cgroup controlled by the CPU subsystem.
-//! let name = PathBuf::from("my_cgroup");
+//! let name = PathBuf::from("students/charlie");
 //! let mut cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name));
 //! cgroup.create()?;
 //!
@@ -55,7 +58,7 @@
 //!
 //! ### Create a set of cgroups controlled by multiple subsystems
 //!
-//! `v1::Builder` provides a way to configure cgroups in the builder pattern.
+//! [`v1::Builder`] provides a way to configure cgroups in the builder pattern.
 //!
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
@@ -87,7 +90,7 @@
 //!         // perf_event subsystem has no parameter, so this method does not return a subsystem
 //!         // builder, just enable the monitoring.
 //!     // Actually build cgroups with the configuration.
-//!     // Only create a directory for the CPU subsystem.
+//!     // Only create a directory for the CPU, cpuset, and pids subsystems.
 //!     .build()?;
 //!
 //! // Attach the self process to the cgroups.
@@ -107,6 +110,9 @@
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! [`v1`]: v1/index.html
+//! [`v1::Builder`]: v1/struct.Builder.html
 
 #[macro_use]
 mod util;
@@ -118,7 +124,7 @@ pub use error::{Error, ErrorKind, Result};
 /// PID or thread ID for attaching a task in a cgroup.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Pid(u32); // Max PID is 2^15 on 32-bit systems, 2^22 on 64-bit systems
-                     // TODO: is this true for thread IDs?
+                     // TODO: Is this true for thread IDs?
 
 impl From<u32> for Pid {
     fn from(pid: u32) -> Self {
@@ -139,6 +145,7 @@ impl Pid {
     ///
     /// ```
     /// use cgroups::Pid;
+    ///
     /// let pid = Pid::from(42);
     /// assert_eq!(pid.to_inner(), 42);
     /// ```

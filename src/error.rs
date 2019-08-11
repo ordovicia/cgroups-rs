@@ -4,7 +4,7 @@ use std::{error::Error as StdError, fmt};
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Error type that can be returned from this crate, in the [`Result::Err`] variant. The lower-level
-/// source of this error can be obtained via `source()` method.
+/// source of this error can be obtained via `source` method.
 ///
 /// [`Result::Err`]: https://doc.rust-lang.org/std/result/enum.Result.html#variant.Err
 #[derive(Debug)]
@@ -32,7 +32,7 @@ pub enum ErrorKind {
     /// Note that this crate does not catch all errors caused by an invalid argument. In some cases,
     /// the system (kernel) raises an lower-level error, and this crate returns an `Error` with
     /// other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
-    /// `Error::source()` method.
+    /// `Error::source` method.
     InvalidArgument,
 
     /// You tried to do something invalid.
@@ -43,7 +43,7 @@ pub enum ErrorKind {
     /// Note that this crate does not catch all errors caused by an invalid operation. In some
     /// cases, the system (kernel) raises an lower-level error, and this crate returns an `Error`
     /// with other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
-    /// `Error::source()` method.
+    /// `Error::source` method.
     InvalidOperation,
 }
 

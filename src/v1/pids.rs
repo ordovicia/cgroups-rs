@@ -11,7 +11,7 @@
 //! use cgroups::{Pid, v1::{pids, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut pids_cgroup = pids::Subsystem::new(
-//!     CgroupPath::new(SubsystemKind::Pids, PathBuf::from("limit_process_number")));
+//!     CgroupPath::new(SubsystemKind::Pids, PathBuf::from("students/charlie")));
 //! pids_cgroup.create()?;
 //!
 //! // Limit the maximum number of processes this cgroup can have.
@@ -20,8 +20,6 @@
 //! // Add a task to this cgroup.
 //! let pid = Pid::from(std::process::id());
 //! pids_cgroup.add_task(pid)?;
-//!
-//! // Do something ...
 //!
 //! println!("cgroup now has {} processes", pids_cgroup.current()?);
 //! println!("cgroup has hit the limit {} times", pids_cgroup.events()?.1);
@@ -52,8 +50,8 @@ pub struct Subsystem {
 
 /// Limit on the number of processes a cgroup can have.
 ///
-/// `Max` implements [`FromStr`], so you can [`parse()`] a string into a `Max`. If failed,
-/// `parse()` returns an error with kind [`ErrorKind::Parse`].
+/// `Max` implements [`FromStr`], so you can [`parse`] a string into a `Max`. If failed,
+/// `parse` returns an error with kind [`ErrorKind::Parse`].
 ///
 /// ```
 /// use cgroups::v1::pids;
@@ -85,7 +83,7 @@ pub struct Subsystem {
 /// ```
 ///
 /// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
-/// [`parse()`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
+/// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
 /// [`ErrorKind::Parse`]: ../../enum.ErrorKind.html#variant.Parse
 ///
 /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html

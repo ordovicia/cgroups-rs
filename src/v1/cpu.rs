@@ -4,8 +4,42 @@
 //! [Documentation/scheduler/sched-design-CFS.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt)
 //! paragraph 7 ("GROUP SCHEDULER EXTENSIONS TO CFS"), and
 //! [Documentation/scheduler/sched-bwc.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt).
-
-// TODO: module-level doc
+//!
+//! # Examples
+//!
+//! ```no_run
+//! # fn main() -> cgroups::Result<()> {
+//! use std::path::PathBuf;
+//! use cgroups::{Pid, v1::{self, cpu, Cgroup, CgroupPath, SubsystemKind}};
+//!
+//! let mut cpu_cgroup = cpu::Subsystem::new(
+//!     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+//! cpu_cgroup.create()?;
+//!
+//! // Define a resource limit about how a cgroup can use CPU time.
+//! let cpu_resources = v1::Resources {
+//!     cpu: cpu::Resources {
+//!         shares: Some(1024),
+//!         cfs_quota_us: Some(500_000),
+//!         cfs_period_us: Some(1000_000),
+//!     },
+//!     ..v1::Resources::default()
+//! };
+//!
+//! // Apply the resource limit.
+//! cpu_cgroup.apply(&cpu_resources)?;
+//!
+//! let pid = Pid::from(std::process::id());
+//! cpu_cgroup.add_task(pid)?;
+//!
+//! // Get the throttling statistics of this cgroup.
+//! println!("{:?}", cpu_cgroup.stat()?);
+//!
+//! cpu_cgroup.remove_task(pid)?;
+//! cpu_cgroup.delete()?;
+//! # Ok(())
+//! # }
+//! ```
 
 use std::path::PathBuf;
 

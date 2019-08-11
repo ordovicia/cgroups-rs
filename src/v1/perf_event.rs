@@ -11,7 +11,7 @@
 //! use cgroups::{Pid, v1::{perf_event, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut perf_event_cgroup = perf_event::Subsystem::new(
-//!     CgroupPath::new(SubsystemKind::PerfEvent, PathBuf::from("perf_monitor")));
+//!     CgroupPath::new(SubsystemKind::PerfEvent, PathBuf::from("students/charlie")));
 //! perf_event_cgroup.create()?;
 //!
 //! // Add tasks to this cgroup.
@@ -27,8 +27,6 @@
 //! perf_event_cgroup.add_task(child_pid)?;
 //!
 //! // You can monitor the processes with `perf` in the cgroup unit.
-//!
-//! // Do something ...
 //!
 //! perf_event_cgroup.remove_task(child_pid)?;
 //! perf_event_cgroup.remove_task(pid)?;

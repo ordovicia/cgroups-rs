@@ -38,7 +38,7 @@ use crate::v1::{$($subsystem),*};
 /// let pid = Pid::from(std::process::id());
 ///
 /// // Define and create a new unified representation of a set of cgroup.
-/// let mut cgroups = UnifiedRepr::new(PathBuf::from("my_cgroups"));
+/// let mut cgroups = UnifiedRepr::new(PathBuf::from("test/test_0"));
 /// cgroups.create()?;
 ///
 /// // Attach the self process to the cgroup set.
@@ -145,7 +145,9 @@ impl UnifiedRepr {
 
     /// Creates new directories for each cgroup of the all supported subsystems.
     ///
-    /// See [`Cgroup::create()`](trait.Cgroup.html#method.create) for more information.
+    /// See [`Cgroup::create`] for more information.
+    ///
+    /// [`Cgroup::create`]: trait.Cgroup.html#method.create
     pub fn create(&mut self) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
@@ -171,7 +173,9 @@ impl UnifiedRepr {
 
     /// Deletes directories for each cgroup of the all supported subsystems.
     ///
-    /// See [`Cgroup::delete()`](trait.Cgroup.html#method.delete) for more information.
+    /// See [`Cgroup::delete`] for more information.
+    ///
+    /// [`Cgroup::delete`]: trait.Cgroup.html#method.delete
     pub fn delete(&mut self) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
@@ -183,7 +187,9 @@ impl UnifiedRepr {
 
     /// Gets a list of tasks attached to each cgroup of the all supported subsystems.
     ///
-    /// See [`Cgroup::tasks()`](trait.Cgroup.html#method.tasks) for more information.
+    /// See [`Cgroup::tasks`] for more information.
+    ///
+    /// [`Cgroup::tasks`]: trait.Cgroup.html#method.tasks
     pub fn tasks(&self) -> Result<HashMap<SubsystemKind, Vec<Pid>>> {
         let mut tasks = HashMap::new();
         $(
@@ -196,7 +202,9 @@ impl UnifiedRepr {
 
     /// Attaches a task to each cgroup of the all supported subsystems.
     ///
-    /// See [`Cgroup::add_task()`](trait.Cgroup.html#method.add_task) for more information.
+    /// See [`Cgroup::add_task`] for more information.
+    ///
+    /// [`Cgroup::add_task`]: trait.Cgroup.html#method.add_task
     pub fn add_task(&mut self, pid: Pid) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
@@ -208,7 +216,9 @@ impl UnifiedRepr {
 
     /// Removes a task from each cgroup of the all supported subsystems.
     ///
-    /// See [`Cgroup::remove_task()`](trait.Cgroup.html#method.remove_task) for more information.
+    /// See [`Cgroup::remove_task`] for more information.
+    ///
+    /// [`Cgroup::remove_task`]: trait.Cgroup.html#method.remove_task
     pub fn remove_task(&mut self, pid: Pid) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
@@ -220,7 +230,9 @@ impl UnifiedRepr {
 
     /// Gets a list of processes attached to each cgroup of the all supported subsystems.
     ///
-    /// See [`Cgroup::procs()`](trait.Cgroup.html#method.tasks) for more information.
+    /// See [`Cgroup::procs`] for more information.
+    ///
+    /// [`Cgroup::procs`]: trait.Cgroup.html#method.procs
     pub fn procs(&self) -> Result<HashMap<SubsystemKind, Vec<Pid>>> {
         let mut procs = HashMap::new();
         $(
@@ -233,7 +245,9 @@ impl UnifiedRepr {
 
     /// Attaches a process to each cgroup of the all supported subsystems.
     ///
-    /// See [`Cgroup::add_proc()`](trait.Cgroup.html#method.add_proc) for more information.
+    /// See [`Cgroup::add_proc`] for more information.
+    ///
+    /// [`Cgroup::add_proc`]: trait.Cgroup.html#method.add_proc
     pub fn add_proc(&mut self, pid: Pid) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
@@ -245,7 +259,9 @@ impl UnifiedRepr {
 
     /// Removes a process from each cgroup of the all supported subsystems.
     ///
-    /// See [`Cgroup::remove_proc()`](trait.Cgroup.html#method.remove_proc) for more information.
+    /// See [`Cgroup::remove_proc`] for more information.
+    ///
+    /// [`Cgroup::remove_proc`]: trait.Cgroup.html#method.remove_proc
     pub fn remove_proc(&mut self, pid: Pid) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {

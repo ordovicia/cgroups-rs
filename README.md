@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
 
 // Define and create a new cgroup controlled by the CPU subsystem.
-let name = PathBuf::from("my_cgroup");
+let name = PathBuf::from("students/charlie");
 let mut cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name));
 cgroup.create()?;
 
@@ -26,7 +26,7 @@ cgroup.add_task(pid)?;
 let resources = Resources::default();
 
 // Apply the resource limits.
-cgroup.apply(&resources, true)?;
+cgroup.apply(&resources)?;
 
 // Low-level file operations are also supported.
 let stat_file = cgroup.open_file_read("cpu.stat")?;
@@ -76,8 +76,8 @@ let mut cgroups =
         // perf_event subsystem has no parameter, so this method does not return a subsystem
         // builder, just enable the monitoring.
     // Actually build cgroups with the configuration.
-    // Only create a directory for the CPU subsystem.
-    .build(true)?;
+    // Only create a directory for the CPU, cpuset, and pids subsystems.
+    .build()?;
 
 // Attach the self process to the cgroups.
 let pid = std::process::id().into();

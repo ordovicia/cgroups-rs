@@ -11,7 +11,7 @@
 //! use cgroups::{Pid, v1::{freezer, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut freezer_cgroup = freezer::Subsystem::new(
-//!     CgroupPath::new(SubsystemKind::Freezer, PathBuf::from("freezer")));
+//!     CgroupPath::new(SubsystemKind::Freezer, PathBuf::from("students/charlie")));
 //! freezer_cgroup.create()?;
 //!
 //! // Add a task to this cgroup.
@@ -56,8 +56,8 @@ pub struct Subsystem {
 
 /// Freezer state of a cgroup.
 ///
-/// `State` implements [`FromStr`], so you can [`parse()`] a string into a `State`. If failed,
-/// `parse()` returns an error with kind [`ErrorKind::Parse`].
+/// `State` implements [`FromStr`], so you can [`parse`] a string into a `State`. If failed,
+/// `parse` returns an error with kind [`ErrorKind::Parse`].
 ///
 /// ```
 /// use cgroups::v1::freezer;
@@ -85,7 +85,7 @@ pub struct Subsystem {
 /// ```
 ///
 /// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
-/// [`parse()`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
+/// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
 /// [`ErrorKind::Parse`]: ../../enum.ErrorKind.html#variant.Parse
 ///
 /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
@@ -103,7 +103,7 @@ pub enum State {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// If `State::Frozen`, tasks in this cgroup will be frozen. If `State::Thawed`, they will be
-    /// thawed. Note that applying `State::Freezing` is invalid, and `apply()` will raise an error.
+    /// thawed. Note that applying `State::Freezing` is invalid, and `apply` will raise an error.
     state: Option<State>,
 }
 
