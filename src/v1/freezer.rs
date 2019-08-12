@@ -89,7 +89,7 @@ pub struct Subsystem {
 /// [`ErrorKind::Parse`]: ../../enum.ErrorKind.html#variant.Parse
 ///
 /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum State {
     /// Tasks in this cgroup are thawed, i.e. not frozen.
     Thawed,

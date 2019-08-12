@@ -14,7 +14,7 @@ pub struct Error {
 }
 
 /// Kinds of errors that can occur while operating on cgroups.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ErrorKind {
     /// Failed to do an I/O operation on a cgroup file system.
     Io,

@@ -89,7 +89,7 @@ pub struct Subsystem {
 /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 ///
 /// [`Default`]: https://doc.rust-lang.org/std/default/trait.Default.html
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Max {
     /// Not limit the number of processes this cgroup can have.
     Max,
