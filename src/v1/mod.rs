@@ -4,8 +4,8 @@
 //! [Documentation/cgroup-v1/cgroups.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt).
 //!
 //! Operations for each subsystem are implemented in each module. See [`cpu::Subsystem`] for
-//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [pids], [freezer], and
-//! [`perf_event`] subsystems.
+//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [pids], [hugetlb], [freezer],
+//! and [perf_event] subsystems.
 //!
 //! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
 //! this trait and subsystem-specific operations.
@@ -20,6 +20,7 @@
 //! [cpuset]: cpuset/index.html
 //! [cpuacct]: cpuacct/index.html
 //! [pids]: pids/index.html
+//! [hugetlb]: hugetlb/index.html
 //! [freezer]: freezer/index.html
 //! [perf_event]: perf_event/index.html
 //!
@@ -36,6 +37,7 @@ pub mod cpu;
 pub mod cpuacct;
 pub mod cpuset;
 pub mod freezer;
+pub mod hugetlb;
 pub mod perf_event;
 pub mod pids;
 mod unified_repr;
@@ -65,8 +67,10 @@ pub enum SubsystemKind {
     Cpuset,
     /// Cpuacct (CPU accounting) subsystem.
     Cpuacct,
-    /// Pids subsystem,
+    /// Pids subsystem.
     Pids,
+    /// Hugetlb subsystem.
+    HugeTlb,
     /// Freezer subsystem.
     Freezer,
     /// Perf_event subsystem.
@@ -88,6 +92,8 @@ pub struct Resources {
     pub cpuset: cpuset::Resources,
     /// How many processes this cgroup can have.
     pub pids: pids::Resources,
+    /// How many hugepage TLBs this cgroup can use.
+    pub hugetlb: hugetlb::Resources,
     /// Whether tasks in this cgruop is freezed.
     pub freezer: freezer::Resources,
 }
@@ -101,6 +107,7 @@ impl fmt::Display for SubsystemKind {
             Cpuset => write!(f, "cpuset"),
             Cpuacct => write!(f, "cpuacct"),
             Pids => write!(f, "pids"),
+            HugeTlb => write!(f, "hugetlb"),
             Freezer => write!(f, "freezer",),
             PerfEvent => write!(f, "perf_event",),
         }

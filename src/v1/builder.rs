@@ -102,7 +102,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    v1::{cpuset, pids, Resources, SubsystemKind, UnifiedRepr},
+    v1::{cpuset, hugetlb, pids, Resources, SubsystemKind, UnifiedRepr},
     Result,
 };
 
@@ -144,7 +144,8 @@ impl Builder {
     gen_subsystem_builder_call! {
         (cpu, Cpu, CpuBuilder, "CPU"),
         (cpuset, Cpuset, CpusetBuilder, "cpuset"),
-        (pids, Pids, PidsBuilder, "pids")
+        (pids, Pids, PidsBuilder, "pids"),
+        (hugetlb, HugeTlb, HugeTlbBuilder, "hugetlb")
     }
 
     // Calling `cpu()` twice will push duplicated `SubsystemKind::Cpu`, but it is not a problem for
@@ -325,6 +326,39 @@ impl PidsBuilder {
     );
 
     /// Finishes configurating this pids subsystem.
+    pub fn done(self) -> Builder {
+        self.builder
+    }
+}
+
+/// Hugetlb subsystem builder.
+///
+/// This struct is created by [`Builder::hugetlb`](struct.Builder.html#method.hugetlb) method.
+#[derive(Debug)]
+pub struct HugeTlbBuilder {
+    builder: Builder,
+}
+
+impl HugeTlbBuilder {
+    /// Sets a limit of 2 MB hugepage TLB usage.
+    ///
+    /// See [`hugetlb::Subsystem::set_limit`](../hugetlb/struct.Subsystem.html#method.set_limit) for
+    /// more information.
+    pub fn limit_2mb(mut self, limit: hugetlb::Limit) -> Self {
+        self.builder.resources.hugetlb.limit_2mb = Some(limit);
+        self
+    }
+
+    /// Sets a limit of 1 GB hugepage TLB usage.
+    ///
+    /// See [`hugetlb::Subsystem::set_limit`](../hugetlb/struct.Subsystem.html#method.set_limit) for
+    /// more information.
+    pub fn limit_1gb(mut self, limit: hugetlb::Limit) -> Self {
+        self.builder.resources.hugetlb.limit_1gb = Some(limit);
+        self
+    }
+
+    /// Finishes configurating this hugetlb subsystem.
     pub fn done(self) -> Builder {
         self.builder
     }

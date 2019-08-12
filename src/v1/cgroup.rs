@@ -776,6 +776,7 @@ mod tests {
             (cpuset, Cpuset),
             (cpuacct, Cpuacct),
             (pids, Pids),
+            (hugetlb, HugeTlb),
             (freezer, Freezer),
             (perf_event, PerfEvent)
         }
