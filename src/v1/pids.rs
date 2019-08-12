@@ -108,7 +108,7 @@ pub struct Resources {
 impl_cgroup! {
     Pids,
 
-    /// Sets a maximum number of processes this cgroup can have according to `resources.pids.max`.
+    /// Applies the `Some` fields in `resources.pids`.
     ///
     /// See [`Cgroup::apply`] method for general information.
     ///
@@ -137,6 +137,7 @@ use cgroups::v1::{pids, Cgroup, CgroupPath, SubsystemKind};
 
 let cgroup = pids::Subsystem::new(
     CgroupPath::new(SubsystemKind::Pids, PathBuf::from(\"students/charlie\")));
+
 let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
 # Ok(())
 # }
@@ -251,12 +252,15 @@ mod tests {
     fn test_subsystem_create_file_exists() -> Result<()> {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Pids, gen_cgroup_name!()));
         cgroup.create()?;
-
-        [MAX, CURRENT, EVENTS].iter().all(|n| cgroup.file_exists(n));
-
+        assert!([MAX, CURRENT, EVENTS].iter().all(|f| cgroup.file_exists(f)));
         assert!(!cgroup.file_exists("does_not_exist"));
 
-        cgroup.delete()
+        cgroup.delete()?;
+        assert!([MAX, CURRENT, EVENTS]
+            .iter()
+            .all(|f| !cgroup.file_exists(f)));
+
+        Ok(())
     }
 
     #[test]

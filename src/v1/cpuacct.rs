@@ -93,6 +93,7 @@ use cgroups::v1::{cpuacct, Cgroup, CgroupPath, SubsystemKind};
 
 let cgroup = cpuacct::Subsystem::new(
     CgroupPath::new(SubsystemKind::Cpuacct, PathBuf::from(\"students/charlie\")));
+
 let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
 # Ok(())
 # }
@@ -252,6 +253,7 @@ impl Subsystem {
     ///
     /// let mut cgroup = cpuacct::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpuacct, PathBuf::from("students/charlie")));
+    ///
     /// cgroup.reset()?;
     /// # Ok(())
     /// # }
@@ -270,8 +272,7 @@ mod tests {
         let mut cgroup =
             Subsystem::new(CgroupPath::new(SubsystemKind::Cpuacct, gen_cgroup_name!()));
         cgroup.create()?;
-
-        [
+        assert!([
             STAT,
             USAGE,
             USAGE_ALL,
@@ -282,11 +283,24 @@ mod tests {
             USAGE_USER,
         ]
         .iter()
-        .all(|f| cgroup.file_exists(f));
-
+        .all(|f| cgroup.file_exists(f)));
         assert!(!cgroup.file_exists("does_not_exist"));
 
-        cgroup.delete()
+        cgroup.delete()?;
+        assert!([
+            STAT,
+            USAGE,
+            USAGE_ALL,
+            USAGE_PERCPU,
+            USAGE_PERCPU_SYS,
+            USAGE_PERCPU_USER,
+            USAGE_SYS,
+            USAGE_USER,
+        ]
+        .iter()
+        .all(|f| !cgroup.file_exists(f)));
+
+        Ok(())
     }
 
     // TODO: test adding tasks

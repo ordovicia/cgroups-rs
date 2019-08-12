@@ -1,103 +1,8 @@
 //! Configurating cgroups using the builder pattern.
 //!
-//! By using [`Builder`], you can configure a (set of) cgroup(s) in the builder pattern. This
-//! builder creates directories for the cgroups, but only for the configured subsystems. e.g. If
-//! you call only [`cpu`], only one cgroup directory is created for the CPU subsystem.
-//!
-//! ```no_run
-//! # fn main() -> cgroups::Result<()> {
-//! use std::path::PathBuf;
-//! use cgroups::v1::{cpuset::IdSet, pids, Builder};
-//!
-//! let mut cgroups =
-//!     // Start building a (set of) cgroup(s).
-//!     Builder::new(PathBuf::from("students/charlie"))
-//!     // Start configurating the CPU resource limits.
-//!     .cpu()
-//!         .shares(1000)
-//!         .cfs_quota_us(500 * 1000)
-//!         .cfs_period_us(1000 * 1000)
-//!         // Finish configurating the CPU resource limits.
-//!         .done()
-//!     // Start configurating the cpuset resource limits.
-//!     .cpuset()
-//!         .cpus([0].iter().copied().collect::<IdSet>())
-//!         .mems([0].iter().copied().collect::<IdSet>())
-//!         .memory_migrate(true)
-//!         .done()
-//!     // Start configurating the pids resource limits.
-//!     .pids()
-//!         .max(pids::Max::Number(42))
-//!         .done()
-//!     // Enable monitoring this cgroup via `perf` tool.
-//!     .perf_event()
-//!         // perf_event subsystem has no parameter, so this method does not return a subsystem
-//!         // builder, just enable the monitoring.
-//!     // Actually build cgroups with the configuration.
-//!     // Only create a directory for the CPU, cpuset, and pids subsystems.
-//!     .build()?;
-//!
-//! let pid = std::process::id().into();
-//! cgroups.add_task(pid)?;
-//!
-//! // Do something ...
-//!
-//! // Remove self process from the cgroups.
-//! cgroups.remove_task(pid)?;
-//!
-//! // And delete the cgroups.
-//! cgroups.delete()?;
-//!
-//! // Note that cgroup handlers does not implement `Drop` and therefore when the
-//! // handler is dropped, the cgroup will stay around.
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! Note that calling the same method of the same subsystem builder twice overrides the previous
-//! configuration if set.
-//!
-//! ```no_run
-//! # fn main() -> cgroups::Result<()> {
-//! # use std::path::PathBuf;
-//! # use cgroups::v1::Builder;
-//! let mut cgroups = Builder::new(PathBuf::from("students/charlie"))
-//!     .cpu()
-//!         .shares(1000)
-//!         .shares(2000)   // Override.
-//!         .done()
-//!     .build()?;
-//!
-//! assert_eq!(cgroups.cpu().unwrap().shares()?, 2000);
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! But building the same subsystem twice does not reset the subsystem configuration.
-//!
-//! ```no_run
-//! # fn main() -> cgroups::Result<()> {
-//! # use std::path::PathBuf;
-//! # use cgroups::v1::Builder;
-//! let mut cgroups = Builder::new(PathBuf::from("students/charlie"))
-//!     .cpu()
-//!         .shares(1000)
-//!         .done()
-//!     .cpu()  // Not reset shares.
-//!         .cfs_quota_us(500 * 1000)
-//!         .cfs_period_us(1000 * 1000)
-//!         .done()
-//!     .build()?;
-//!
-//! assert_eq!(cgroups.cpu().unwrap().shares()?, 1000);
-//! # Ok(())
-//! # }
-//! ```
+//! [`Builder`] struct is the entry point of the pattern. See its documentation.
 //!
 //! [`Builder`]: struct.Builder.html
-//! [`cpu`]: struct.Builder.html#method.cpu
-
-// NOTE: Keep the example above in sync with README.md and lib.rs
 
 use std::path::PathBuf;
 
@@ -106,9 +11,105 @@ use crate::{
     Result,
 };
 
+// NOTE: Keep the example below in sync with README.md and lib.rs
+
 /// Cgroup builder.
 ///
-/// See also the [module-level documentation](index.html).
+/// By using `Builder`, you can configure a (set of) cgroup(s) in the builder pattern. This
+/// builder creates directories for the cgroups, but only for the configured subsystems. e.g. If
+/// you call only [`cpu`], only one cgroup directory is created for the CPU subsystem.
+///
+/// ```no_run
+/// # fn main() -> cgroups::Result<()> {
+/// use std::path::PathBuf;
+/// use cgroups::v1::{cpuset::IdSet, pids, Builder};
+///
+/// let mut cgroups =
+///     // Start building a (set of) cgroup(s).
+///     Builder::new(PathBuf::from("students/charlie"))
+///     // Start configurating the CPU resource limits.
+///     .cpu()
+///         .shares(1000)
+///         .cfs_quota_us(500 * 1000)
+///         .cfs_period_us(1000 * 1000)
+///         // Finish configurating the CPU resource limits.
+///         .done()
+///     // Start configurating the cpuset resource limits.
+///     .cpuset()
+///         .cpus([0].iter().copied().collect::<IdSet>())
+///         .mems([0].iter().copied().collect::<IdSet>())
+///         .memory_migrate(true)
+///         .done()
+///     // Start configurating the pids resource limits.
+///     .pids()
+///         .max(pids::Max::Number(42))
+///         .done()
+///     // Enable monitoring this cgroup via `perf` tool.
+///     .perf_event()
+///         // perf_event subsystem has no parameter, so this method does not return a subsystem
+///         // builder, just enable the monitoring.
+///     // Actually build cgroups with the configuration.
+///     // Only create a directory for the CPU, cpuset, and pids subsystems.
+///     .build()?;
+///
+/// let pid = std::process::id().into();
+/// cgroups.add_task(pid)?;
+///
+/// // Do something ...
+///
+/// // Remove self process from the cgroups.
+/// cgroups.remove_task(pid)?;
+///
+/// // And delete the cgroups.
+/// cgroups.delete()?;
+///
+/// // Note that cgroup handlers does not implement `Drop` and therefore when the
+/// // handler is dropped, the cgroup will stay around.
+/// # Ok(())
+/// # }
+/// ```
+///
+/// Note that calling the same method of the same subsystem builder twice overrides the previous
+/// configuration if set.
+///
+/// ```no_run
+/// # fn main() -> cgroups::Result<()> {
+/// # use std::path::PathBuf;
+/// # use cgroups::v1::Builder;
+/// let mut cgroups = Builder::new(PathBuf::from("students/charlie"))
+///     .cpu()
+///         .shares(1000)
+///         .shares(2000)   // Override.
+///         .done()
+///     .build()?;
+///
+/// assert_eq!(cgroups.cpu().unwrap().shares()?, 2000);
+/// # Ok(())
+/// # }
+/// ```
+///
+/// But building the same subsystem twice does not reset the subsystem configuration.
+///
+/// ```no_run
+/// # fn main() -> cgroups::Result<()> {
+/// # use std::path::PathBuf;
+/// # use cgroups::v1::Builder;
+/// let mut cgroups = Builder::new(PathBuf::from("students/charlie"))
+///     .cpu()
+///         .shares(1000)
+///         .done()
+///     .cpu()  // Not reset shares.
+///         .cfs_quota_us(500 * 1000)
+///         .cfs_period_us(1000 * 1000)
+///         .done()
+///     .build()?;
+///
+/// assert_eq!(cgroups.cpu().unwrap().shares()?, 1000);
+/// # Ok(())
+/// # }
+/// ```
+///
+/// [`cpu`]: struct.Builder.html#method.cpu
 #[derive(Debug)]
 pub struct Builder {
     name: PathBuf,

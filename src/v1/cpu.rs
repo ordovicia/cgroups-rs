@@ -26,7 +26,7 @@
 //!     ..v1::Resources::default()
 //! };
 //!
-//! // Apply the resource limit.
+//! // Apply the resource limit to this cgroup.
 //! cpu_cgroup.apply(&cpu_resources)?;
 //!
 //! let pid = Pid::from(std::process::id());
@@ -62,7 +62,7 @@ pub struct Subsystem {
 /// Throttling statistics of a cgroup.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stat {
-    /// Number of periods (as specifiec in `Resources.cfs_period_us`) that have elapsed.
+    /// Number of periods (as specified in `Resources.cfs_period_us`) that have elapsed.
     pub nr_periods: u64,
     /// Number of times this cgroup has been throttled.
     pub nr_throttled: u64,
@@ -86,7 +86,7 @@ pub struct Resources {
 impl_cgroup! {
     Cpu,
 
-    /// Apply the `Some` fields in `resources.cpu`.
+    /// Applies the `Some` fields in `resources.cpu`.
     ///
     /// See [`Cgroup::apply`] for general information.
     ///
@@ -139,6 +139,7 @@ use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
 
 let cgroup = cpu::Subsystem::new(
     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from(\"students/charlie\")));
+
 let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
 # Ok(())
 # }
@@ -155,6 +156,7 @@ use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
 
 let mut cgroup = cpu::Subsystem::new(
     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from(\"students/charlie\")));
+
 cgroup.set_", stringify!($resource), "(", stringify!($val), ")?;
 # Ok(())
 # }
@@ -265,14 +267,17 @@ mod tests {
     fn test_subsystem_create_file_exists() -> Result<()> {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;
-
-        [STAT, SHARES, CFS_QUOTA, CFS_PERIOD]
+        assert!([STAT, SHARES, CFS_QUOTA, CFS_PERIOD]
             .iter()
-            .all(|f| cgroup.file_exists(f));
-
+            .all(|f| cgroup.file_exists(f)));
         assert!(!cgroup.file_exists("does_not_exist"));
 
-        cgroup.delete()
+        cgroup.delete()?;
+        assert!([STAT, SHARES, CFS_QUOTA, CFS_PERIOD]
+            .iter()
+            .all(|f| !cgroup.file_exists(f)));
+
+        Ok(())
     }
 
     #[test]

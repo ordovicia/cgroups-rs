@@ -110,7 +110,7 @@ pub struct Resources {
 impl_cgroup! {
     Freezer,
 
-    /// Freeze or thaw tasks in this cgroup according to `resources.freezer.state`.
+    /// Freezes or thaws tasks in this cgroup according to `resources.freezer.state`.
     ///
     /// Note that only `State::Frozen` and `State::Thawed` are valid. Applying `State::Freezing`
     /// will return an error with kind [`ErrorKind::InvalidArgument`].
@@ -146,6 +146,7 @@ use cgroups::v1::{freezer, Cgroup, CgroupPath, SubsystemKind};
 
 let cgroup = freezer::Subsystem::new(
     CgroupPath::new(SubsystemKind::Freezer, PathBuf::from(\"students/charlie\")));
+
 let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
 # Ok(())
 # }
@@ -164,6 +165,7 @@ use cgroups::v1::{freezer, Cgroup, CgroupPath, SubsystemKind};
 
 let mut cgroup = freezer::Subsystem::new(
     CgroupPath::new(SubsystemKind::Freezer, PathBuf::from(\"students/charlie\")));
+
 cgroup.", stringify!($setter), "()?;
 # Ok(())
 # }
@@ -251,14 +253,17 @@ mod tests {
         let mut cgroup =
             Subsystem::new(CgroupPath::new(SubsystemKind::Freezer, gen_cgroup_name!()));
         cgroup.create()?;
-
-        [STATE, SELF_FREEZING, PARENT_FREEZING]
+        assert!([STATE, SELF_FREEZING, PARENT_FREEZING]
             .iter()
-            .all(|n| cgroup.file_exists(n));
-
+            .all(|f| cgroup.file_exists(f)));
         assert!(!cgroup.file_exists("does_not_exist"));
 
-        cgroup.delete()
+        cgroup.delete()?;
+        assert!([STATE, SELF_FREEZING, PARENT_FREEZING]
+            .iter()
+            .all(|f| !cgroup.file_exists(f)));
+
+        Ok(())
     }
 
     #[test]

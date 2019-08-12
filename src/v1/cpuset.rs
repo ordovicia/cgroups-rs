@@ -31,7 +31,7 @@
 //!     ..Default::default()
 //! };
 //!
-//! // Apply the resource limit.
+//! // Apply the resource limit to this cgroup.
 //! cpuset_cgroup.apply(&cpuset_resources)?;
 //!
 //! let pid = Pid::from(std::process::id());
@@ -185,7 +185,7 @@ pub struct IdSet(HashSet<usize>);
 impl_cgroup! {
     Cpuset,
 
-    /// Apply the `Some` fields in `resources.cpuset`.
+    /// Applies the `Some` fields in `resources.cpuset`.
     ///
     /// See [`Cgroup::apply`] for general information.
     ///
@@ -270,6 +270,7 @@ use cgroups::v1::{cpuset, Cgroup, CgroupPath, SubsystemKind};
 
 let cgroup = cpuset::Subsystem::new(
     CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(\"students/charlie\")));
+
 let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
 # Ok(())
 # }
@@ -286,6 +287,7 @@ use cgroups::v1::{cpuset, Cgroup, CgroupPath, SubsystemKind};
 
 let mut cgroup = cpuset::Subsystem::new(
     CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(\"students/charlie\")));
+
 cgroup.set_", stringify!($resource), "(", stringify!($val), ")?;
 # Ok(())
 # }
@@ -763,8 +765,7 @@ mod tests {
 
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, gen_cgroup_name!()));
         cgroup.create()?;
-
-        [
+        assert!([
             CPUS,
             MEMS,
             MEMORY_MIGRATE,
@@ -779,12 +780,29 @@ mod tests {
             SCHED_RELAX_DOMAIN_LEVEL,
         ]
         .iter()
-        .all(|n| cgroup.file_exists(n));
-
+        .all(|f| cgroup.file_exists(f)));
         assert!(!cgroup.file_exists(MEMORY_PRESSURE_ENABLED));
         assert!(!cgroup.file_exists("does_not_exist"));
 
-        cgroup.delete()
+        cgroup.delete()?;
+        assert!([
+            CPUS,
+            MEMS,
+            MEMORY_MIGRATE,
+            CPU_EXCLUSIVE,
+            MEM_EXCLUSIVE,
+            MEM_HARDWALL,
+            MEMORY_PRESSURE,
+            // MEMORY_PRESSURE_ENABLED,
+            MEMORY_SPREAD_PAGE,
+            MEMORY_SPREAD_SLAB,
+            SCHED_LOAD_BALANCE,
+            SCHED_RELAX_DOMAIN_LEVEL,
+        ]
+        .iter()
+        .all(|f| !cgroup.file_exists(f)));
+
+        Ok(())
     }
 
     #[test]
