@@ -7,7 +7,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    v1::{cpuset, hugetlb, pids, Resources, SubsystemKind, UnifiedRepr},
+    v1::{cpuset, hugetlb, net_cls, pids, Resources, SubsystemKind, UnifiedRepr},
     Result,
 };
 
@@ -146,7 +146,8 @@ impl Builder {
         (cpu, Cpu, CpuBuilder, "CPU"),
         (cpuset, Cpuset, CpusetBuilder, "cpuset"),
         (pids, Pids, PidsBuilder, "pids"),
-        (hugetlb, HugeTlb, HugeTlbBuilder, "hugetlb")
+        (hugetlb, HugeTlb, HugeTlbBuilder, "hugetlb"),
+        (net_cls, NetCls, NetClsBuilder, "net_cls")
     }
 
     // Calling `cpu()` twice will push duplicated `SubsystemKind::Cpu`, but it is not a problem for
@@ -360,6 +361,30 @@ impl HugeTlbBuilder {
     }
 
     /// Finishes configurating this hugetlb subsystem.
+    pub fn done(self) -> Builder {
+        self.builder
+    }
+}
+
+/// net_cls subsystem builder.
+///
+/// This struct is created by [`Builder::net_cls`](struct.Builder.html#method.net_cls) method.
+#[derive(Debug)]
+pub struct NetClsBuilder {
+    builder: Builder,
+}
+
+impl NetClsBuilder {
+    /// Tags network packet from this cgroup with a class ID.
+    ///
+    /// See [`net_cls::Subsystem::set_classid`](../net_cls/struct.Subsystem.html#method.set_classid)
+    /// for more information.
+    pub fn classid(mut self, class_id: net_cls::ClassId) -> Self {
+        self.builder.resources.net_cls.classid = Some(class_id);
+        self
+    }
+
+    /// Finishes configurating this net_cls subsystem.
     pub fn done(self) -> Builder {
         self.builder
     }

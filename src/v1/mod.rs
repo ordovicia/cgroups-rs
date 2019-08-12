@@ -4,8 +4,8 @@
 //! [Documentation/cgroup-v1/cgroups.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt).
 //!
 //! Operations for each subsystem are implemented in each module. See [`cpu::Subsystem`] for
-//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [pids], [hugetlb], [freezer],
-//! and [perf_event] subsystems.
+//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [pids], [hugetlb], [net_cls],
+//! [freezer], and [perf_event] subsystems.
 //!
 //! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
 //! this trait and subsystem-specific operations.
@@ -21,6 +21,7 @@
 //! [cpuacct]: cpuacct/index.html
 //! [pids]: pids/index.html
 //! [hugetlb]: hugetlb/index.html
+//! [net_cls]: net_cls/index.html
 //! [freezer]: freezer/index.html
 //! [perf_event]: perf_event/index.html
 //!
@@ -38,6 +39,7 @@ pub mod cpuacct;
 pub mod cpuset;
 pub mod freezer;
 pub mod hugetlb;
+pub mod net_cls;
 pub mod perf_event;
 pub mod pids;
 mod unified_repr;
@@ -63,17 +65,19 @@ pub(crate) const CGROUPFS_MOUNT_POINT: &str = "/sys/fs/cgroup";
 pub enum SubsystemKind {
     /// CPU subsystem.
     Cpu,
-    /// Cpuset subsystem.
+    /// cpuset subsystem.
     Cpuset,
-    /// Cpuacct (CPU accounting) subsystem.
+    /// cpuacct (CPU accounting) subsystem.
     Cpuacct,
-    /// Pids subsystem.
+    /// pids subsystem.
     Pids,
-    /// Hugetlb subsystem.
+    /// hugetlb subsystem.
     HugeTlb,
-    /// Freezer subsystem.
+    /// net_cls subsystem.
+    NetCls,
+    /// freezer subsystem.
     Freezer,
-    /// Perf_event subsystem.
+    /// perf_event subsystem.
     PerfEvent,
 }
 
@@ -94,6 +98,8 @@ pub struct Resources {
     pub pids: pids::Resources,
     /// How many hugepage TLBs this cgroup can use.
     pub hugetlb: hugetlb::Resources,
+    /// Tag network packets from this cgroup with a class ID.
+    pub net_cls: net_cls::Resources,
     /// Whether tasks in this cgruop is freezed.
     pub freezer: freezer::Resources,
 }
@@ -108,6 +114,7 @@ impl fmt::Display for SubsystemKind {
             Cpuacct => write!(f, "cpuacct"),
             Pids => write!(f, "pids"),
             HugeTlb => write!(f, "hugetlb"),
+            NetCls => write!(f, "net_cls"),
             Freezer => write!(f, "freezer",),
             PerfEvent => write!(f, "perf_event",),
         }
