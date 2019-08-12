@@ -34,6 +34,7 @@
 //! // Apply the resource limit to this cgroup.
 //! cpuset_cgroup.apply(&cpuset_resources)?;
 //!
+//! // Add tasks to this cgroup.
 //! let pid = Pid::from(std::process::id());
 //! cpuset_cgroup.add_task(pid)?;
 //!
@@ -62,6 +63,8 @@ pub struct Subsystem {
 }
 
 /// Which CPUs and which memory nodes a cgroup can use, and how they are controlled by the kernel.
+///
+/// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// Set of CPUs the tasks of the cgroup can run on.
@@ -105,8 +108,6 @@ pub struct Resources {
     pub sched_load_balance: Option<bool>,
 
     /// Indicates how much work the kernel should do to rebalance the load on this cpuset.
-    ///
-    /// See the kernel's documentation for more information.
     pub sched_relax_domain_level: Option<i32>,
     // pub effective_cpus: Vec<usize>,
     // pub effective_mems: Vec<usize>,
@@ -430,32 +431,29 @@ impl Subsystem {
     }
 
     with_doc! { concat!(
-            "Reads running average of the memory pressure faced by tasks in this cgroup, from ",
-            "`cpuset.memory_pressure` file.\n\n",
-            "See the kernel's documentation for more information.\n\n",
-            gen_doc!(err_read; memory_pressure), "\n\n",
-            gen_doc!(eg; memory_pressure),
-        ),
+        "Reads running average of the memory pressure faced by tasks in this cgroup, from ",
+        "`cpuset.memory_pressure` file.\n\n",
+        "See the kernel's documentation for more information.\n\n",
+        gen_doc!(err_read; memory_pressure), "\n\n",
+        gen_doc!(eg; memory_pressure)),
         pub fn memory_pressure(&self) -> Result<u64> {
             self.open_file_read(MEMORY_PRESSURE)
                 .and_then(parse)
         }
     }
 
-    with_doc! {
-        concat!(
-            gen_doc!(
-                reads;
-                "whether the kernel computes the memory pressure of this cgroup",
-                memory_pressure_enabled
-            ), "\n\n",
-            "# Errors\n\n",
-            "This field is present only in the root cgroup. If you call this method on a non-root ",
-            "cgroup, an error is returned with kind `ErrorKind::InvalidOperation`.\n\n",
-            "On the root cgroup, returns an error if failed to read and parse ",
-            "`cpuset.memory_pressure_enabled` file.\n\n",
-            gen_doc!(eg; memory_pressure_enabled)
-        ),
+    with_doc! { concat!(
+        gen_doc!(
+            reads;
+            "whether the kernel computes the memory pressure of this cgroup",
+            memory_pressure_enabled
+        ), "\n\n",
+        "# Errors\n\n",
+        "This field is present only in the root cgroup. If you call this method on a non-root ",
+        "cgroup, an error is returned with kind `ErrorKind::InvalidOperation`.\n\n",
+        "On the root cgroup, returns an error if failed to read and parse ",
+        "`cpuset.memory_pressure_enabled` file.\n\n",
+        gen_doc!(eg; memory_pressure_enabled)),
         pub fn memory_pressure_enabled(&self) -> Result<bool> {
             if self.is_root() {
                 self.open_file_read(MEMORY_PRESSURE_ENABLED)
@@ -466,20 +464,18 @@ impl Subsystem {
         }
     }
 
-    with_doc! {
-        concat!(
-            gen_doc!(
-                sets;
-                "whether the kernel computes the memory pressure of this cgroup",
-                memory_pressure_enabled
-            ), "\n\n",
-            "# Errors\n\n",
-            "This field is present only in the root cgroup. If you call this method on a non-root ",
-            "cgroup, an error is returned with kind `ErrorKind::InvalidOperation`.\n\n",
-            "On the root cgroup, returns an error if failed to write to ",
-            "`cpuset.memory_pressure_enabled` file.\n\n",
-            gen_doc!(eg; memory_pressure_enabled, true)
-        ),
+    with_doc! { concat!(
+        gen_doc!(
+            sets;
+            "whether the kernel computes the memory pressure of this cgroup",
+            memory_pressure_enabled
+        ), "\n\n",
+        "# Errors\n\n",
+        "This field is present only in the root cgroup. If you call this method on a non-root ",
+        "cgroup, an error is returned with kind `ErrorKind::InvalidOperation`.\n\n",
+        "On the root cgroup, returns an error if failed to write to ",
+        "`cpuset.memory_pressure_enabled` file.\n\n",
+        gen_doc!(eg; memory_pressure_enabled, true)),
         pub fn set_memory_pressure_enabled(&mut self, enable: bool) -> Result<()> {
             if self.is_root() {
                 self.write_file(MEMORY_PRESSURE_ENABLED, enable as i32)

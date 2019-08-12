@@ -29,6 +29,7 @@
 //! // Apply the resource limit to this cgroup.
 //! cpu_cgroup.apply(&cpu_resources)?;
 //!
+//! // Add tasks to this cgroup.
 //! let pid = Pid::from(std::process::id());
 //! cpu_cgroup.add_task(pid)?;
 //!
@@ -59,18 +60,9 @@ pub struct Subsystem {
     path: CgroupPath,
 }
 
-/// Throttling statistics of a cgroup.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Stat {
-    /// Number of periods (as specified in `Resources.cfs_period_us`) that have elapsed.
-    pub nr_periods: u64,
-    /// Number of times this cgroup has been throttled.
-    pub nr_throttled: u64,
-    /// Total time duration for which this cgroup has been throttled (in nanoseconds).
-    pub throttled_time: u64,
-}
-
 /// How CPU time is provided to a cgroup.
+///
+/// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// Weight of how much of the total CPU time should be provided to this cgroup.
@@ -81,6 +73,17 @@ pub struct Resources {
     pub cfs_period_us: Option<u64>,
     // pub realtime_runtime: Option<i64>,
     // pub realtime_period: Option<u64>,
+}
+
+/// Throttling statistics of a cgroup.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Stat {
+    /// Number of periods (as specified in `Resources.cfs_period_us`) that have elapsed.
+    pub nr_periods: u64,
+    /// Number of times this cgroup has been throttled.
+    pub nr_throttled: u64,
+    /// Total time duration for which this cgroup has been throttled (in nanoseconds).
+    pub throttled_time: u64,
 }
 
 impl_cgroup! {

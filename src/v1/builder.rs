@@ -217,7 +217,7 @@ impl CpuBuilder {
     }
 }
 
-/// Cpuset subsystem builder.
+/// cpuset subsystem builder.
 ///
 /// This struct is created by [`Builder::cpuset`](struct.Builder.html#method.cpuset) method.
 #[derive(Debug)]
@@ -311,7 +311,7 @@ impl CpusetBuilder {
     }
 }
 
-/// Pids subsystem builder.
+/// pids subsystem builder.
 ///
 /// This struct is created by [`Builder::pids`](struct.Builder.html#method.pids) method.
 #[derive(Debug)]
@@ -333,7 +333,7 @@ impl PidsBuilder {
     }
 }
 
-/// Hugetlb subsystem builder.
+/// hugetlb subsystem builder.
 ///
 /// This struct is created by [`Builder::hugetlb`](struct.Builder.html#method.hugetlb) method.
 #[derive(Debug)]

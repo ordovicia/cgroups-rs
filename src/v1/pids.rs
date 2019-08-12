@@ -48,6 +48,16 @@ pub struct Subsystem {
     path: CgroupPath,
 }
 
+/// How many processes a cgroup can have.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct Resources {
+    /// If `Max::Max`, the system does not limit the number of processes this cgroup can have. If
+    /// `Max::Number(n)`, this cgroup can have `n` processes at most.
+    ///
+    /// See the kernel's documentation for more information about this field.
+    pub max: Option<Max>,
+}
+
 /// Limit on the number of processes a cgroup can have.
 ///
 /// `Max` implements [`FromStr`], so you can [`parse`] a string into a `Max`. If failed,
@@ -89,20 +99,12 @@ pub struct Subsystem {
 /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 ///
 /// [`Default`]: https://doc.rust-lang.org/std/default/trait.Default.html
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Max {
     /// Not limit the number of processes this cgroup can have.
     Max,
     /// Limits the number of processes this cgroup can have to this number.
     Number(u32),
-}
-
-/// How many processes a cgroup can have.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct Resources {
-    /// If `Max::Max`, the system does not limit the number of processes this cgroup can have. If
-    /// `Max::Number(n)`, this cgroup can have `n` processes at most.
-    pub max: Option<Max>,
 }
 
 impl_cgroup! {

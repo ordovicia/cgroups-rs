@@ -26,6 +26,7 @@
 //! // Apply the resource limit.
 //! hugetlb_cgroup.apply(&hugetlb_resources)?;
 //!
+//! // Add tasks to this cgroup.
 //! let pid = Pid::from(std::process::id());
 //! hugetlb_cgroup.add_task(pid)?;
 //!
@@ -51,6 +52,8 @@ pub struct Subsystem {
 }
 
 /// How many hugepage TLBs a cgroup can use.
+///
+/// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// How many 2 MB size hugepage TLBs this cgroup can use.
@@ -60,7 +63,7 @@ pub struct Resources {
 }
 
 /// Limit on hugepage TLB usage in different units.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Limit {
     /// Limit hugepage TLB usage in bytes.
     Bytes(u64),

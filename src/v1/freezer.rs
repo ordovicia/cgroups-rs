@@ -54,6 +54,16 @@ pub struct Subsystem {
     path: CgroupPath,
 }
 
+/// Whether tasks in a cgruop is freezed.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct Resources {
+    /// If `State::Frozen`, tasks in this cgroup will be frozen. If `State::Thawed`, they will be
+    /// thawed. Note that applying `State::Freezing` is invalid, and `apply` will raise an error.
+    ///
+    /// See the kernel's documentation for more information about this field.
+    pub state: Option<State>,
+}
+
 /// Freezer state of a cgroup.
 ///
 /// `State` implements [`FromStr`], so you can [`parse`] a string into a `State`. If failed,
@@ -97,14 +107,6 @@ pub enum State {
     Freezing,
     /// Tasks in this cgroup are frozen.
     Frozen,
-}
-
-/// Whether tasks in a cgruop is freezed.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct Resources {
-    /// If `State::Frozen`, tasks in this cgroup will be frozen. If `State::Thawed`, they will be
-    /// thawed. Note that applying `State::Freezing` is invalid, and `apply` will raise an error.
-    state: Option<State>,
 }
 
 impl_cgroup! {

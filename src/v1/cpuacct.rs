@@ -50,7 +50,7 @@ pub struct Subsystem {
 }
 
 /// Statistics about how much CPU time is consumed by tasks in a cgroup.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Stat {
     /// CPU time consumed in the system (kernel) mode.
     pub system: u64,
@@ -83,6 +83,7 @@ const USAGE_USER: &str = "cpuacct.usage_user";
 #[rustfmt::skip]
 macro_rules! gen_doc {
     ($resource: ident) => { concat!(
+        "See the kernel's documentation for more information about this field.\n\n",
         "# Errors\n\n",
         "Returns an error if failed to read and parse `cpuacct.", stringify!($resource), "` file of this cgroup.\n\n",
         "# Examples\n\n",

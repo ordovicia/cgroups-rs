@@ -15,7 +15,6 @@
 //! perf_event_cgroup.create()?;
 //!
 //! // Add tasks to this cgroup.
-//!
 //! let pid = Pid::from(process::id());
 //! perf_event_cgroup.add_task(pid)?;
 //!
