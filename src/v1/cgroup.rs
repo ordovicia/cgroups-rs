@@ -570,16 +570,10 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn open_file_read(&self, name: &str) -> Result<File> {
-        fs::OpenOptions::new()
-            .read(true)
-            .open(self.path().join(name))
-            .map_err(Error::io)
+        File::open(self.path().join(name)).map_err(Error::io)
     }
 
     /// Low-level API that opens a file with write access.
-    ///
-    /// If `append` is `true`, the file is opened in append mode. Otherwise, if the file already
-    /// exists, writing to the file will overwrite its contents.
     ///
     /// # Errors
     ///
@@ -597,18 +591,16 @@ pub trait Cgroup {
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
     ///
-    /// let cpu_shares_file = cgroup.open_file_write("cpu.shares", false)?;
+    /// let cpu_shares_file = cgroup.open_file_write("cpu.shares")?;
     /// # Ok(())
     /// # }
     /// ```
-    fn open_file_write(&mut self, name: &str, append: bool) -> Result<File> {
-        let mut open_options = fs::OpenOptions::new();
-        if append {
-            open_options.append(true);
-        } else {
-            open_options.write(true).create(true);
-        }
-        open_options.open(self.path().join(name)).map_err(Error::io)
+    fn open_file_write(&mut self, name: &str) -> Result<File> {
+        fs::OpenOptions::new()
+            .write(true)
+            // .create(true)
+            .open(self.path().join(name))
+            .map_err(Error::io)
     }
 }
 
@@ -801,20 +793,25 @@ mod tests {
     #[test]
     #[ignore] // `cargo test` must not be executed in parallel for this test
     fn test_cgroup_add_get_remove_tasks() -> Result<()> {
+        use std::process::{self, Command};
+
         let mut cgroup =
             cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;
 
-        let pid = Pid::from(std::process::id());
-
-        // Add self to the cgroup
+        let pid = Pid::from(process::id());
         cgroup.add_task(pid)?;
-        // Verify that self is indeed in the cgroup
         assert_eq!(cgroup.tasks()?, vec![pid]);
 
-        // Now, try removing self
+        let child = Command::new("sleep").arg("1").spawn().unwrap();
+        let child_pid = Pid::from(&child);
+        cgroup.add_task(child_pid)?;
+        assert!(cgroup.tasks()? == vec![pid, child_pid] || cgroup.tasks()? == vec![child_pid, pid]);
+
+        cgroup.remove_task(child_pid)?;
+        assert!(cgroup.tasks()? == vec![pid]);
+
         cgroup.remove_task(pid)?;
-        // Verify that it was indeed removed
         assert!(cgroup.tasks()?.is_empty());
 
         cgroup.delete()
@@ -822,14 +819,23 @@ mod tests {
 
     #[test]
     fn test_cgroup_add_get_remove_procs() -> Result<()> {
-        let pid = Pid::from(std::process::id());
+        use std::process::{self, Command};
 
         let mut cgroup =
             cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;
 
+        let pid = Pid::from(process::id());
         cgroup.add_proc(pid)?;
         assert_eq!(cgroup.procs()?, vec![pid]);
+
+        let child = Command::new("sleep").arg("1").spawn().unwrap();
+        let child_pid = Pid::from(&child);
+        cgroup.add_proc(child_pid)?;
+        assert!(cgroup.procs()? == vec![pid, child_pid] || cgroup.procs()? == vec![child_pid, pid]);
+
+        cgroup.remove_proc(child_pid)?;
+        assert!(cgroup.procs()? == vec![pid]);
 
         cgroup.remove_proc(pid)?;
         assert!(cgroup.procs()?.is_empty());
@@ -912,7 +918,7 @@ mod tests {
         assert_eq!(buf, "0\n");
 
         // write
-        let mut file = cgroup.open_file_write(NOTIFY_ON_RELEASE, false)?;
+        let mut file = cgroup.open_file_write(NOTIFY_ON_RELEASE)?;
         write!(file, "1").unwrap();
 
         // read
@@ -922,8 +928,6 @@ mod tests {
             .read_to_string(&mut buf)
             .unwrap();
         assert_eq!(buf, "1\n");
-
-        // TODO: test append
 
         cgroup.delete()
     }
