@@ -166,7 +166,7 @@ impl Subsystem {
             }
 
             let sys_col_num = match (header.next(), header.next()) {
-                (Some("user"), Some("system")) => 1, // TODO: are the column order guaranteed ?
+                (Some("user"), Some("system")) => 1, // FIXME: column order is guaranteed ?
                 (Some("system"), Some("user")) => 0,
                 _ => { return Err(Error::new(ErrorKind::Parse)); }
             };
@@ -175,7 +175,7 @@ impl Subsystem {
             for line in buf.lines() {
                 let entry = line.map_err(Error::io)?;
                 let mut entry = entry.split_whitespace().skip(1); // skip CPU ID
-                // TODO: are the IDs guaranteed to be sorted ?
+                // FIXME: IDs are guaranteed to be sorted ?
 
                 let usage_0 = parse_option(entry.next())?;
                 let usage_1 = parse_option(entry.next())?;

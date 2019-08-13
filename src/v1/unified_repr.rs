@@ -282,6 +282,7 @@ gen_unified_repr! {
     (pids, pids_mut, Pids, "pids"),
     (hugetlb, hugetlb_mut, HugeTlb, "hugetlb"),
     (net_cls, net_cls_mut, NetCls, "net_cls"),
+    (net_prio, net_prio_mut, NetPrio, "net_prio"),
     (freezer, freezer_mut, Freezer, "freezer"),
     (perf_event, perf_event_mut, PerfEvent, "perf_event")
 }

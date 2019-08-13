@@ -4,7 +4,7 @@
 //!
 //! [`Builder`]: struct.Builder.html
 
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
     v1::{cpuset, hugetlb, net_cls, pids, Resources, SubsystemKind, UnifiedRepr},
@@ -147,7 +147,8 @@ impl Builder {
         (cpuset, Cpuset, CpusetBuilder, "cpuset"),
         (pids, Pids, PidsBuilder, "pids"),
         (hugetlb, HugeTlb, HugeTlbBuilder, "hugetlb"),
-        (net_cls, NetCls, NetClsBuilder, "net_cls")
+        (net_cls, NetCls, NetClsBuilder, "net_cls"),
+        (net_prio, NetPrio, NetPrioBuilder, "net_prio")
     }
 
     // Calling `cpu()` twice will push duplicated `SubsystemKind::Cpu`, but it is not a problem for
@@ -385,6 +386,30 @@ impl NetClsBuilder {
     }
 
     /// Finishes configuring this net_cls subsystem.
+    pub fn done(self) -> Builder {
+        self.builder
+    }
+}
+
+/// net_prio subsystem builder.
+///
+/// This struct is created by [`Builder::net_prio`](struct.Builder.html#method.net_prio) method.
+#[derive(Debug)]
+pub struct NetPrioBuilder {
+    builder: Builder,
+}
+
+impl NetPrioBuilder {
+    /// Sets a map of priorities assigned to traffic originating from this cgroup.
+    ///
+    /// See [`net_prio::Subsystem::set_ifpriomap`](../net_prio/struct.Subsystem.html#method.set_ifpriomap)
+    /// for more information.
+    pub fn ifpriomap(mut self, prio_map: HashMap<String, u32>) -> Self {
+        self.builder.resources.net_prio.ifpriomap = Some(prio_map);
+        self
+    }
+
+    /// Finishes configuring this net_prio subsystem.
     pub fn done(self) -> Builder {
         self.builder
     }

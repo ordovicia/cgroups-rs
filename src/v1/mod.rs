@@ -5,7 +5,7 @@
 //!
 //! Operations for each subsystem are implemented in each module. See [`cpu::Subsystem`] for
 //! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [pids], [hugetlb], [net_cls],
-//! [freezer], and [perf_event] subsystems.
+//! [net_prio], [freezer], and [perf_event] subsystems.
 //!
 //! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
 //! this trait and subsystem-specific operations.
@@ -22,6 +22,7 @@
 //! [pids]: pids/index.html
 //! [hugetlb]: hugetlb/index.html
 //! [net_cls]: net_cls/index.html
+//! [net_prio]: net_prio/index.html
 //! [freezer]: freezer/index.html
 //! [perf_event]: perf_event/index.html
 //!
@@ -40,6 +41,7 @@ pub mod cpuset;
 pub mod freezer;
 pub mod hugetlb;
 pub mod net_cls;
+pub mod net_prio;
 pub mod perf_event;
 pub mod pids;
 mod unified_repr;
@@ -75,6 +77,8 @@ pub enum SubsystemKind {
     HugeTlb,
     /// net_cls subsystem.
     NetCls,
+    /// net_prio subsystem.
+    NetPrio,
     /// freezer subsystem.
     Freezer,
     /// perf_event subsystem.
@@ -101,6 +105,8 @@ pub struct Resources {
     pub hugetlb: hugetlb::Resources,
     /// Tag network packets from this cgroup with a class ID.
     pub net_cls: net_cls::Resources,
+    /// Priority map of traffic originating from this cgroup.
+    pub net_prio: net_prio::Resources,
     /// Whether tasks in this cgroup is freezed.
     pub freezer: freezer::Resources,
 }
@@ -116,6 +122,7 @@ impl fmt::Display for SubsystemKind {
             Pids => write!(f, "pids"),
             HugeTlb => write!(f, "hugetlb"),
             NetCls => write!(f, "net_cls"),
+            NetPrio => write!(f, "net_prio"),
             Freezer => write!(f, "freezer",),
             PerfEvent => write!(f, "perf_event",),
         }

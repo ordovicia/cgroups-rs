@@ -770,6 +770,7 @@ mod tests {
             (pids, Pids),
             (hugetlb, HugeTlb),
             (net_cls, NetCls),
+            (net_prio, NetPrio),
             (freezer, Freezer),
             (perf_event, PerfEvent)
         }

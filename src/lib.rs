@@ -124,7 +124,7 @@ pub use error::{Error, ErrorKind, Result};
 /// PID or thread ID for attaching a task in a cgroup.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Pid(u32); // Max PID is 2^15 on 32-bit systems, 2^22 on 64-bit systems
-                     // TODO: Is this true for thread IDs?
+                     // FIXME: ^ also true for thread IDs?
 
 impl From<u32> for Pid {
     fn from(pid: u32) -> Self {
