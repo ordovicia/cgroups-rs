@@ -62,8 +62,8 @@
 //!
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
-//! use std::path::PathBuf;
-//! use cgroups::v1::{cpuset::IdSet, pids, Builder};
+//! use std::{collections::HashMap, path::PathBuf};
+//! use cgroups::v1::{cpuset, hugetlb, net_cls, pids, Builder};
 //!
 //! let mut cgroups =
 //!     // Start building a (set of) cgroup(s).
@@ -77,13 +77,27 @@
 //!         .done()
 //!     // Start configuring the cpuset resource limits.
 //!     .cpuset()
-//!         .cpus([0].iter().copied().collect::<IdSet>())
-//!         .mems([0].iter().copied().collect::<IdSet>())
+//!         .cpus([0].iter().copied().collect::<cpuset::IdSet>())
+//!         .mems([0].iter().copied().collect::<cpuset::IdSet>())
 //!         .memory_migrate(true)
 //!         .done()
-//!     // Start configuring the pids resource limits.
 //!     .pids()
 //!         .max(pids::Max::Number(42))
+//!         .done()
+//!     .hugetlb()
+//!         .limit_2mb(hugetlb::Limit::Pages(4))
+//!         .limit_1gb(hugetlb::Limit::Pages(2))
+//!         .done()
+//!     .net_cls()
+//!         .classid(net_cls::ClassId { major: 0x10, minor: 0x1 })
+//!         .done()
+//!     .net_prio()
+//!         .ifpriomap(
+//!             [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)]
+//!                 .iter()
+//!                 .cloned()
+//!                 .collect::<HashMap<_, u32>>(),
+//!         )
 //!         .done()
 //!     // Enable monitoring this cgroup via `perf` tool.
 //!     .perf_event()
@@ -93,20 +107,13 @@
 //!     // Only create a directory for the CPU, cpuset, and pids subsystems.
 //!     .build()?;
 //!
-//! // Attach the self process to the cgroups.
 //! let pid = std::process::id().into();
 //! cgroups.add_task(pid)?;
 //!
 //! // Do something ...
 //!
-//! // Remove self process from the cgroups.
 //! cgroups.remove_task(pid)?;
-//!
-//! // And delete the cgroups.
 //! cgroups.delete()?;
-//!
-//! // Note that cgroup handlers does not implement `Drop` and therefore when the
-//! // handler is dropped, the cgroup will stay around.
 //! # Ok(())
 //! # }
 //! ```
