@@ -248,6 +248,8 @@ pub trait Cgroup {
     /// Reads a list of tasks attached to this cgroup from `tasks` file. The resulting tasks are
     /// represented by their thread IDs.
     ///
+    /// See the kernel's documentation for more information about this field.
+    ///
     /// # Errors
     ///
     /// Returns an error if failed to read and parse `tasks` file of this cgroup.
@@ -272,6 +274,8 @@ pub trait Cgroup {
 
     /// Attaches a task to this cgroup by writing a thread ID to `tasks` file.
     ///
+    /// See the kernel's documentation for more information about this field.
+    ///
     /// # Errors
     ///
     /// Returns an error if failed to write to `tasks` file of this cgroup.
@@ -295,8 +299,9 @@ pub trait Cgroup {
     }
 
     /// Removes a task from this cgroup. The task is represented by its thread ID.
-    ///
     /// The removed task is moved to the root cgroup of the same subsystem.
+    ///
+    /// See the kernel's documentation for more information about this field.
     ///
     /// # Errors
     ///
@@ -326,6 +331,8 @@ pub trait Cgroup {
     /// Reads a list of processes attached to this cgroup from `cgroup.procs` file. The resulting
     /// processes are represented by their PIDs.
     ///
+    /// See the kernel's documentation for more information about this field.
+    ///
     /// # Errors
     ///
     /// Returns an error if failed to read and parse `cgroup.procs` file of this cgroup.
@@ -349,6 +356,8 @@ pub trait Cgroup {
     }
 
     /// Attaches a process to this cgroup by writing a PID to `cgroup.procs` file.
+    ///
+    /// See the kernel's documentation for more information about this field.
     ///
     /// # Errors
     ///
@@ -374,8 +383,9 @@ pub trait Cgroup {
 
     /// Removes a process from this cgroup, with all threads in the same thread group at once. The
     /// process is represented by its PID.
-    ///
     /// The removed process is moved to the root cgroup of the same subsystem.
+    ///
+    /// See the kernel's documentation for more information about this field.
     ///
     /// # Errors
     ///
@@ -405,9 +415,11 @@ pub trait Cgroup {
     /// Reads whether the system executes the executable written in `release_agent` file when a
     /// cgroup no longer has any task, from `notify_on_release` file.
     ///
+    /// See the kernel's documentation for more information about this field.
+    ///
     /// # Errors
     ///
-    /// Returns an error if failed to read and parse `notify_on_release` file.
+    /// Returns an error if failed to read and parse `notify_on_release` file of this cgroup.
     ///
     /// # Examples
     ///
@@ -431,9 +443,11 @@ pub trait Cgroup {
     /// Sets whether the system executes the executable written in `release_agent` file when a
     /// cgroup no longer has any task, from `notify_on_release` file.
     ///
+    /// See the kernel's documentation for more information about this field.
+    ///
     /// # Errors
     ///
-    /// Returns an error if failed to write to `notify_on_release` file.
+    /// Returns an error if failed to write to `notify_on_release` file of this cgroup.
     ///
     /// # Examples
     ///
@@ -460,12 +474,16 @@ pub trait Cgroup {
     /// Reads the command to be executed when "notify on release" is triggered, i.e. this cgroup is
     /// emptied of all tasks, from `release_agent` file.
     ///
+    /// See the kernel's documentation for more information about this field.
+    ///
     /// # Errors
     ///
     /// This file is present only in the root cgroup. If you call this method on a non-root cgroup,
-    /// an error is returned with kind `ErrorKind::InvalidOperation`.
+    /// an error is returned with kind [`ErrorKind::InvalidOperation`].
     ///
     /// On the root cgroup, returns an error if failed to read `release_agent` file.
+    ///
+    /// [`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation
     ///
     /// # Examples
     ///
@@ -499,12 +517,16 @@ pub trait Cgroup {
     /// Sets a path of executable to be executed when "notify on release" is triggered, i.e. this
     /// cgroup is emptied of all tasks, by writing to `release_agent` file.
     ///
+    /// See the kernel's documentation for more information about this field.
+    ///
     /// # Errors
     ///
     /// This file is present only in the root cgroup. If you call this method on a non-root cgroup,
-    /// an error is returned with kind `ErrorKind::InvalidOperation`.
+    /// an error is returned with kind [`ErrorKind::InvalidOperation`].
     ///
     /// On the root cgroup, returns an error if failed to write to `release_agent` file.
+    ///
+    /// [`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation
     ///
     /// # Examples
     ///
