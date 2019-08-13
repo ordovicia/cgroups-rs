@@ -48,13 +48,13 @@ pub struct Subsystem {
     path: CgroupPath,
 }
 
-/// How many processes a cgroup can have.
+/// Resource limit on how many processes a cgroup can have.
+///
+/// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// If `Max::Max`, the system does not limit the number of processes this cgroup can have. If
     /// `Max::Number(n)`, this cgroup can have `n` processes at most.
-    ///
-    /// See the kernel's documentation for more information about this field.
     pub max: Option<Max>,
 }
 

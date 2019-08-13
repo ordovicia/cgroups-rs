@@ -60,7 +60,7 @@ pub struct Subsystem {
     path: CgroupPath,
 }
 
-/// How CPU time is provided to a cgroup.
+/// Resource limit on how much CPU time a cgroup can use.
 ///
 /// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -182,9 +182,11 @@ impl Subsystem {
             let (mut nr_periods, mut nr_throttled, mut throttled_time) = (None, None, None);
 
             let buf = BufReader::new(self.open_file_read(STAT)?);
+
             for line in buf.lines() {
                 let line = line.map_err(Error::io)?;
                 let mut entry = line.split_whitespace();
+
                 match entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))? {
                     "nr_periods" => {
                         nr_periods = Some(parse_option(entry.next())?);

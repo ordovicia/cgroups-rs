@@ -1,4 +1,4 @@
-//! Configurating cgroups using the builder pattern.
+//! Configuring cgroups using the builder pattern.
 //!
 //! [`Builder`] struct is the entry point of the pattern. See its documentation.
 //!
@@ -27,20 +27,20 @@ use crate::{
 /// let mut cgroups =
 ///     // Start building a (set of) cgroup(s).
 ///     Builder::new(PathBuf::from("students/charlie"))
-///     // Start configurating the CPU resource limits.
+///     // Start configuring the CPU resource limits.
 ///     .cpu()
 ///         .shares(1000)
 ///         .cfs_quota_us(500 * 1000)
 ///         .cfs_period_us(1000 * 1000)
-///         // Finish configurating the CPU resource limits.
+///         // Finish configuring the CPU resource limits.
 ///         .done()
-///     // Start configurating the cpuset resource limits.
+///     // Start configuring the cpuset resource limits.
 ///     .cpuset()
 ///         .cpus([0].iter().copied().collect::<IdSet>())
 ///         .mems([0].iter().copied().collect::<IdSet>())
 ///         .memory_migrate(true)
 ///         .done()
-///     // Start configurating the pids resource limits.
+///     // Start configuring the pids resource limits.
 ///     .pids()
 ///         .max(pids::Max::Number(42))
 ///         .done()
@@ -120,7 +120,7 @@ pub struct Builder {
 macro_rules! gen_subsystem_builder_call {
     ( $( ($subsystem: ident, $kind: ident, $builder: ident, $name: literal) ),* ) => { $(
         with_doc! {
-            concat!("Starts configurating the ", $name, " subsytem."),
+            concat!("Starts configuring the ", $name, " subsystem."),
             pub fn $subsystem(mut self) -> $builder {
                 self.subsystem_kinds.push(SubsystemKind::$kind);
                 $builder { builder: self }
@@ -130,7 +130,7 @@ macro_rules! gen_subsystem_builder_call {
 }
 
 impl Builder {
-    /// Creats a new cgroup builder.
+    /// Creates a new cgroup builder.
     ///
     /// The resulting (set of) cgroup(s) will have the given name. For the directory name of each
     /// subsystem, the standard name (e.g. `cpu` for the CPU subsystem) is used.
@@ -211,7 +211,7 @@ impl CpuBuilder {
         "total available CPU time within a period (in microseconds)"
     );
 
-    /// Finishes configurating this CPU subsystem.
+    /// Finishes configuring this CPU subsystem.
     pub fn done(self) -> Builder {
         self.builder
     }
@@ -295,17 +295,17 @@ impl CpusetBuilder {
         cpuset;
         sched_load_balance,
         bool,
-        "whether the kernel rebalances the load across the selected CPUs"
+        "whether the kernel balances the load across the selected CPUs"
     );
 
     gen_setter!(
         cpuset;
         sched_relax_domain_level,
         i32,
-        "how much work the kernel do to rebalance the load on this cgroup"
+        "how much work the kernel do to balance the load on this cgroup"
     );
 
-    /// Finishes configurating this cpuset subsystem.
+    /// Finishes configuring this cpuset subsystem.
     pub fn done(self) -> Builder {
         self.builder
     }
@@ -327,7 +327,7 @@ impl PidsBuilder {
         "a maximum number of tasks this cgroup can have"
     );
 
-    /// Finishes configurating this pids subsystem.
+    /// Finishes configuring this pids subsystem.
     pub fn done(self) -> Builder {
         self.builder
     }
@@ -360,7 +360,7 @@ impl HugeTlbBuilder {
         self
     }
 
-    /// Finishes configurating this hugetlb subsystem.
+    /// Finishes configuring this hugetlb subsystem.
     pub fn done(self) -> Builder {
         self.builder
     }
@@ -384,7 +384,7 @@ impl NetClsBuilder {
         self
     }
 
-    /// Finishes configurating this net_cls subsystem.
+    /// Finishes configuring this net_cls subsystem.
     pub fn done(self) -> Builder {
         self.builder
     }

@@ -2,7 +2,7 @@
 
 Native Rust library for operating on cgroups.
 
-Currently this crate supports only cgroup v1 hierarchy, implementes in `v1` module.
+Currently this crate supports only cgroup v1 hierarchy, implemented in `v1` module.
 
 ## Examples
 
@@ -54,20 +54,20 @@ use cgroups::v1::{cpuset::IdSet, pids, Builder};
 let mut cgroups =
     // Start building a (set of) cgroup(s).
     Builder::new(PathBuf::from("students/charlie"))
-    // Start configurating the CPU resource limits.
+    // Start configuring the CPU resource limits.
     .cpu()
         .shares(1000)
         .cfs_quota_us(500 * 1000)
         .cfs_period_us(1000 * 1000)
-        // Finish configurating the CPU resource limits.
+        // Finish configuring the CPU resource limits.
         .done()
-    // Start configurating the cpuset resource limits.
+    // Start configuring the cpuset resource limits.
     .cpuset()
         .cpus([0].iter().copied().collect::<IdSet>())
         .mems([0].iter().copied().collect::<IdSet>())
         .memory_migrate(true)
         .done()
-    // Start configurating the pids resource limits.
+    // Start configuring the pids resource limits.
     .pids()
         .max(pids::Max::Number(42))
         .done()

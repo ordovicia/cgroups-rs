@@ -62,7 +62,8 @@ pub struct Subsystem {
     path: CgroupPath,
 }
 
-/// Which CPUs and which memory nodes a cgroup can use, and how they are controlled by the kernel.
+/// Resource limit on which CPUs and which memory nodes a cgroup can use, and how they are
+/// controlled by the system.
 ///
 /// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -102,12 +103,12 @@ pub struct Resources {
     /// in the `mems` field.
     pub memory_spread_slab: Option<bool>,
 
-    /// If true, the kernel will attempt to rebalance the load between the CPUs specified in the
+    /// If true, the kernel will attempt to balance the load between the CPUs specified in the
     /// `cpus` field. This field is ignored if an ancestor cgroup already has enabled the load
     /// balancing at that hierarchy level.
     pub sched_load_balance: Option<bool>,
 
-    /// Indicates how much work the kernel should do to rebalance the load on this cpuset.
+    /// Indicates how much work the kernel should do to balance the load on this cpuset.
     pub sched_relax_domain_level: Option<i32>,
     // pub effective_cpus: Vec<usize>,
     // pub effective_mems: Vec<usize>,
@@ -531,7 +532,7 @@ impl Subsystem {
 
     with_doc! {
         gen_doc!(
-            "whether the kernel rebalances the load across the selected CPUs",
+            "whether the kernel balances the load across the selected CPUs",
             sched_load_balance
         ),
         pub fn sched_load_balance(&self) -> Result<bool> {
@@ -542,7 +543,7 @@ impl Subsystem {
 
     with_doc! {
         gen_doc!(
-            "whether the kernel rebalances the load across the selected CPUs",
+            "whether the kernel balances the load across the selected CPUs",
             sched_load_balance,
             true
         ),
@@ -553,7 +554,7 @@ impl Subsystem {
 
     with_doc! {
         gen_doc!(
-            "how much work the kernel do to rebalance the load on this cgroup",
+            "how much work the kernel do to balance the load on this cgroup",
             sched_relax_domain_level
         ),
         pub fn sched_relax_domain_level(&self) -> Result<i32> {
@@ -564,7 +565,7 @@ impl Subsystem {
 
     with_doc! {
         gen_doc!(
-            "how much work the kernel do to rebalance the load on this cgroup",
+            "how much work the kernel do to balance the load on this cgroup",
             sched_relax_domain_level,
             -1
         ),
@@ -594,15 +595,15 @@ impl std::str::FromStr for IdSet {
 
         let mut result = Vec::new();
 
-        for comma_splitted in s.split(',') {
-            if comma_splitted.contains('-') {
-                let dash_splitted = comma_splitted.split('-').collect::<Vec<_>>();
-                if dash_splitted.len() != 2 {
+        for comma_split in s.split(',') {
+            if comma_split.contains('-') {
+                let dash_split = comma_split.split('-').collect::<Vec<_>>();
+                if dash_split.len() != 2 {
                     return Err(Error::new(ErrorKind::Parse));
                 }
 
-                let start = dash_splitted[0].parse::<usize>().map_err(Error::parse)?;
-                let end = dash_splitted[1].parse::<usize>().map_err(Error::parse)?; // inclusive
+                let start = dash_split[0].parse::<usize>().map_err(Error::parse)?;
+                let end = dash_split[1].parse::<usize>().map_err(Error::parse)?; // inclusive
                 if end < start {
                     return Err(Error::new(ErrorKind::Parse));
                 }
@@ -611,7 +612,7 @@ impl std::str::FromStr for IdSet {
                     result.push(n);
                 }
             } else {
-                result.push(comma_splitted.parse::<usize>().map_err(Error::parse)?);
+                result.push(comma_split.parse::<usize>().map_err(Error::parse)?);
             }
         }
 
@@ -930,12 +931,9 @@ mod tests {
 
     #[test]
     fn err_id_set_from_str() {
-        let testcases = [
+        for case in &[
             ",", ",0", "0,", "-", "-0", "0-", "0-,1", "0,-1", "1-0", "-1", "0.1", "invalid",
-        ]
-        .into_iter();
-
-        for case in testcases {
+        ] {
             assert_eq!(case.parse::<IdSet>().unwrap_err().kind(), ErrorKind::Parse);
         }
     }

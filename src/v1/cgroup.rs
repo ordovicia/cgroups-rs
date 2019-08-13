@@ -93,7 +93,7 @@ pub trait Cgroup {
 
     /// Returns the absolute path to this cgroup.
     ///
-    /// The resulting path is a concatanation of 1) the cgroup mount point `sys/fs/cgroup`, 2) the
+    /// The resulting path is a concatenation of 1) the cgroup mount point `sys/fs/cgroup`, 2) the
     /// directory name for the subsystem of this cgroup, and 3) the cgroup name (e.g.
     /// `students/charlie`).
     ///
@@ -182,7 +182,7 @@ pub trait Cgroup {
     ///
     /// # Errors
     ///
-    /// Returns an erorr if failed to apply the resource configuration. The kind and lower-level
+    /// Returns an error if failed to apply the resource configuration. The kind and lower-level
     /// source of the error can be obtained with [`Error::kind`] and [`Error::source`] methods.
     ///
     /// See also implementors' documentation for their specific behavior.
@@ -578,7 +578,7 @@ pub trait Cgroup {
 
     /// Low-level API that opens a file with write access.
     ///
-    /// If `append` is `true`, the file is opend in append mode. Otherwise, if the file already
+    /// If `append` is `true`, the file is opened in append mode. Otherwise, if the file already
     /// exists, writing to the file will overwrite its contents.
     ///
     /// # Errors
@@ -763,7 +763,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cgroup_subsytem_kind() {
+    fn test_cgroup_subsystem_kind() {
         macro_rules! t {
             ( $( ($subsystem: ident, $kind: ident) ),* ) => {{ $(
                 let cgroup = crate::v1::$subsystem::Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));

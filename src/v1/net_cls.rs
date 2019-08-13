@@ -43,11 +43,11 @@ pub struct Subsystem {
 }
 
 /// Tag network packets from a cgroup with a class ID.
+///
+/// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
-    /// Class ID.
-    ///
-    /// See the kernel's documentation for more information about this field.
+    /// Class ID to be attached to network packets originating from this cgroup.
     pub classid: Option<ClassId>,
 }
 
@@ -74,7 +74,7 @@ pub struct Resources {
 /// assert_eq!(ClassId { major: 0x0123, minor: 0xABCD}.to_string(), "0x123ABCD");
 /// ```
 ///
-/// `ClassId` also supports conversion from/into `u32`.
+/// `ClassId` also supports conversion from/into `u32` and from/into `[u16; 2]`.
 ///
 /// ```
 /// use cgroups::v1::net_cls::ClassId;

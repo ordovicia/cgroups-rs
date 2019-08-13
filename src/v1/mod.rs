@@ -90,17 +90,18 @@ pub enum SubsystemKind {
 /// Resource limits and constraints that will be set to a cgroup.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
-    /// How this cgroup can use CPUs.
+    /// Resource limit on how much CPU time this cgroup can use.
     pub cpu: cpu::Resources,
-    /// Which CPUs and which memory nodes this cgroup can use.
+    /// Resource limit on which CPUs and which memory nodes this cgroup can use, and how they are
+    /// controlled by the system.
     pub cpuset: cpuset::Resources,
-    /// How many processes this cgroup can have.
+    /// Resource limit on how many processes this cgroup can have.
     pub pids: pids::Resources,
-    /// How many hugepage TLBs this cgroup can use.
+    /// Resource limit no how many hugepage TLBs this cgroup can use.
     pub hugetlb: hugetlb::Resources,
     /// Tag network packets from this cgroup with a class ID.
     pub net_cls: net_cls::Resources,
-    /// Whether tasks in this cgruop is freezed.
+    /// Whether tasks in this cgroup is freezed.
     pub freezer: freezer::Resources,
 }
 

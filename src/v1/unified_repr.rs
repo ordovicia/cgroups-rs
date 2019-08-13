@@ -14,7 +14,7 @@ use crate::v1::{$($subsystem),*};
 ///
 /// In cgroup v1, a system has multiple directory hierarchies for different sets of subsystems
 /// (typically one subsystem). Each cgroup belongs to a hierarchy, and subsystems attached to that
-/// hierarchy cotrol the resource of that cgroup.
+/// hierarchy control the resource of that cgroup.
 ///
 /// In cgroup v2 (not yet fully implemented in the Linux kernel), on the other hand, a system has
 /// only a single unified hierarchy, and subsystems are differently enabled for each cgroup. This

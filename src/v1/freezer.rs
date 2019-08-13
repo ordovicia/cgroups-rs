@@ -54,13 +54,13 @@ pub struct Subsystem {
     path: CgroupPath,
 }
 
-/// Whether tasks in a cgruop is freezed.
+/// Whether tasks in a cgroup is freezed.
+///
+/// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// If `State::Frozen`, tasks in this cgroup will be frozen. If `State::Thawed`, they will be
     /// thawed. Note that applying `State::Freezing` is invalid, and `apply` will raise an error.
-    ///
-    /// See the kernel's documentation for more information about this field.
     pub state: Option<State>,
 }
 

@@ -51,7 +51,7 @@ pub struct Subsystem {
     path: CgroupPath,
 }
 
-/// How many hugepage TLBs a cgroup can use.
+/// Resource limit no how many hugepage TLBs a cgroup can use.
 ///
 /// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -208,7 +208,7 @@ impl Subsystem {
     }
 
     with_doc! {
-        gen_doc!("a limit of hugepage TLB usage (in byets)", limit_in_bytes, "limit_in_bytes", 1 * (1 << 21)),
+        gen_doc!("a limit of hugepage TLB usage (in bytes)", limit_in_bytes, "limit_in_bytes", 1 * (1 << 21)),
         pub fn set_limit_in_bytes(&mut self, size: HugepageSize, bytes: u64) -> Result<()> {
             self.write_file(&format!("hugetlb.{}.{}", size, LIMIT_IN_BYTES), bytes)
         }
