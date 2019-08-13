@@ -89,6 +89,19 @@ pub struct Resources {
 /// assert_eq!(id, 0x0123_ABCD);
 /// ```
 ///
+/// ```
+/// use cgroups::v1::net_cls::ClassId;
+///
+/// assert_eq!(ClassId::from([0x10, 0x1]), ClassId { major: 0x10, minor: 0x1});
+/// assert_eq!(ClassId::from([0x0123, 0xABCD]), ClassId { major: 0x0123, minor: 0xABCD});
+///
+/// let id: [u16; 2] = ClassId { major: 0x10, minor: 0x1}.into();
+/// assert_eq!(id, [0x10, 0x1]);
+///
+/// let id: [u16; 2] = ClassId { major: 0x0123, minor: 0xABCD}.into();
+/// assert_eq!(id, [0x0123, 0xABCD]);
+/// ```
+///
 /// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
 /// [`ErrorKind::Parse`]: ../../enum.ErrorKind.html#variant.Parse
 ///
@@ -207,9 +220,24 @@ impl From<u32> for ClassId {
     }
 }
 
+impl From<[u16; 2]> for ClassId {
+    fn from(id: [u16; 2]) -> Self {
+        Self {
+            major: id[0],
+            minor: id[1],
+        }
+    }
+}
+
 impl Into<u32> for ClassId {
     fn into(self) -> u32 {
         ((self.major as u32) << 16) | (self.minor as u32)
+    }
+}
+
+impl Into<[u16; 2]> for ClassId {
+    fn into(self) -> [u16; 2] {
+        [self.major, self.minor]
     }
 }
 
