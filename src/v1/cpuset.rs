@@ -316,6 +316,8 @@ const MEMORY_SPREAD_SLAB: &str = "cpuset.memory_spread_slab";
 const SCHED_LOAD_BALANCE: &str = "cpuset.sched_load_balance";
 const SCHED_RELAX_DOMAIN_LEVEL: &str = "cpuset.sched_relax_domain_level";
 
+const CLONE_CHILDREN: &str = "cgroup.clone_children";
+
 impl Subsystem {
     with_doc! {
         gen_doc!("the set of CPUs on which tasks in this cgroup can run", cpus),
@@ -571,6 +573,28 @@ impl Subsystem {
         ),
         pub fn set_sched_relax_domain_level(&mut self, level: i32) -> Result<()> {
             self.write_file(SCHED_RELAX_DOMAIN_LEVEL, level)
+        }
+    }
+
+    with_doc! { concat!(
+        "Reads whether a new cpuset cgroup will copy the configuration from its parent cgroup, from `cgroups.clone_children` file.\n\n",
+        "See the kernel's documentation for more information about this field.\n\n",
+        "# Errors\n\n",
+        "Returns an error if failed to read and parse `cgroups.clone_children` file of this cgroup.\n\n",
+        gen_doc!(eg; clone_children)),
+        pub fn clone_children(&self) -> Result<bool> {
+            self.open_file_read(CLONE_CHILDREN).and_then(parse_01_bool)
+        }
+    }
+
+    with_doc! { concat!(
+        "Sets whether a new cpuset cgroup will copy the configuration from its parent cgroup, by writing to `cgroups.clone_children` file.\n\n",
+        "See the kernel's documentation for more information about this field.\n\n",
+        "# Errors\n\n",
+        "Returns an error if failed to write to `cgroups.clone_children` file of this cgroup.\n\n",
+        gen_doc!(eg; clone_children, true)),
+        pub fn set_clone_children(&mut self, clone: bool) -> Result<()> {
+            self.write_file(CLONE_CHILDREN, clone as i32)
         }
     }
 }
@@ -896,6 +920,11 @@ mod tests {
     fn test_subsystem_sched_relax_domain_level() -> Result<()> {
         // TODO: `set_sched_relax_domain_level()` raises io::Error with kind InvalidInput ?
         gen_subsystem_test!(Cpuset; sched_relax_domain_level, -1)
+    }
+
+    #[test]
+    fn test_subsystem_clone_children() -> Result<()> {
+        gen_subsystem_test!(Cpuset; clone_children, false, set_clone_children, true)
     }
 
     #[test]
