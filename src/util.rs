@@ -86,7 +86,7 @@ where
 
     buf.split_whitespace()
         .map(|e| e.parse::<T>().map_err(Error::parse))
-        .collect::<Result<Vec<_>>>()
+        .collect()
 }
 
 pub(crate) fn parse_01_bool<R: std::io::Read>(reader: R) -> Result<bool> {

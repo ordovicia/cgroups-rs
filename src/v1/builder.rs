@@ -36,8 +36,8 @@ use crate::{
 ///         .done()
 ///     // Start configuring the cpuset resource limits.
 ///     .cpuset()
-///         .cpus([0].iter().copied().collect::<cpuset::IdSet>())
-///         .mems([0].iter().copied().collect::<cpuset::IdSet>())
+///         .cpus([0].iter().copied().collect())
+///         .mems([0].iter().copied().collect())
 ///         .memory_migrate(true)
 ///         .done()
 ///     .pids()
@@ -55,7 +55,7 @@ use crate::{
 ///             [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)]
 ///                 .iter()
 ///                 .cloned()
-///                 .collect::<HashMap<_, u32>>(),
+///                 .collect(),
 ///         )
 ///         .done()
 ///     // Enable monitoring this cgroup via `perf` tool.
