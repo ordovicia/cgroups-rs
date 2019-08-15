@@ -16,7 +16,7 @@
 //!
 //! // Set a map of priorities assigned to traffic originating from this cgroup.
 //! let priorities = [("lo", 0), ("wlp1s0", 1)].iter().copied().collect::<HashMap<_, u32>>();
-//! net_cls_cgroup.set_ifpriomap(priorities.into_iter())?;
+//! net_cls_cgroup.set_ifpriomap(priorities)?;
 //!
 //! // Add a task to this cgroup.
 //! let pid = Pid::from(std::process::id());
@@ -161,19 +161,19 @@ impl Subsystem {
     ///     CgroupPath::new(SubsystemKind::NetPrio, PathBuf::from("students/charlie")));
     ///
     /// let prio_map = [("lo", 0), ("wlp1s0", 1)].iter().copied().collect::<HashMap<_, _>>();
-    /// cgroup.set_ifpriomap(prio_map.into_iter())?;
+    /// cgroup.set_ifpriomap(prio_map)?;
     /// # Ok(())
     /// # }
     /// ```
     pub fn set_ifpriomap<I, T>(&mut self, prio_map: I) -> Result<()>
     where
-        I: Iterator<Item = (T, u32)>,
+        I: IntoIterator<Item = (T, u32)>,
         T: AsRef<str> + std::fmt::Display,
     {
         use std::io::Write;
 
         let mut file = self.open_file_write(IFPRIOMAP)?;
-        for (interface, prio) in prio_map {
+        for (interface, prio) in prio_map.into_iter() {
             // write!(file, "{} {}", interface, prio).map_err(Error::io)?;
             // FIXME: ^ does not work
 
