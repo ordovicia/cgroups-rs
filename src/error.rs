@@ -58,16 +58,12 @@ impl StdError for Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self.kind {
-                ErrorKind::Io => "unable to do an I/O operation on a cgroup file system",
-                ErrorKind::Parse => "unable to parse contents in a cgroup file",
-                ErrorKind::InvalidArgument => "invalid argument",
-                ErrorKind::InvalidOperation => "the requested operation is invalid",
-            }
-        )?;
+        f.write_str(match self.kind {
+            ErrorKind::Io => "Unable to do an I/O operation on a cgroup file system",
+            ErrorKind::Parse => "Unable to parse contents in a cgroup file",
+            ErrorKind::InvalidArgument => "Invalid argument",
+            ErrorKind::InvalidOperation => "The requested operation is invalid",
+        })?;
 
         if let Some(ref source) = self.source {
             write!(f, ": {}", source)?;
@@ -110,4 +106,12 @@ impl Error {
     {
         Self::with_source(ErrorKind::Parse, source)
     }
+}
+
+#[cfg(test)]
+#[allow(unreachable_code, dead_code)]
+fn error_impl_sync_send() {
+    let _e: Error = unimplemented!();
+    let _: &dyn Sync = &_e;
+    let _: &dyn Send = &_e;
 }
