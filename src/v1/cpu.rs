@@ -17,17 +17,14 @@
 //! cpu_cgroup.create()?;
 //!
 //! // Define a resource limit about how a cgroup can use CPU time.
-//! let cpu_resources = v1::Resources {
-//!     cpu: cpu::Resources {
-//!         shares: Some(1024),
-//!         cfs_quota_us: Some(500_000),
-//!         cfs_period_us: Some(1000_000),
-//!     },
-//!     ..v1::Resources::default()
+//! let resources = cpu::Resources {
+//!     shares: Some(1024),
+//!     cfs_quota_us: Some(500_000),
+//!     cfs_period_us: Some(1000_000),
 //! };
 //!
 //! // Apply the resource limit to this cgroup.
-//! cpu_cgroup.apply(&cpu_resources)?;
+//! cpu_cgroup.apply(&resources.into())?;
 //!
 //! // Add tasks to this cgroup.
 //! let pid = Pid::from(std::process::id());
@@ -260,6 +257,15 @@ impl Subsystem {
         gen_doc!("length of period (in microseconds)", cfs_period_us, 1000 * 1000),
         pub fn set_cfs_period_us(&mut self, period_us: u64) -> Result<()> {
             self.write_file(CFS_PERIOD, period_us)
+        }
+    }
+}
+
+impl Into<v1::Resources> for Resources {
+    fn into(self) -> v1::Resources {
+        v1::Resources {
+            cpu: self,
+            ..v1::Resources::default()
         }
     }
 }

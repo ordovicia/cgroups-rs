@@ -221,6 +221,15 @@ impl Subsystem {
     }
 }
 
+impl Into<v1::Resources> for Resources {
+    fn into(self) -> v1::Resources {
+        v1::Resources {
+            freezer: self,
+            ..v1::Resources::default()
+        }
+    }
+}
+
 impl std::str::FromStr for State {
     type Err = Error;
 

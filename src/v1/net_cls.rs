@@ -189,6 +189,15 @@ impl Subsystem {
     }
 }
 
+impl Into<v1::Resources> for Resources {
+    fn into(self) -> v1::Resources {
+        v1::Resources {
+            net_cls: self,
+            ..v1::Resources::default()
+        }
+    }
+}
+
 impl FromStr for ClassId {
     type Err = Error;
 

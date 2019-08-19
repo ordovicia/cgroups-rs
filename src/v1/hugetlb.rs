@@ -15,16 +15,13 @@
 //! hugetlb_cgroup.create()?;
 //!
 //! // Define a resource limit about how many hugepage TLB a cgroup can use.
-//! let hugetlb_resources = v1::Resources {
-//!     hugetlb: hugetlb::Resources {
-//!         limit_2mb: Some(hugetlb::Limit::Pages(1)),
-//!         limit_1gb: Some(hugetlb::Limit::Pages(1)),
-//!     },
-//!     ..Default::default()
+//! let resources = hugetlb::Resources {
+//!     limit_2mb: Some(hugetlb::Limit::Pages(1)),
+//!     limit_1gb: Some(hugetlb::Limit::Pages(1)),
 //! };
 //!
 //! // Apply the resource limit.
-//! hugetlb_cgroup.apply(&hugetlb_resources)?;
+//! hugetlb_cgroup.apply(&resources.into())?;
 //!
 //! // Add tasks to this cgroup.
 //! let pid = Pid::from(std::process::id());
@@ -260,6 +257,15 @@ impl Subsystem {
         pub fn failcnt(&self, size: HugepageSize) -> Result<u64> {
             self.open_file_read(&format!("hugetlb.{}.{}", size, FAILCNT))
                 .and_then(parse)
+        }
+    }
+}
+
+impl Into<v1::Resources> for Resources {
+    fn into(self) -> v1::Resources {
+        v1::Resources {
+            hugetlb: self,
+            ..v1::Resources::default()
         }
     }
 }

@@ -21,18 +21,15 @@
 //!     id_set
 //! };
 //!
-//! let cpuset_resources = v1::Resources {
-//!     cpuset: cpuset::Resources {
-//!         cpus: Some(id_set.clone()),
-//!         mems: Some(id_set),
-//!         memory_migrate: Some(true),
-//!         ..Default::default()
-//!     },
-//!     ..Default::default()
+//! let resources = cpuset::Resources {
+//!     cpus: Some(id_set.clone()),
+//!     mems: Some(id_set),
+//!     memory_migrate: Some(true),
+//!     ..cpuset::Resources::default()
 //! };
 //!
 //! // Apply the resource limit to this cgroup.
-//! cpuset_cgroup.apply(&cpuset_resources)?;
+//! cpuset_cgroup.apply(&resources.into())?;
 //!
 //! // Add tasks to this cgroup.
 //! let pid = Pid::from(std::process::id());
@@ -595,6 +592,15 @@ impl Subsystem {
         gen_doc!(eg; clone_children, true)),
         pub fn set_clone_children(&mut self, clone: bool) -> Result<()> {
             self.write_file(CLONE_CHILDREN, clone as i32)
+        }
+    }
+}
+
+impl Into<v1::Resources> for Resources {
+    fn into(self) -> v1::Resources {
+        v1::Resources {
+            cpuset: self,
+            ..v1::Resources::default()
         }
     }
 }
