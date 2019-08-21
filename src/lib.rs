@@ -21,7 +21,7 @@
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
+//! use cgroups::{Pid, Max, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
 //!
 //! // Define and create a new cgroup controlled by the CPU subsystem.
 //! let name = PathBuf::from("students/charlie");
@@ -63,7 +63,7 @@
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
 //! use std::{collections::HashMap, path::PathBuf};
-//! use cgroups::v1::{cpuset, hugetlb, net_cls, pids, Builder};
+//! use cgroups::{Max, v1::{cpuset, hugetlb, net_cls, pids, Builder}};
 //!
 //! let mut cgroups =
 //!     // Start building a (set of) cgroup(s).
@@ -82,7 +82,7 @@
 //!         .memory_migrate(true)
 //!         .done()
 //!     .pids()
-//!         .max(pids::Max::Number(42))
+//!         .max(Max::<u32>::Limit(42))
 //!         .done()
 //!     .hugetlb()
 //!         .limit_2mb(hugetlb::Limit::Pages(4))
@@ -126,6 +126,8 @@ mod util;
 mod error;
 pub mod v1;
 
+use std::{fmt, str::FromStr};
+
 pub use error::{Error, ErrorKind, Result};
 
 /// PID or thread ID for attaching a task in a cgroup.
@@ -158,5 +160,90 @@ impl Pid {
     /// ```
     pub fn to_inner(self) -> u32 {
         self.0
+    }
+}
+
+/// Limit a number/amount of resources, or not limit.
+///
+/// `Max` implements [`FromStr`], so you can [`parse`] a string into a `Max`. If failed,
+/// `parse` returns an error with kind [`ErrorKind::Parse`].
+///
+/// ```
+/// use cgroups::Max;
+///
+/// let max = "max".parse::<Max<u32>>().unwrap();
+/// assert_eq!(max, Max::<u32>::Max);
+///
+/// let num = "42".parse::<Max<u32>>().unwrap();
+/// assert_eq!(num, Max::<u32>::Limit(42));
+/// ```
+///
+/// `Max` also implements [`Display`]. The resulting format is the number or "max".
+///
+/// ```
+/// use std::string::ToString;
+/// use cgroups::Max;
+///
+/// assert_eq!(Max::<u32>::Max.to_string(), "max");
+/// assert_eq!(Max::<u32>::Limit(42).to_string(), "42");
+/// ```
+///
+/// `Max` implements [`Default`]. The default value is `Max::Max`.
+///
+/// ```
+/// use cgroups::Max;
+///
+/// assert_eq!(Max::<u32>::default(), Max::<u32>::Max);
+/// ```
+///
+/// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
+/// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
+/// [`ErrorKind::Parse`]: enum.ErrorKind.html#variant.Parse
+///
+/// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
+///
+/// [`Default`]: https://doc.rust-lang.org/std/default/trait.Default.html
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Max<T> {
+    /// Not limit the number/amount of resources.
+    Max,
+    /// Limits the number/amount of resources to this value.
+    Limit(T),
+}
+
+impl<T> Default for Max<T> {
+    fn default() -> Self {
+        Self::Max
+    }
+}
+
+impl<T> From<T> for Max<T> {
+    fn from(n: T) -> Self {
+        Self::Limit(n)
+    }
+}
+
+impl<T> FromStr for Max<T>
+where
+    T: FromStr,
+    <T as FromStr>::Err: std::error::Error + Send + Sync + 'static,
+    Error: From<<T as FromStr>::Err>,
+{
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "max" => Ok(Self::Max),
+            n => Ok(Self::Limit(n.parse()?)),
+        }
+    }
+}
+
+impl<T: fmt::Display> fmt::Display for Max<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Max => write!(f, "max"),
+            Self::Limit(n) => write!(f, "{}", n),
+        }
     }
 }

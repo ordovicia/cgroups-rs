@@ -10,7 +10,7 @@ Currently this crate supports only cgroup v1 hierarchy, implemented in `v1` modu
 
 ```rust
 use std::path::PathBuf;
-use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
+use cgroups::{Pid, Max, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
 
 // Define and create a new cgroup controlled by the CPU subsystem.
 let name = PathBuf::from("students/charlie");
@@ -49,7 +49,7 @@ cgroup.delete()?;
 
 ```rust
 use std::{collections::HashMap, path::PathBuf};
-use cgroups::v1::{cpuset, hugetlb, net_cls, pids, Builder};
+use cgroups::{Max, v1::{cpuset, hugetlb, net_cls, pids, Builder}};
 
 let mut cgroups =
     // Start building a (set of) cgroup(s).
@@ -68,7 +68,7 @@ let mut cgroups =
         .memory_migrate(true)
         .done()
     .pids()
-        .max(pids::Max::Number(42))
+        .max(Max::<u32>::Limit(42))
         .done()
     .hugetlb()
         .limit_2mb(hugetlb::Limit::Pages(4))

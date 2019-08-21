@@ -8,14 +8,14 @@
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::{Pid, v1::{pids, Cgroup, CgroupPath, SubsystemKind}};
+//! use cgroups::{Pid, Max, v1::{pids, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut pids_cgroup = pids::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::Pids, PathBuf::from("students/charlie")));
 //! pids_cgroup.create()?;
 //!
 //! // Limit the maximum number of processes this cgroup can have.
-//! pids_cgroup.set_max(pids::Max::Number(42))?;
+//! pids_cgroup.set_max(Max::Limit(42))?;
 //!
 //! // Add a task to this cgroup.
 //! let pid = Pid::from(std::process::id());
@@ -30,11 +30,11 @@
 //! # }
 //! ```
 
-use std::{fmt, path::PathBuf};
+use std::path::PathBuf;
 
 use crate::{
     v1::{self, Cgroup, CgroupPath, SubsystemKind},
-    Error, Result,
+    Max, Result,
 };
 
 use crate::{
@@ -54,57 +54,8 @@ pub struct Subsystem {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// If `Max::Max`, the system does not limit the number of processes this cgroup can have. If
-    /// `Max::Number(n)`, this cgroup can have `n` processes at most.
-    pub max: Option<Max>,
-}
-
-/// Limit on the number of processes a cgroup can have.
-///
-/// `Max` implements [`FromStr`], so you can [`parse`] a string into a `Max`. If failed,
-/// `parse` returns an error with kind [`ErrorKind::Parse`].
-///
-/// ```
-/// use cgroups::v1::pids;
-///
-/// let max = "max".parse::<pids::Max>().unwrap();
-/// assert_eq!(max, pids::Max::Max);
-///
-/// let num = "42".parse::<pids::Max>().unwrap();
-/// assert_eq!(num, pids::Max::Number(42));
-/// ```
-///
-/// `Max` also implements [`Display`]. The resulting format is same as in `pids.max` file.
-///
-/// ```
-/// use std::string::ToString;
-/// use cgroups::v1::pids;
-///
-/// assert_eq!(pids::Max::Max.to_string(), "max");
-/// assert_eq!(pids::Max::Number(42).to_string(), "42");
-/// ```
-///
-/// `Max` implements [`Default`]. The default value is `Max::Max`, same as the value a cgroup has
-/// when created.
-///
-/// ```
-/// use cgroups::v1::pids;
-///
-/// assert_eq!(pids::Max::default(), pids::Max::Max);
-/// ```
-///
-/// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
-/// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
-/// [`ErrorKind::Parse`]: ../../enum.ErrorKind.html#variant.Parse
-///
-/// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
-///
-/// [`Default`]: https://doc.rust-lang.org/std/default/trait.Default.html
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Max {
-    /// Not limit the number of processes this cgroup can have.
-    Max,
-    /// Limits the number of processes this cgroup can have to this number.
-    Number(u32),
+    /// `Max::Limit(n)`, this cgroup can have `n` processes at most.
+    pub max: Option<Max<u32>>,
 }
 
 impl_cgroup! {
@@ -153,7 +104,7 @@ const EVENTS: &str = "pids.events";
 impl Subsystem {
     with_doc! {
         gen_doc!("the maximum number of processes this cgroup can have", max),
-        pub fn max(&self) -> Result<Max> {
+        pub fn max(&self) -> Result<Max<u32>> {
             self.open_file_read(MAX).and_then(parse)
         }
     }
@@ -171,15 +122,15 @@ impl Subsystem {
     /// ```no_run
     /// # fn main() -> cgroups::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{pids, Cgroup, CgroupPath, SubsystemKind};
+    /// use cgroups::{Max, v1::{pids, Cgroup, CgroupPath, SubsystemKind}};
     ///
     /// let mut cgroup = pids::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Pids, PathBuf::from("students/charlie")));
-    /// cgroup.set_max(pids::Max::from(2))?;
+    /// cgroup.set_max(Max::<u32>::Limit(2))?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn set_max(&mut self, max: Max) -> Result<()> {
+    pub fn set_max(&mut self, max: Max<u32>) -> Result<()> {
         self.write_file(MAX, max)
     }
 
@@ -195,7 +146,7 @@ impl Subsystem {
             "the event counter, i.e. a pair of the maximum number of processes, and the number of times fork failed due to the limit",
             events
         ),
-        pub fn events(&self) -> Result<(Max, u64)> {
+        pub fn events(&self) -> Result<(Max<u32>, u64)> {
             use std::io::Read;
 
             let mut file = self.open_file_read(EVENTS)?;
@@ -216,38 +167,6 @@ impl Into<v1::Resources> for Resources {
         v1::Resources {
             pids: self,
             ..v1::Resources::default()
-        }
-    }
-}
-
-impl Default for Max {
-    fn default() -> Self {
-        Self::Max
-    }
-}
-
-impl From<u32> for Max {
-    fn from(n: u32) -> Self {
-        Self::Number(n)
-    }
-}
-
-impl std::str::FromStr for Max {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "max" => Ok(Self::Max),
-            n => Ok(Self::Number(n.parse()?)),
-        }
-    }
-}
-
-impl fmt::Display for Max {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Max => write!(f, "max"),
-            Self::Number(n) => write!(f, "{}", n),
         }
     }
 }
@@ -273,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_max() -> Result<()> {
-        gen_subsystem_test!(Pids; max, Max::Max, set_max, Max::Number(42))
+        gen_subsystem_test!(Pids; max, Max::<u32>::Max, set_max, Max::<u32>::Limit(42))
     }
 
     #[test]
@@ -297,6 +216,6 @@ mod tests {
 
     #[test]
     fn test_subsystem_events() -> Result<()> {
-        gen_subsystem_test!(Pids; events, (Max::Max, 0))
+        gen_subsystem_test!(Pids; events, (Max::<u32>::Max, 0))
     }
 }

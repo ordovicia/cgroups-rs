@@ -7,8 +7,8 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
-    v1::{cpuset, hugetlb, net_cls, pids, Resources, SubsystemKind, UnifiedRepr},
-    Result,
+    v1::{cpuset, hugetlb, net_cls, Resources, SubsystemKind, UnifiedRepr},
+    Max, Result,
 };
 
 // NOTE: Keep the example below in sync with README.md and lib.rs
@@ -22,7 +22,7 @@ use crate::{
 /// ```no_run
 /// # fn main() -> cgroups::Result<()> {
 /// use std::{collections::HashMap, path::PathBuf};
-/// use cgroups::v1::{cpuset, hugetlb, net_cls, pids, Builder};
+/// use cgroups::{Max, v1::{cpuset, hugetlb, net_cls, pids, Builder}};
 ///
 /// let mut cgroups =
 ///     // Start building a (set of) cgroup(s).
@@ -41,7 +41,7 @@ use crate::{
 ///         .memory_migrate(true)
 ///         .done()
 ///     .pids()
-///         .max(pids::Max::Number(42))
+///         .max(Max::<u32>::Limit(42))
 ///         .done()
 ///     .hugetlb()
 ///         .limit_2mb(hugetlb::Limit::Pages(4))
@@ -332,7 +332,7 @@ impl PidsBuilder {
     gen_setter!(
         pids;
         max,
-        pids::Max,
+        Max<u32>,
         "a maximum number of tasks this cgroup can have"
     );
 
