@@ -632,8 +632,8 @@ impl std::str::FromStr for IdSet {
                     return Err(Error::new(ErrorKind::Parse));
                 }
 
-                let start = dash_split[0].parse::<usize>().map_err(Error::parse)?;
-                let end = dash_split[1].parse::<usize>().map_err(Error::parse)?; // inclusive
+                let start = dash_split[0].parse::<usize>()?;
+                let end = dash_split[1].parse::<usize>()?; // inclusive
                 if end < start {
                     return Err(Error::new(ErrorKind::Parse));
                 }
@@ -642,7 +642,7 @@ impl std::str::FromStr for IdSet {
                     result.push(n);
                 }
             } else {
-                result.push(comma_split.parse::<usize>().map_err(Error::parse)?);
+                result.push(comma_split.parse::<usize>()?);
             }
         }
 

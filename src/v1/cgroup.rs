@@ -173,7 +173,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn create(&mut self) -> Result<()> {
-        fs::create_dir(self.path()).map_err(Error::io)
+        fs::create_dir(self.path()).map_err(Into::into)
     }
 
     /// Applies a set of resource limits and constraints to this cgroup.
@@ -242,7 +242,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn delete(&mut self) -> Result<()> {
-        fs::remove_dir(self.path()).map_err(Error::io)
+        fs::remove_dir(self.path()).map_err(Into::into)
     }
 
     /// Reads a list of tasks attached to this cgroup from `tasks` file. The resulting tasks are
@@ -295,7 +295,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn add_task(&mut self, pid: Pid) -> Result<()> {
-        fs::write(self.path().join(TASKS), format!("{}", pid.to_inner())).map_err(Error::io)
+        fs::write(self.path().join(TASKS), format!("{}", pid.to_inner())).map_err(Into::into)
     }
 
     /// Removes a task from this cgroup. The task is represented by its thread ID.
@@ -378,7 +378,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn add_proc(&mut self, pid: Pid) -> Result<()> {
-        fs::write(self.path().join(PROCS), format!("{}", pid.to_inner())).map_err(Error::io)
+        fs::write(self.path().join(PROCS), format!("{}", pid.to_inner())).map_err(Into::into)
     }
 
     /// Removes a process from this cgroup, with all threads in the same thread group at once. The
@@ -468,7 +468,7 @@ pub trait Cgroup {
             self.path().join(NOTIFY_ON_RELEASE),
             format!("{}", enable as i32),
         )
-        .map_err(Error::io)
+        .map_err(Into::into)
     }
 
     /// Reads the command to be executed when "notify on release" is triggered, i.e. this cgroup is
@@ -508,8 +508,7 @@ pub trait Cgroup {
 
         let mut buf = String::new();
         self.open_file_read(RELEASE_AGENT)?
-            .read_to_string(&mut buf)
-            .map_err(Error::io)?;
+            .read_to_string(&mut buf)?;
 
         Ok(buf)
     }
@@ -546,7 +545,7 @@ pub trait Cgroup {
         if !self.is_root() {
             return Err(Error::new(ErrorKind::InvalidOperation));
         }
-        fs::write(self.path().join(RELEASE_AGENT), agent_path.as_ref()).map_err(Error::io)
+        fs::write(self.path().join(RELEASE_AGENT), agent_path.as_ref()).map_err(Into::into)
     }
 
     /// Returns whether a file with the given name exists in this cgroup.
@@ -592,7 +591,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn open_file_read(&self, name: &str) -> Result<File> {
-        File::open(self.path().join(name)).map_err(Error::io)
+        File::open(self.path().join(name)).map_err(Into::into)
     }
 
     /// Low-level API that opens a file with write access.
@@ -622,7 +621,7 @@ pub trait Cgroup {
             .write(true)
             // .create(true)
             .open(self.path().join(name))
-            .map_err(Error::io)
+            .map_err(Into::into)
     }
 }
 
@@ -733,7 +732,8 @@ macro_rules! impl_cgroup {
 
 pub(crate) trait CgroupHelper: Cgroup {
     fn write_file(&mut self, name: &str, val: impl std::fmt::Display) -> Result<()> {
-        fs::write(self.path().join(name), format!("{}", val)).map_err(Error::io)
+        let _ = fs::write(self.path().join(name), format!("{}", val))?;
+        Ok(())
     }
 }
 
@@ -744,8 +744,7 @@ fn parse_tasks_procs(file: File) -> Result<Vec<Pid>> {
 
     let mut ids = vec![];
     for line in BufReader::new(file).lines() {
-        let line = line.map_err(Error::io)?;
-        let id = line.trim().parse::<u32>().map_err(Error::parse)?;
+        let id = line?.trim().parse::<u32>()?;
         ids.push(Pid::from(id))
     }
 

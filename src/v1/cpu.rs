@@ -177,11 +177,10 @@ impl Subsystem {
             use std::io::{BufRead, BufReader};
 
             let (mut nr_periods, mut nr_throttled, mut throttled_time) = (None, None, None);
-
             let buf = BufReader::new(self.open_file_read(STAT)?);
 
             for line in buf.lines() {
-                let line = line.map_err(Error::io)?;
+                let line = line?;
                 let mut entry = line.split_whitespace();
 
                 match entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))? {

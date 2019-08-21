@@ -185,7 +185,7 @@ impl Subsystem {
     /// ```
     pub fn set_classid(&mut self, id: ClassId) -> Result<()> {
         let raw: u32 = id.into();
-        std::fs::write(self.path().join(CLASSID), format!("{:#08X}", raw)).map_err(Error::io)
+        std::fs::write(self.path().join(CLASSID), format!("{:#08X}", raw)).map_err(Into::into)
     }
 }
 
@@ -207,8 +207,8 @@ impl FromStr for ClassId {
             return Err(Error::new(ErrorKind::Parse));
         }
 
-        let major = u16::from_str_radix(&s[2..(len - 4)], 16).map_err(Error::parse)?;
-        let minor = u16::from_str_radix(&s[(len - 4)..len], 16).map_err(Error::parse)?;
+        let major = u16::from_str_radix(&s[2..(len - 4)], 16)?;
+        let minor = u16::from_str_radix(&s[(len - 4)..len], 16)?;
 
         Ok(ClassId { major, minor })
     }

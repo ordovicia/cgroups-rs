@@ -60,7 +60,7 @@ where
     R: std::io::Read,
 {
     let mut buf = String::new();
-    reader.read_to_string(&mut buf).map_err(Error::io)?;
+    reader.read_to_string(&mut buf)?;
     buf.trim().parse::<T>().map_err(Error::parse)
 }
 
@@ -82,7 +82,7 @@ where
     R: std::io::Read,
 {
     let mut buf = String::new();
-    reader.read_to_string(&mut buf).map_err(Error::io)?;
+    reader.read_to_string(&mut buf)?;
 
     buf.split_whitespace()
         .map(|e| e.parse::<T>().map_err(Error::parse))

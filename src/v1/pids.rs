@@ -200,7 +200,7 @@ impl Subsystem {
 
             let mut file = self.open_file_read(EVENTS)?;
             let mut buf = String::new();
-            file.read_to_string(&mut buf).map_err(Error::io)?;
+            file.read_to_string(&mut buf)?;
 
             let mut entry = buf.split_whitespace();
             let max = parse_option(entry.next())?;
@@ -238,10 +238,7 @@ impl std::str::FromStr for Max {
     fn from_str(s: &str) -> Result<Self> {
         match s {
             "max" => Ok(Max::Max),
-            n => {
-                let n = n.parse().map_err(Error::parse)?;
-                Ok(Max::Number(n))
-            }
+            n => Ok(Max::Number(n.parse()?)),
         }
     }
 }

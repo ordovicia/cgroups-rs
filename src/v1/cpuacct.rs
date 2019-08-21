@@ -113,11 +113,12 @@ impl Subsystem {
             use std::io::{BufRead, BufReader};
 
             let (mut system, mut user) = (None, None);
-
             let buf = BufReader::new(self.open_file_read(STAT)?);
+
             for line in buf.lines() {
-                let line = line.map_err(Error::io)?;
+                let line = line?;
                 let mut entry = line.split_whitespace();
+
                 match entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))? {
                     "system" => {
                         system = Some(parse_option(entry.next())?);
@@ -173,8 +174,8 @@ impl Subsystem {
 
             let mut stats = Vec::new();
             for line in buf.lines() {
-                let entry = line.map_err(Error::io)?;
-                let mut entry = entry.split_whitespace().skip(1); // skip CPU ID
+                let line = line?;
+                let mut entry = line.split_whitespace().skip(1); // skip CPU ID
                 // FIXME: IDs are guaranteed to be sorted ?
 
                 let usage_0 = parse_option(entry.next())?;

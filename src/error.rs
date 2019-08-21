@@ -88,25 +88,31 @@ impl Error {
         }
     }
 
-    /// Returns the kind of this error.
-    pub fn kind(&self) -> ErrorKind {
-        self.kind
-    }
-
-    pub(crate) fn io<E>(source: E) -> Self
-    where
-        E: StdError + Sync + Send + 'static,
-    {
-        Self::with_source(ErrorKind::Io, source)
-    }
-
     pub(crate) fn parse<E>(source: E) -> Self
     where
         E: StdError + Sync + Send + 'static,
     {
         Self::with_source(ErrorKind::Parse, source)
     }
+
+    /// Returns the kind of this error.
+    pub fn kind(&self) -> ErrorKind {
+        self.kind
+    }
 }
+
+macro_rules! impl_from {
+    ($source: ty, $kind: ident) => {
+        impl From<$source> for Error {
+            fn from(e: $source) -> Self {
+                Self::with_source(ErrorKind::$kind, e)
+            }
+        }
+    };
+}
+
+impl_from!(std::io::Error, Io);
+impl_from!(std::num::ParseIntError, Parse);
 
 #[cfg(test)]
 #[allow(unreachable_code, dead_code)]

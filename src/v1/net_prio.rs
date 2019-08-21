@@ -129,7 +129,7 @@ impl Subsystem {
         let buf = BufReader::new(self.open_file_read(IFPRIOMAP)?);
 
         for line in buf.lines() {
-            let line = line.map_err(Error::io)?;
+            let line = line?;
             let mut entry = line.split_whitespace();
 
             let interface = entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))?;
@@ -174,11 +174,10 @@ impl Subsystem {
 
         let mut file = self.open_file_write(IFPRIOMAP)?;
         for (interface, prio) in prio_map.into_iter() {
-            // write!(file, "{} {}", interface, prio).map_err(Error::io)?;
+            // write!(file, "{} {}", interface, prio)?;
             // FIXME: ^ does not work
 
-            file.write_all(format!("{} {}", interface, prio).as_bytes())
-                .map_err(Error::io)?;
+            file.write_all(format!("{} {}", interface, prio).as_bytes())?;
         }
 
         Ok(())
