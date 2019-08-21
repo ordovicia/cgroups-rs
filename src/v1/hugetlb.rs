@@ -287,8 +287,8 @@ fn pages_to_bytes(pages: u64, size: HugepageSize) -> u64 {
 impl fmt::Display for HugepageSize {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            HugepageSize::Mb2 => write!(f, "2MB"),
-            HugepageSize::Gb1 => write!(f, "1GB"),
+            Self::Mb2 => write!(f, "2MB"),
+            Self::Gb1 => write!(f, "1GB"),
         }
     }
 }

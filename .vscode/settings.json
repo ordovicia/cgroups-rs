@@ -1,48 +1,38 @@
 {
     "cSpell.words": [
-        "concat",
-        "hashset",
-        "clippy",
-        "rustfmt",
-        "tymethod",
-        "structfield",
-        //
+        "TLBs",
+        "UnifiedRepr",
         "cgroup",
-        "cgroups",
         "cgroupfs",
-        "procs",
-        //
-        "cpus",
-        "realtime",
-        //
+        "cgroups",
+        "classid",
+        "clippy",
+        "concat",
         "cpuacct",
-        "percpu",
-        //
+        "cpus",
         "cpuset",
         "cpusets",
-        "mems",
+        "failcnt",
         "hardwall",
         "hardwalled",
-        "sched",
-        //
+        "hashset",
+        "hugepage",
+        "hugetlb",
+        "ifpriomap",
+        "mems",
         "net_cls",
-        "classid",
-        //
         "net_prio",
+        "percpu",
+        "perf_event",
+        "pids",
         "prio",
         "prioidx",
-        "ifpriomap",
-        //
-        "hugetlb",
-        "hugepage",
-        "TLBs",
-        "failcnt",
-        //
-        "pids",
-        //
-        "perf_event",
-        //
-        "UnifiedRepr",
-        "repr"
+        "procs",
+        "realtime",
+        "repr",
+        "rustfmt",
+        "sched",
+        "structfield",
+        "tymethod"
     ]
 }

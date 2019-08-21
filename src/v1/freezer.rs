@@ -122,12 +122,10 @@ impl_cgroup! {
     /// [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument
     /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
-        use State::*;
-
         match resources.freezer.state {
-            Some(Frozen) => self.freeze(),
-            Some(Thawed) => self.thaw(),
-            Some(Freezing) => Err(Error::new(ErrorKind::InvalidArgument)),
+            Some(State::Frozen) => self.freeze(),
+            Some(State::Thawed) => self.thaw(),
+            Some(State::Freezing) => Err(Error::new(ErrorKind::InvalidArgument)),
             None => Ok(())
         }
     }
@@ -234,11 +232,10 @@ impl std::str::FromStr for State {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        use State::*;
         match s {
-            "THAWED" => Ok(Thawed),
-            "FREEZING" => Ok(Freezing),
-            "FROZEN" => Ok(Frozen),
+            "THAWED" => Ok(Self::Thawed),
+            "FREEZING" => Ok(Self::Freezing),
+            "FROZEN" => Ok(Self::Frozen),
             _ => Err(Error::new(ErrorKind::Parse)),
         }
     }
@@ -246,11 +243,10 @@ impl std::str::FromStr for State {
 
 impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use State::*;
         match self {
-            Thawed => write!(f, "THAWED"),
-            Freezing => write!(f, "FREEZING"),
-            Frozen => write!(f, "FROZEN"),
+            Self::Thawed => write!(f, "THAWED"),
+            Self::Freezing => write!(f, "FREEZING"),
+            Self::Frozen => write!(f, "FROZEN"),
         }
     }
 }

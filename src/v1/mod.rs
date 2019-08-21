@@ -113,18 +113,16 @@ pub struct Resources {
 
 impl fmt::Display for SubsystemKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use SubsystemKind::*;
-
-        match self {
-            Cpu => write!(f, "cpu"),
-            Cpuset => write!(f, "cpuset"),
-            Cpuacct => write!(f, "cpuacct"),
-            Pids => write!(f, "pids"),
-            HugeTlb => write!(f, "hugetlb"),
-            NetCls => write!(f, "net_cls"),
-            NetPrio => write!(f, "net_prio"),
-            Freezer => write!(f, "freezer",),
-            PerfEvent => write!(f, "perf_event",),
-        }
+        f.write_str(match self {
+            Self::Cpu => "cpu",
+            Self::Cpuset => "cpuset",
+            Self::Cpuacct => "cpuacct",
+            Self::Pids => "pids",
+            Self::HugeTlb => "hugetlb",
+            Self::NetCls => "net_cls",
+            Self::NetPrio => "net_prio",
+            Self::Freezer => "freezer",
+            Self::PerfEvent => "perf_event",
+        })
     }
 }

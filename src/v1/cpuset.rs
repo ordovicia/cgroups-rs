@@ -673,6 +673,7 @@ impl fmt::Display for IdSet {
         let mut segments = Vec::new();
         for id in ids {
             use IdSegment::*;
+
             match current {
                 Single(c) if id == c + 1 => {
                     current = Range(c, id);
@@ -693,6 +694,7 @@ impl fmt::Display for IdSet {
         let mut buf = String::new();
         for seg in segments {
             use IdSegment::*;
+
             let s = match seg {
                 Single(id) => format!("{},", id),
                 Range(s, e) => {

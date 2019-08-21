@@ -222,13 +222,13 @@ impl Into<v1::Resources> for Resources {
 
 impl Default for Max {
     fn default() -> Self {
-        Max::Max
+        Self::Max
     }
 }
 
 impl From<u32> for Max {
     fn from(n: u32) -> Self {
-        Max::Number(n)
+        Self::Number(n)
     }
 }
 
@@ -237,8 +237,8 @@ impl std::str::FromStr for Max {
 
     fn from_str(s: &str) -> Result<Self> {
         match s {
-            "max" => Ok(Max::Max),
-            n => Ok(Max::Number(n.parse()?)),
+            "max" => Ok(Self::Max),
+            n => Ok(Self::Number(n.parse()?)),
         }
     }
 }
@@ -246,8 +246,8 @@ impl std::str::FromStr for Max {
 impl fmt::Display for Max {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Max::Max => write!(f, "max"),
-            Max::Number(n) => write!(f, "{}", n),
+            Self::Max => write!(f, "max"),
+            Self::Number(n) => write!(f, "{}", n),
         }
     }
 }
