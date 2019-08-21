@@ -793,6 +793,7 @@ mod tests {
             (hugetlb, HugeTlb),
             (net_cls, NetCls),
             (net_prio, NetPrio),
+            (blkio, BlkIo),
             (rdma, Rdma),
             (freezer, Freezer),
             (perf_event, PerfEvent),
@@ -852,7 +853,7 @@ mod tests {
         cgroup.add_proc(pid)?;
         assert_eq!(cgroup.procs()?, vec![pid]);
 
-        // child processes are automaticaly added to the cgroup
+        // child processes are automatically added to the cgroup
         let mut child = Command::new("sleep").arg("1").spawn().unwrap();
         let child_pid = Pid::from(&child);
 

@@ -49,7 +49,7 @@ cgroup.delete()?;
 
 ```rust
 use std::{collections::HashMap, path::PathBuf};
-use cgroups::{Max, v1::{cpuset, devices, hugetlb, net_cls, pids, rdma, Builder}};
+use cgroups::{Device, Max, v1::{cpuset, devices, hugetlb, net_cls, pids, rdma, Builder}};
 
 let mut cgroups =
     // Start building a (set of) cgroup(s).
@@ -93,6 +93,12 @@ let mut cgroups =
                 .cloned()
                 .collect(),
         )
+        .done()
+    .blkio()
+        .weight(1000)
+        .weight_device([(Device::from([8, 0]), 100)].iter().copied().collect())
+        .read_bps_device([(Device::from([8, 0]), 10 * (1 << 20))].iter().copied().collect())
+        .write_iops_device([(Device::from([8, 0]), 100)].iter().copied().collect())
         .done()
     .rdma()
         .max(

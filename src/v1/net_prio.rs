@@ -185,9 +185,7 @@ impl Subsystem {
 
         let mut file = self.open_file_write(IFPRIOMAP)?;
         for (interface, prio) in prio_map.into_iter() {
-            // write!(file, "{} {}", interface, prio)?;
-            // FIXME: ^ does not work
-
+            // write!(file, "{} {}", interface, prio)?; // not work
             file.write_all(format!("{} {}", interface, prio).as_bytes())?;
         }
 

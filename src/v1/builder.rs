@@ -8,7 +8,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
     v1::{cpuset, devices, hugetlb, net_cls, rdma, Resources, SubsystemKind, UnifiedRepr},
-    Max, Result,
+    Device, Max, Result,
 };
 
 // NOTE: Keep the example below in sync with README.md and lib.rs
@@ -22,7 +22,7 @@ use crate::{
 /// ```no_run
 /// # fn main() -> cgroups::Result<()> {
 /// use std::{collections::HashMap, path::PathBuf};
-/// use cgroups::{Max, v1::{cpuset, devices, hugetlb, net_cls, pids, rdma, Builder}};
+/// use cgroups::{Device, Max, v1::{cpuset, devices, hugetlb, net_cls, pids, rdma, Builder}};
 ///
 /// let mut cgroups =
 ///     // Start building a (set of) cgroup(s).
@@ -66,6 +66,12 @@ use crate::{
 ///                 .cloned()
 ///                 .collect(),
 ///         )
+///         .done()
+///     .blkio()
+///         .weight(1000)
+///         .weight_device([(Device::from([8, 0]), 100)].iter().copied().collect())
+///         .read_bps_device([(Device::from([8, 0]), 10 * (1 << 20))].iter().copied().collect())
+///         .write_iops_device([(Device::from([8, 0]), 100)].iter().copied().collect())
 ///         .done()
 ///     .rdma()
 ///         .max(
@@ -182,6 +188,7 @@ impl Builder {
         (hugetlb, HugeTlb, HugeTlbBuilder, "hugetlb"),
         (net_cls, NetCls, NetClsBuilder, "net_cls"),
         (net_prio, NetPrio, NetPrioBuilder, "net_prio"),
+        (blkio, BlkIo, BlkIoBuilder, "blkio"),
         (rdma, Rdma, RdmaBuilder, "rdma"),
     }
 
@@ -503,6 +510,53 @@ gen_subsystem_builder! {
         "a map of priorities assigned to traffic originating from this cgroup",
         ifpriomap,
         HashMap<String, u32>
+    );
+}
+
+gen_subsystem_builder! {
+    blkio,
+    BlkIoBuilder,
+    "blkio",
+
+    gen_setter_opt!(blkio; "a relative weight of block I/O by this cgroup", weight, u16);
+    gen_setter!(blkio; "overriding weights for each device", weight_device, HashMap<Device, u16>);
+
+    gen_setter_opt!(
+        blkio;
+        "a weight this cgroup has while competing against descendant cgroups",
+        leaf_weight,
+        u16
+    );
+    gen_setter!(
+        blkio;
+        "overriding leaf weights for each device",
+        leaf_weight_device,
+        HashMap<Device, u16>
+    );
+
+    gen_setter!(
+        blkio;
+        "a throttling on read access in terms of bytes/s for each device",
+        read_bps_device,
+        HashMap<Device, u64>
+    );
+    gen_setter!(
+        blkio;
+        "a throttling on write access in terms of bytes/s for each device",
+        write_bps_device,
+        HashMap<Device, u64>
+    );
+    gen_setter!(
+        blkio;
+        "a throttling on read access in terms of ops/s for each device",
+        read_iops_device,
+        HashMap<Device, u64>
+    );
+    gen_setter!(
+        blkio;
+        "a throttling on write access in terms of ops/s for each device",
+        write_iops_device,
+        HashMap<Device, u64>
     );
 }
 

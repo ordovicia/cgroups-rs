@@ -219,7 +219,7 @@ impl Subsystem {
 
         let mut file = self.open_file_write(MAX)?;
         for (device, limit) in limits.into_iter() {
-            // write!(file, "{} {}", interface, prio)?;
+            // write!(file, "{} {}", interface, prio)?; // not work
             file.write_all(format!("{} {}", device, limit).as_bytes())?;
         }
 

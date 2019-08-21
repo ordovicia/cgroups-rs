@@ -5,7 +5,7 @@
 //!
 //! Operations for each subsystem are implemented in each module. See [`cpu::Subsystem`] for
 //! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [memory], [pids], [devices],
-//! [hugetlb], [net_cls], [net_prio], [RDMA], [freezer], and [perf_event] subsystems.
+//! [hugetlb], [net_cls], [net_prio], [blkio], [RDMA], [freezer], and [perf_event] subsystems.
 //!
 //! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
 //! this trait and subsystem-specific operations.
@@ -25,6 +25,7 @@
 //! [hugetlb]: hugetlb/index.html
 //! [net_cls]: net_cls/index.html
 //! [net_prio]: net_prio/index.html
+//! [blkio]: blkio/index.html
 //! [RDMA]: rdma/index.html
 //! [freezer]: freezer/index.html
 //! [perf_event]: perf_event/index.html
@@ -37,6 +38,7 @@ use std::fmt;
 
 #[macro_use]
 mod cgroup;
+pub mod blkio;
 pub mod builder;
 pub mod cpu;
 pub mod cpuacct;
@@ -89,6 +91,8 @@ pub enum SubsystemKind {
     NetCls,
     /// net_prio subsystem.
     NetPrio,
+    /// blkio subsystem.
+    BlkIo,
     /// RDMA subsystem.
     Rdma,
     /// freezer subsystem.
@@ -123,6 +127,8 @@ pub struct Resources {
     pub net_cls: net_cls::Resources,
     /// Priority map of traffic originating from this cgroup.
     pub net_prio: net_prio::Resources,
+    /// Throttle bandwidth of block I/O by this cgroup.
+    pub blkio: blkio::Resources,
     /// Resource limit on how much this cgroup can use RDMA/IB devices.
     pub rdma: rdma::Resources,
     /// Whether tasks in this cgroup is freezed.
@@ -141,6 +147,7 @@ impl fmt::Display for SubsystemKind {
             Self::HugeTlb => "hugetlb",
             Self::NetCls => "net_cls",
             Self::NetPrio => "net_prio",
+            Self::BlkIo => "blkio",
             Self::Rdma => "rdma",
             Self::Freezer => "freezer",
             Self::PerfEvent => "perf_event",

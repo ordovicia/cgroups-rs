@@ -2,6 +2,7 @@
     "cSpell.words": [
         "TLBs",
         "UnifiedRepr",
+        "blkio",
         "cgroup",
         "cgroupfs",
         "cgroups",
@@ -19,7 +20,9 @@
         "hugepage",
         "hugetlb",
         "ifpriomap",
+        "iops",
         "kmem",
+        "lsblk",
         "mems",
         "memsw",
         "mknod",

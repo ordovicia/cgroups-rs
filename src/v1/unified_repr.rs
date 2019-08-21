@@ -285,6 +285,7 @@ gen_unified_repr! {
     (hugetlb, hugetlb_mut, HugeTlb, "hugetlb"),
     (net_cls, net_cls_mut, NetCls, "net_cls"),
     (net_prio, net_prio_mut, NetPrio, "net_prio"),
+    (blkio, blkio_mut, BlkIo, "blkio"),
     (rdma, rdma_mut, Rdma, "rdma"),
     (freezer, freezer_mut, Freezer, "freezer"),
     (perf_event, perf_event_mut, PerfEvent, "perf_event"),
