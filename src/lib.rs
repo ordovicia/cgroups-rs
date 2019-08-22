@@ -161,7 +161,7 @@ impl From<&std::process::Child> for Pid {
     }
 }
 
-impl Pid {
+impl Into<u32> for Pid {
     /// Returns the underlying PID or thread ID value.
     ///
     /// # Examples
@@ -169,11 +169,24 @@ impl Pid {
     /// ```
     /// use cgroups::Pid;
     ///
-    /// let pid = Pid::from(42);
-    /// assert_eq!(pid.to_inner(), 42);
+    /// let pid: u32 = Pid::from(42).into();
+    /// assert_eq!(pid, 42);
     /// ```
-    pub fn to_inner(self) -> u32 {
+    fn into(self) -> u32 {
         self.0
+    }
+}
+
+impl fmt::Display for Pid {
+    /// Formats the underlying PID or thread ID value.
+    ///
+    /// ```
+    /// use cgroups::Pid;
+    ///
+    /// assert_eq!(Pid::from(42).to_string(), "42");
+    /// ```
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 

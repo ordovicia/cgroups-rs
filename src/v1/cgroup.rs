@@ -295,7 +295,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn add_task(&mut self, pid: Pid) -> Result<()> {
-        fs::write(self.path().join(TASKS), format!("{}", pid.to_inner())).map_err(Into::into)
+        fs::write(self.path().join(TASKS), format!("{}", pid)).map_err(Into::into)
     }
 
     /// Removes a task from this cgroup. The task is represented by its thread ID.
@@ -378,7 +378,7 @@ pub trait Cgroup {
     /// # }
     /// ```
     fn add_proc(&mut self, pid: Pid) -> Result<()> {
-        fs::write(self.path().join(PROCS), format!("{}", pid.to_inner())).map_err(Into::into)
+        fs::write(self.path().join(PROCS), format!("{}", pid)).map_err(Into::into)
     }
 
     /// Removes a process from this cgroup, with all threads in the same thread group at once. The
