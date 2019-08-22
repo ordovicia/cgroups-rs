@@ -49,23 +49,27 @@ pub struct Subsystem {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// Map of priorities assigned to traffic originating from this cgroup.
-    pub ifpriomap: Option<HashMap<String, u32>>,
+    /// 
+    /// No priority will be set if this map is empty.
+    pub ifpriomap: HashMap<String, u32>,
 }
 
 impl_cgroup! {
     NetPrio,
 
-    /// Applies the `Some` fields in `resources.net_prio`.
+    /// Applies `resources.net_prio.ifpriomap`.
     ///
     /// See [`Cgroup::apply`] for general information.
     ///
     /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
-        if let Some(ref prio_map) = resources.net_prio.ifpriomap {
-            self.set_ifpriomap(prio_map.iter().map(|(i, prio)| (i, *prio)))?;
-        }
+        let prio_map = &resources.net_prio.ifpriomap;
 
-        Ok(())
+        if prio_map.is_empty() {
+            Ok(())
+        } else {
+            self.set_ifpriomap(prio_map.iter().map(|(i, prio)| (i, *prio)))
+        }
     }
 }
 

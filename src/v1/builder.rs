@@ -195,7 +195,7 @@ impl Builder {
     }
 }
 
-macro_rules! gen_setter {
+macro_rules! gen_setter_opt {
     ($subsystem: ident; $resource: ident, $ty: ty, $desc: literal) => { with_doc! {
         concat!(
 "Sets ", $desc, ".
@@ -210,6 +210,21 @@ for more information."
     } };
 }
 
+macro_rules! gen_setter {
+    ($subsystem: ident; $resource: ident, $ty: ty, $desc: literal) => { with_doc! {
+        concat!(
+"Sets ", $desc, ".
+
+See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($resource), "`](../", stringify!($subsystem), "/struct.Subsystem.html#method.set_", stringify!($resource), ")
+for more information."
+),
+        pub fn $resource(mut self, $resource: $ty) -> Self {
+            self.builder.resources.$subsystem.$resource = $resource;
+            self
+        }
+    } };
+}
+
 /// CPU subsystem builder.
 ///
 /// This struct is created by [`Builder::cpu`](struct.Builder.html#method.cpu) method.
@@ -219,16 +234,16 @@ pub struct CpuBuilder {
 }
 
 impl CpuBuilder {
-    gen_setter!(cpu; shares, u64, "CPU time shares");
+    gen_setter_opt!(cpu; shares, u64, "CPU time shares");
 
-    gen_setter!(
+    gen_setter_opt!(
         cpu;
         cfs_period_us,
         u64,
         "length of period (in microseconds)"
     );
 
-    gen_setter!(
+    gen_setter_opt!(
         cpu;
         cfs_quota_us,
         i64,
@@ -250,40 +265,40 @@ pub struct CpusetBuilder {
 }
 
 impl CpusetBuilder {
-    gen_setter!(
+    gen_setter_opt!(
         cpuset;
         cpus,
         cpuset::IdSet,
         "a set of Cpus on which task in this cgroup can run"
     );
 
-    gen_setter!(
+    gen_setter_opt!(
         cpuset;
         mems,
         cpuset::IdSet,
         "a set of memory nodes which tasks in this cgroup can use"
     );
-    gen_setter!(
+    gen_setter_opt!(
         cpuset;
         memory_migrate,
         bool,
         "whether the memory used by tasks in this cgroup should beb migrated when memory selection is updated"
     );
-    gen_setter!(
+    gen_setter_opt!(
         cpuset;
         cpu_exclusive,
         bool,
         "whether the selected CPUs should be exclusive to this cgroup"
     );
 
-    gen_setter!(
+    gen_setter_opt!(
         cpuset;
         mem_exclusive,
         bool,
         "whether the selected memory nodes should be exclusive to this cgroup"
     );
 
-    gen_setter!(
+    gen_setter_opt!(
         cpuset;
         mem_hardwall,
         bool,
@@ -301,28 +316,28 @@ impl CpusetBuilder {
         self
     }
 
-    gen_setter!(
+    gen_setter_opt!(
         cpuset;
         memory_spread_page,
         bool,
         "whether file system buffers are spread across the selected memory nodes"
     );
 
-    gen_setter!(
+    gen_setter_opt!(
         cpuset;
         memory_spread_slab,
         bool,
         "whether file system buffers are spread across the selected memory nodes"
     );
 
-    gen_setter!(
+    gen_setter_opt!(
         cpuset;
         sched_load_balance,
         bool,
         "whether the kernel balances the load across the selected CPUs"
     );
 
-    gen_setter!(
+    gen_setter_opt!(
         cpuset;
         sched_relax_domain_level,
         i32,
@@ -344,7 +359,7 @@ pub struct PidsBuilder {
 }
 
 impl PidsBuilder {
-    gen_setter!(
+    gen_setter_opt!(
         pids;
         max,
         Max<u32>,
@@ -423,14 +438,12 @@ pub struct NetPrioBuilder {
 }
 
 impl NetPrioBuilder {
-    /// Sets a map of priorities assigned to traffic originating from this cgroup.
-    ///
-    /// See [`net_prio::Subsystem::set_ifpriomap`](../net_prio/struct.Subsystem.html#method.set_ifpriomap)
-    /// for more information.
-    pub fn ifpriomap(mut self, prio_map: HashMap<String, u32>) -> Self {
-        self.builder.resources.net_prio.ifpriomap = Some(prio_map);
-        self
-    }
+    gen_setter!(
+        net_prio;
+        ifpriomap,
+        HashMap<String, u32>,
+        "a map of priorities assigned to traffic originating from this cgroup"
+    );
 
     /// Finishes configuring this net_prio subsystem.
     pub fn done(self) -> Builder {
@@ -447,14 +460,12 @@ pub struct RdmaBuilder {
 }
 
 impl RdmaBuilder {
-    /// Limit the usage of RDMA/IB devices.
-    ///
-    /// See [`rdma::Subsystem::set_max`](../rdma/struct.Subsystem.html#method.set_max) for more
-    /// information.
-    pub fn max(mut self, limits: HashMap<String, rdma::Limit>) -> Self {
-        self.builder.resources.rdma.limits = limits;
-        self
-    }
+    gen_setter!(
+        rdma;
+        max,
+        HashMap<String, rdma::Limit>,
+        "limits of the usage of RDMA/IB devices"
+    );
 
     /// Finishes configuring this RDMA subsystem.
     pub fn done(self) -> Builder {

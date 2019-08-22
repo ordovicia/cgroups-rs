@@ -1,4 +1,4 @@
-//! Operations on a RDMA subsystem.
+//! Operations on an RDMA subsystem.
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/rdma.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/rdma.txt).
@@ -76,7 +76,7 @@ pub struct Resources {
     /// is limit for the device.
     ///
     /// No limits will be applied if this map is empty.
-    pub limits: HashMap<String, Limit>,
+    pub max: HashMap<String, Limit>,
 }
 
 /// Limit or usage of an RDMA/IB device.
@@ -97,8 +97,14 @@ impl_cgroup! {
     ///
     /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
-        // FIXME: avoid clone
-        self.set_max(resources.rdma.limits.iter().map(|(d, lim)| (d, lim.clone())))
+        let max = &resources.rdma.max;
+
+        if max.is_empty() {
+            Ok(())
+        } else {
+            // FIXME: avoid clone
+            self.set_max(max.iter().map(|(d, lim)| (d, lim.clone())))
+        }
     }
 }
 
