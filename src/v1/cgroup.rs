@@ -841,6 +841,7 @@ mod tests {
 
     #[test]
     fn test_cgroup_add_get_remove_procs() -> Result<()> {
+        use crate::util::sleep;
         use std::process::{self, Command};
 
         let mut cgroup =
@@ -857,9 +858,11 @@ mod tests {
         assert!(cgroup.procs()? == vec![pid, child_pid] || cgroup.procs()? == vec![child_pid, pid]);
 
         cgroup.remove_proc(child_pid)?;
+        sleep(100);
         assert!(cgroup.procs()? == vec![pid]);
 
         cgroup.remove_proc(pid)?;
+        sleep(100);
         assert!(cgroup.procs()?.is_empty());
 
         cgroup.delete()

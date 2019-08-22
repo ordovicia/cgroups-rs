@@ -208,7 +208,7 @@ mod tests {
         assert!(cgroup.current()? > 0);
 
         cgroup.remove_proc(pid)?;
-        std::thread::sleep(std::time::Duration::from_millis(100)); // FIXME: wait for system
+        crate::util::sleep(100);
         assert_eq!(cgroup.current()?, 0);
 
         cgroup.delete()

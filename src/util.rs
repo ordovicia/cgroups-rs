@@ -53,7 +53,7 @@ macro_rules! gen_subsystem_test {
     }};
 }
 
-pub(crate) fn parse<T, R>(mut reader: R) -> Result<T>
+pub fn parse<T, R>(mut reader: R) -> Result<T>
 where
     T: FromStr,
     <T as FromStr>::Err: StdError + Sync + Send + 'static,
@@ -64,7 +64,7 @@ where
     buf.trim().parse::<T>().map_err(Error::parse)
 }
 
-pub(crate) fn parse_option<T>(s: Option<&str>) -> Result<T>
+pub fn parse_option<T>(s: Option<&str>) -> Result<T>
 where
     T: FromStr,
     <T as FromStr>::Err: StdError + Sync + Send + 'static,
@@ -75,7 +75,7 @@ where
     }
 }
 
-pub(crate) fn parse_vec<T, R>(mut reader: R) -> Result<Vec<T>>
+pub fn parse_vec<T, R>(mut reader: R) -> Result<Vec<T>>
 where
     T: FromStr,
     <T as FromStr>::Err: StdError + Sync + Send + 'static,
@@ -89,12 +89,17 @@ where
         .collect()
 }
 
-pub(crate) fn parse_01_bool<R: std::io::Read>(reader: R) -> Result<bool> {
+pub fn parse_01_bool<R: std::io::Read>(reader: R) -> Result<bool> {
     parse::<i32, _>(reader).and_then(|n| match n {
         0 => Ok(false),
         1 => Ok(true),
         _ => Err(Error::new(ErrorKind::Parse)),
     })
+}
+
+#[cfg(test)]
+pub fn sleep(millis: u64) {
+    std::thread::sleep(std::time::Duration::from_millis(millis));
 }
 
 #[cfg(test)]
@@ -105,7 +110,7 @@ mod tests {
     fn test_gen_cgroup_name() {
         assert_eq!(
             gen_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-util-107")
+            std::path::PathBuf::from("cgroups_rs-util-112")
         );
     }
 
