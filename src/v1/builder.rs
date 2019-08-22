@@ -7,7 +7,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
-    v1::{cpuset, hugetlb, net_cls, Resources, SubsystemKind, UnifiedRepr},
+    v1::{cpuset, hugetlb, net_cls, rdma, Resources, SubsystemKind, UnifiedRepr},
     Max, Result,
 };
 
@@ -22,7 +22,7 @@ use crate::{
 /// ```no_run
 /// # fn main() -> cgroups::Result<()> {
 /// use std::{collections::HashMap, path::PathBuf};
-/// use cgroups::{Max, v1::{cpuset, hugetlb, net_cls, pids, Builder}};
+/// use cgroups::{Max, v1::{cpuset, hugetlb, net_cls, pids, rdma, Builder}};
 ///
 /// let mut cgroups =
 ///     // Start building a (set of) cgroup(s).
@@ -53,6 +53,20 @@ use crate::{
 ///     .net_prio()
 ///         .ifpriomap(
 ///             [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)]
+///                 .iter()
+///                 .cloned()
+///                 .collect(),
+///         )
+///         .done()
+///     .rdma()
+///         .max(
+///             [(
+///                 "mlx4_0".to_string(),
+///                 rdma::Limit {
+///                     hca_handle: Max::<u32>::Limit(2),
+///                     hca_object: Max::<u32>::Max,
+///                 },
+///             )]
 ///                 .iter()
 ///                 .cloned()
 ///                 .collect(),
@@ -156,7 +170,8 @@ impl Builder {
         (pids, Pids, PidsBuilder, "pids"),
         (hugetlb, HugeTlb, HugeTlbBuilder, "hugetlb"),
         (net_cls, NetCls, NetClsBuilder, "net_cls"),
-        (net_prio, NetPrio, NetPrioBuilder, "net_prio")
+        (net_prio, NetPrio, NetPrioBuilder, "net_prio"),
+        (rdma, Rdma, RdmaBuilder, "rdma")
     }
 
     // Calling `cpu()` twice will push duplicated `SubsystemKind::Cpu`, but it is not a problem for
@@ -418,6 +433,30 @@ impl NetPrioBuilder {
     }
 
     /// Finishes configuring this net_prio subsystem.
+    pub fn done(self) -> Builder {
+        self.builder
+    }
+}
+
+/// RDMA subsystem builder.
+///
+/// This struct is created by [`Builder::rdma`](struct.Builder.html#method.rdma) method.
+#[derive(Debug)]
+pub struct RdmaBuilder {
+    builder: Builder,
+}
+
+impl RdmaBuilder {
+    /// Limit the usage of RDMA/IB devices.
+    ///
+    /// See [`rdma::Subsystem::set_max`](../rdma/struct.Subsystem.html#method.set_max) for more
+    /// information.
+    pub fn max(mut self, limits: HashMap<String, rdma::Limit>) -> Self {
+        self.builder.resources.rdma.limits = limits;
+        self
+    }
+
+    /// Finishes configuring this RDMA subsystem.
     pub fn done(self) -> Builder {
         self.builder
     }

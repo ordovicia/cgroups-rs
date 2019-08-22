@@ -49,7 +49,7 @@ cgroup.delete()?;
 
 ```rust
 use std::{collections::HashMap, path::PathBuf};
-use cgroups::{Max, v1::{cpuset, hugetlb, net_cls, pids, Builder}};
+use cgroups::{Max, v1::{cpuset, hugetlb, net_cls, pids, rdma, Builder}};
 
 let mut cgroups =
     // Start building a (set of) cgroup(s).
@@ -80,6 +80,20 @@ let mut cgroups =
     .net_prio()
         .ifpriomap(
             [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)]
+                .iter()
+                .cloned()
+                .collect(),
+        )
+        .done()
+    .rdma()
+        .max(
+            [(
+                "mlx4_0".to_string(),
+                rdma::Limit {
+                    hca_handle: Max::<u32>::Limit(2),
+                    hca_object: Max::<u32>::Max,
+                },
+            )]
                 .iter()
                 .cloned()
                 .collect(),

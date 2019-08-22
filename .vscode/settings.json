@@ -28,6 +28,7 @@
         "prio",
         "prioidx",
         "procs",
+        "rdma",
         "realtime",
         "repr",
         "rustfmt",

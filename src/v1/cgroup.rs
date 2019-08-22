@@ -792,6 +792,7 @@ mod tests {
             (hugetlb, HugeTlb),
             (net_cls, NetCls),
             (net_prio, NetPrio),
+            (rdma, Rdma),
             (freezer, Freezer),
             (perf_event, PerfEvent)
         }

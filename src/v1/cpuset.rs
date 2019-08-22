@@ -926,7 +926,8 @@ mod tests {
 
     #[test]
     fn test_subsystem_sched_relax_domain_level() -> Result<()> {
-        // TODO: `set_sched_relax_domain_level()` raises io::Error with kind InvalidInput ?
+        // TODO: `set_sched_relax_domain_level()` raises io::Error with kind InvalidInput on some
+        // systems?
         gen_subsystem_test!(Cpuset; sched_relax_domain_level, -1)
     }
 
