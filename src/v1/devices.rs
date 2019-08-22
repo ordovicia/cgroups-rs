@@ -453,7 +453,7 @@ mod tests {
         cgroup.deny(&all)?;
         assert!(cgroup.list()?.is_empty());
 
-        let c_1_3_rm  = "c 1:3 rm".parse::<Access>().unwrap();
+        let c_1_3_rm = "c 1:3 rm".parse::<Access>().unwrap();
         cgroup.allow(&c_1_3_rm)?;
         assert_eq!(cgroup.list()?, vec![c_1_3_rm]);
 

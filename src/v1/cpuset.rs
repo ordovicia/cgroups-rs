@@ -1,6 +1,6 @@
 //! Operations on a cpuset subsystem.
 //!
-//! For more information about Cpuset subsystem, see the kernel's documentation
+//! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/cpusets.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cpusets.txt).
 //!
 //! # Examples

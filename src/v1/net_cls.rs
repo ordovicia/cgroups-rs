@@ -223,7 +223,7 @@ impl fmt::Display for ClassId {
 impl From<u32> for ClassId {
     fn from(id: u32) -> Self {
         Self {
-            major: ((id & 0xffff0000) >> 16) as u16,
+            major: ((id & 0xffff_0000) >> 16) as u16,
             minor: (id & 0xffff) as u16,
         }
     }
@@ -240,7 +240,7 @@ impl From<[u16; 2]> for ClassId {
 
 impl Into<u32> for ClassId {
     fn into(self) -> u32 {
-        ((self.major as u32) << 16) | (self.minor as u32)
+        (u32::from(self.major) << 16) | u32::from(self.minor)
     }
 }
 

@@ -732,8 +732,7 @@ macro_rules! impl_cgroup {
 
 pub(crate) trait CgroupHelper: Cgroup {
     fn write_file(&mut self, name: &str, val: impl std::fmt::Display) -> Result<()> {
-        let _ = fs::write(self.path().join(name), format!("{}", val))?;
-        Ok(())
+        fs::write(self.path().join(name), format!("{}", val)).map_err(Into::into)
     }
 }
 
