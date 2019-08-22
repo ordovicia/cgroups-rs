@@ -49,7 +49,7 @@ pub struct Subsystem {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// Map of priorities assigned to traffic originating from this cgroup.
-    /// 
+    ///
     /// No priority will be set if this map is empty.
     pub ifpriomap: HashMap<String, u32>,
 }

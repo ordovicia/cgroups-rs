@@ -280,6 +280,7 @@ gen_unified_repr! {
     (cpuset, cpuset_mut, Cpuset, "cpuset"),
     (cpuacct, cpuacct_mut, Cpuacct, "cpuacct"),
     (pids, pids_mut, Pids, "pids"),
+    (devices, devices_mut, Devices, "devices"),
     (hugetlb, hugetlb_mut, HugeTlb, "hugetlb"),
     (net_cls, net_cls_mut, NetCls, "net_cls"),
     (net_prio, net_prio_mut, NetPrio, "net_prio"),

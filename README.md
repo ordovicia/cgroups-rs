@@ -49,7 +49,7 @@ cgroup.delete()?;
 
 ```rust
 use std::{collections::HashMap, path::PathBuf};
-use cgroups::{Max, v1::{cpuset, hugetlb, net_cls, pids, rdma, Builder}};
+use cgroups::{Max, v1::{cpuset, devices, hugetlb, net_cls, pids, rdma, Builder}};
 
 let mut cgroups =
     // Start building a (set of) cgroup(s).
@@ -69,6 +69,10 @@ let mut cgroups =
         .done()
     .pids()
         .max(Max::<u32>::Limit(42))
+        .done()
+    .devices()
+        .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
+        .allow(vec!["c 1:3 mr".parse::<devices::Access>().unwrap()])
         .done()
     .hugetlb()
         .limit_2mb(hugetlb::Limit::Pages(4))
@@ -101,8 +105,8 @@ let mut cgroups =
         .done()
     // Enable monitoring this cgroup via `perf` tool.
     .perf_event()
-        // perf_event subsystem has no parameter, so this method does not return a subsystem
-        // builder, just enable the monitoring.
+        // perf_event subsystem has no parameter, so this method does not
+        // return a subsystem builder, just enables the monitoring.
     // Actually build cgroups with the configuration.
     // Only create a directory for the CPU, cpuset, and pids subsystems.
     .build()?;

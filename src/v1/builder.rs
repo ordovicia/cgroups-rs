@@ -7,7 +7,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
-    v1::{cpuset, hugetlb, net_cls, rdma, Resources, SubsystemKind, UnifiedRepr},
+    v1::{cpuset, devices, hugetlb, net_cls, rdma, Resources, SubsystemKind, UnifiedRepr},
     Max, Result,
 };
 
@@ -22,7 +22,7 @@ use crate::{
 /// ```no_run
 /// # fn main() -> cgroups::Result<()> {
 /// use std::{collections::HashMap, path::PathBuf};
-/// use cgroups::{Max, v1::{cpuset, hugetlb, net_cls, pids, rdma, Builder}};
+/// use cgroups::{Max, v1::{cpuset, devices, hugetlb, net_cls, pids, rdma, Builder}};
 ///
 /// let mut cgroups =
 ///     // Start building a (set of) cgroup(s).
@@ -42,6 +42,10 @@ use crate::{
 ///         .done()
 ///     .pids()
 ///         .max(Max::<u32>::Limit(42))
+///         .done()
+///     .devices()
+///         .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
+///         .allow(vec!["c 1:3 mr".parse::<devices::Access>().unwrap()])
 ///         .done()
 ///     .hugetlb()
 ///         .limit_2mb(hugetlb::Limit::Pages(4))
@@ -74,8 +78,8 @@ use crate::{
 ///         .done()
 ///     // Enable monitoring this cgroup via `perf` tool.
 ///     .perf_event()
-///         // perf_event subsystem has no parameter, so this method does not return a subsystem
-///         // builder, just enable the monitoring.
+///         // perf_event subsystem has no parameter, so this method does not
+///         // return a subsystem builder, just enables the monitoring.
 ///     // Actually build cgroups with the configuration.
 ///     // Only create a directory for the CPU, cpuset, and pids subsystems.
 ///     .build()?;
@@ -168,6 +172,7 @@ impl Builder {
         (cpu, Cpu, CpuBuilder, "CPU"),
         (cpuset, Cpuset, CpusetBuilder, "cpuset"),
         (pids, Pids, PidsBuilder, "pids"),
+        (devices, Devices, DevicesBuilder, "devices"),
         (hugetlb, HugeTlb, HugeTlbBuilder, "hugetlb"),
         (net_cls, NetCls, NetClsBuilder, "net_cls"),
         (net_prio, NetPrio, NetPrioBuilder, "net_prio"),
@@ -367,6 +372,35 @@ impl PidsBuilder {
     );
 
     /// Finishes configuring this pids subsystem.
+    pub fn done(self) -> Builder {
+        self.builder
+    }
+}
+
+/// devices subsystem builder.
+///
+/// This struct is created by [`Builder::devices`](struct.Builder.html#method.devices) method.
+#[derive(Debug)]
+pub struct DevicesBuilder {
+    builder: Builder,
+}
+
+impl DevicesBuilder {
+    gen_setter!(
+        devices;
+        allow,
+        Vec<devices::Access>,
+        "a list of allowed device accesses"
+    );
+
+    gen_setter!(
+        devices;
+        deny,
+        Vec<devices::Access>,
+        "a list of denied device accesses"
+    );
+
+    /// Finishes configuring this devices subsystem.
     pub fn done(self) -> Builder {
         self.builder
     }

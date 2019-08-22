@@ -63,7 +63,7 @@
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
 //! use std::{collections::HashMap, path::PathBuf};
-//! use cgroups::{Max, v1::{cpuset, hugetlb, net_cls, pids, rdma, Builder}};
+//! use cgroups::{Max, v1::{cpuset, devices, hugetlb, net_cls, pids, rdma, Builder}};
 //!
 //! let mut cgroups =
 //!     // Start building a (set of) cgroup(s).
@@ -83,6 +83,10 @@
 //!         .done()
 //!     .pids()
 //!         .max(Max::<u32>::Limit(42))
+//!         .done()
+//!     .devices()
+//!         .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
+//!         .allow(vec!["c 1:3 mr".parse::<devices::Access>().unwrap()])
 //!         .done()
 //!     .hugetlb()
 //!         .limit_2mb(hugetlb::Limit::Pages(4))
@@ -115,8 +119,8 @@
 //!         .done()
 //!     // Enable monitoring this cgroup via `perf` tool.
 //!     .perf_event()
-//!         // perf_event subsystem has no parameter, so this method does not return a subsystem
-//!         // builder, just enable the monitoring.
+//!         // perf_event subsystem has no parameter, so this method does not
+//!         // return a subsystem builder, just enables the monitoring.
 //!     // Actually build cgroups with the configuration.
 //!     // Only create a directory for the CPU, cpuset, and pids subsystems.
 //!     .build()?;
@@ -271,6 +275,167 @@ impl<T: fmt::Display> fmt::Display for Max<T> {
         match self {
             Self::Max => write!(f, "max"),
             Self::Limit(n) => write!(f, "{}", n),
+        }
+    }
+}
+
+/// Linux device number.
+///
+/// `Device` implements [`FromStr`] and [`Display`]. You can convert a `Device` into a string and
+/// vice versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if failed.
+///
+/// ```
+/// use cgroups::{Device, DeviceNumber};
+///
+/// let dev = "8:16".parse::<Device>().unwrap();
+/// assert_eq!(dev, Device { major: DeviceNumber::Number(8), minor: DeviceNumber::Number(16) });
+///
+/// let dev = "8:*".parse::<Device>().unwrap();
+/// assert_eq!(dev, Device { major: DeviceNumber::Number(8), minor: DeviceNumber::Any });
+/// ```
+///
+/// ```
+/// use cgroups::{Device, DeviceNumber};
+///
+/// let dev = Device { major: DeviceNumber::Number(8), minor: DeviceNumber::Number(16) };
+/// assert_eq!(dev.to_string(), "8:16");
+///
+/// let dev = Device { major: DeviceNumber::Number(8), minor: DeviceNumber::Any };
+/// assert_eq!(dev.to_string(), "8:*");
+/// ```
+///
+/// `Device` also implements [`From`]`<[u16; 2]>` and `From<[DeviceNumber; 2]`.
+///
+/// ```
+/// use cgroups::{Device, DeviceNumber};
+///
+/// assert_eq!(
+///     Device::from([8, 16]),
+///     Device { major: DeviceNumber::Number(8), minor: DeviceNumber::Number(16) }
+/// );
+///
+/// assert_eq!(
+///     Device::from([DeviceNumber::Number(1), DeviceNumber::Any]),
+///     Device { major: DeviceNumber::Number(1), minor: DeviceNumber::Any }
+/// );
+/// ```
+///
+/// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
+/// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
+/// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
+/// [`ErrorKind::Parse`]: enum.ErrorKind.html#variant.Parse
+/// [`From`]: https://doc.rust-lang.org/std/convert/trait.From.html
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Device {
+    /// Major number.
+    pub major: DeviceNumber,
+    /// Minor number.
+    pub minor: DeviceNumber,
+}
+
+/// Device major/minor number.
+///
+/// `DeviceNumber` implements [`FromStr`] and [`Display`]. You can convert a `DeviceNumber` into
+/// a string and vice versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if failed.
+///
+/// ```
+/// use cgroups::DeviceNumber;
+///
+/// let n = "8".parse::<DeviceNumber>().unwrap();
+/// assert_eq!(n, DeviceNumber::Number(8));
+///
+/// let n = "*".parse::<DeviceNumber>().unwrap();
+/// assert_eq!(n, DeviceNumber::Any);
+/// ```
+///
+/// ```
+/// use cgroups::DeviceNumber;
+///
+/// assert_eq!(DeviceNumber::Number(8).to_string(), "8");
+/// assert_eq!(DeviceNumber::Any.to_string(), "*");
+/// ```
+///
+/// `DeviceNumber` also implements [`From`]`<u16>`, which results in `DeviceNumber::Number`.
+///
+/// ```
+/// use cgroups::DeviceNumber;
+///
+/// assert_eq!(DeviceNumber::from(8), DeviceNumber::Number(8));
+/// ```
+///
+/// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
+/// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
+/// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
+/// [`ErrorKind::Parse`]: enum.ErrorKind.html#variant.Parse
+/// [`From`]: https://doc.rust-lang.org/std/convert/trait.From.html
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DeviceNumber {
+    /// Any number matches.
+    Any,
+    /// Specific number.
+    Number(u16),
+}
+
+impl From<[u16; 2]> for Device {
+    fn from(n: [u16; 2]) -> Self {
+        Self {
+            major: n[0].into(),
+            minor: n[1].into(),
+        }
+    }
+}
+
+impl From<[DeviceNumber; 2]> for Device {
+    fn from(n: [DeviceNumber; 2]) -> Self {
+        Self {
+            major: n[0],
+            minor: n[1],
+        }
+    }
+}
+
+impl FromStr for Device {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let mut comma_sp = s.split(':');
+        let major = util::parse_option(comma_sp.next())?;
+        let minor = util::parse_option(comma_sp.next())?;
+
+        Ok(Device { major, minor })
+    }
+}
+
+impl fmt::Display for Device {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.major, self.minor)
+    }
+}
+
+impl From<u16> for DeviceNumber {
+    fn from(n: u16) -> Self {
+        Self::Number(n)
+    }
+}
+
+impl FromStr for DeviceNumber {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        if s == "*" {
+            Ok(Self::Any)
+        } else {
+            Ok(Self::Number(s.parse::<u16>()?))
+        }
+    }
+}
+
+impl fmt::Display for DeviceNumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use fmt::Write;
+        match self {
+            Self::Any => f.write_char('*'),
+            Self::Number(n) => write!(f, "{}", n),
         }
     }
 }

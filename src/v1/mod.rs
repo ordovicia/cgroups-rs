@@ -4,8 +4,8 @@
 //! [Documentation/cgroup-v1/cgroups.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt).
 //!
 //! Operations for each subsystem are implemented in each module. See [`cpu::Subsystem`] for
-//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [pids], [hugetlb], [net_cls],
-//! [net_prio], [RDMA], [freezer], and [perf_event] subsystems.
+//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [pids], [devices], [hugetlb],
+//! [net_cls], [net_prio], [RDMA], [freezer], and [perf_event] subsystems.
 //!
 //! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
 //! this trait and subsystem-specific operations.
@@ -20,6 +20,7 @@
 //! [cpuset]: cpuset/index.html
 //! [cpuacct]: cpuacct/index.html
 //! [pids]: pids/index.html
+//! [devices]: devices/index.html
 //! [hugetlb]: hugetlb/index.html
 //! [net_cls]: net_cls/index.html
 //! [net_prio]: net_prio/index.html
@@ -39,6 +40,7 @@ pub mod builder;
 pub mod cpu;
 pub mod cpuacct;
 pub mod cpuset;
+pub mod devices;
 pub mod freezer;
 pub mod hugetlb;
 pub mod net_cls;
@@ -75,6 +77,8 @@ pub enum SubsystemKind {
     Cpuacct,
     /// pids subsystem.
     Pids,
+    /// devices subsystem.
+    Devices,
     /// hugetlb subsystem.
     HugeTlb,
     /// net_cls subsystem.
@@ -105,6 +109,8 @@ pub struct Resources {
     pub cpuset: cpuset::Resources,
     /// Resource limit on how many processes this cgroup can have.
     pub pids: pids::Resources,
+    /// Allow or deny this cgroup to perform specific accesses to devices.
+    pub devices: devices::Resources,
     /// Resource limit no how many hugepage TLBs this cgroup can use.
     pub hugetlb: hugetlb::Resources,
     /// Tag network packets from this cgroup with a class ID.
@@ -124,6 +130,7 @@ impl fmt::Display for SubsystemKind {
             Self::Cpuset => "cpuset",
             Self::Cpuacct => "cpuacct",
             Self::Pids => "pids",
+            Self::Devices => "devices",
             Self::HugeTlb => "hugetlb",
             Self::NetCls => "net_cls",
             Self::NetPrio => "net_prio",

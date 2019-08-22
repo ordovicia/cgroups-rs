@@ -789,6 +789,7 @@ mod tests {
             (cpuset, Cpuset),
             (cpuacct, Cpuacct),
             (pids, Pids),
+            (devices, Devices),
             (hugetlb, HugeTlb),
             (net_cls, NetCls),
             (net_prio, NetPrio),
