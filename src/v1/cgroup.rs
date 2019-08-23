@@ -787,6 +787,7 @@ mod tests {
             (cpu, Cpu),
             (cpuset, Cpuset),
             (cpuacct, Cpuacct),
+            (memory, Memory),
             (pids, Pids),
             (devices, Devices),
             (hugetlb, HugeTlb),

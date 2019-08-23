@@ -4,8 +4,8 @@
 //! [Documentation/cgroup-v1/cgroups.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt).
 //!
 //! Operations for each subsystem are implemented in each module. See [`cpu::Subsystem`] for
-//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [pids], [devices], [hugetlb],
-//! [net_cls], [net_prio], [RDMA], [freezer], and [perf_event] subsystems.
+//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [memory], [pids], [devices],
+//! [hugetlb], [net_cls], [net_prio], [RDMA], [freezer], and [perf_event] subsystems.
 //!
 //! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
 //! this trait and subsystem-specific operations.
@@ -19,6 +19,7 @@
 //! [CPU]: cpu/index.html
 //! [cpuset]: cpuset/index.html
 //! [cpuacct]: cpuacct/index.html
+//! [memory]: memory/index.html
 //! [pids]: pids/index.html
 //! [devices]: devices/index.html
 //! [hugetlb]: hugetlb/index.html
@@ -43,6 +44,7 @@ pub mod cpuset;
 pub mod devices;
 pub mod freezer;
 pub mod hugetlb;
+pub mod memory;
 pub mod net_cls;
 pub mod net_prio;
 pub mod perf_event;
@@ -75,6 +77,8 @@ pub enum SubsystemKind {
     Cpuset,
     /// cpuacct (CPU accounting) subsystem.
     Cpuacct,
+    /// memory subsystem.
+    Memory,
     /// pids subsystem.
     Pids,
     /// devices subsystem.
@@ -107,6 +111,8 @@ pub struct Resources {
     /// Resource limit on which CPUs and which memory nodes this cgroup can use, and how they are
     /// controlled by the system.
     pub cpuset: cpuset::Resources,
+    /// Resource limit on what amount and how this cgroup can use memory.
+    pub memory: memory::Resources,
     /// Resource limit on how many processes this cgroup can have.
     pub pids: pids::Resources,
     /// Allow or deny this cgroup to perform specific accesses to devices.
@@ -129,6 +135,7 @@ impl fmt::Display for SubsystemKind {
             Self::Cpu => "cpu",
             Self::Cpuset => "cpuset",
             Self::Cpuacct => "cpuacct",
+            Self::Memory => "memory",
             Self::Pids => "pids",
             Self::Devices => "devices",
             Self::HugeTlb => "hugetlb",

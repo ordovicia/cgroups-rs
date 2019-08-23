@@ -40,6 +40,11 @@ use crate::{
 ///         .mems([0].iter().copied().collect())
 ///         .memory_migrate(true)
 ///         .done()
+///     .memory()
+///         .limit_in_bytes(4 * (1 << 30))
+///         .soft_limit_in_bytes(3 * (1 << 30))
+///         .use_hierarchy(true)
+///         .done()
 ///     .pids()
 ///         .max(Max::<u32>::Limit(42))
 ///         .done()
@@ -171,6 +176,7 @@ impl Builder {
     gen_subsystem_builder_calls! {
         (cpu, Cpu, CpuBuilder, "CPU"),
         (cpuset, Cpuset, CpusetBuilder, "cpuset"),
+        (memory, Memory, MemoryBuilder, "memory"),
         (pids, Pids, PidsBuilder, "pids"),
         (devices, Devices, DevicesBuilder, "devices"),
         (hugetlb, HugeTlb, HugeTlbBuilder, "hugetlb"),
@@ -227,7 +233,7 @@ macro_rules! gen_subsystem_builder {
 }
 
 macro_rules! gen_setter_opt {
-    ($subsystem: ident; $resource: ident, $ty: ty, $desc: literal) => { with_doc! {
+    ($subsystem: ident; $desc: literal, $resource: ident, $ty: ty $( as $as: ty )?) => { with_doc! {
         concat!(
 "Sets ", $desc, ".
 
@@ -235,14 +241,14 @@ See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($resource), "`]
 for more information."
 ),
         pub fn $resource(mut self, $resource: $ty) -> Self {
-            self.builder.resources.$subsystem.$resource = Some($resource);
+            self.builder.resources.$subsystem.$resource = Some($resource $( as $as )*);
             self
         }
     } };
 }
 
 macro_rules! gen_setter {
-    ($subsystem: ident; $resource: ident, $ty: ty, $desc: literal) => { with_doc! {
+    ($subsystem: ident; $desc: literal, $resource: ident, $ty: ty $(, $tt: tt )*) => { with_doc! {
         concat!(
 "Sets ", $desc, ".
 
@@ -250,7 +256,7 @@ See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($resource), "`]
 for more information."
 ),
         pub fn $resource(mut self, $resource: $ty) -> Self {
-            self.builder.resources.$subsystem.$resource = $resource;
+            self.builder.resources.$subsystem.$resource = $resource $( $tt )*;
             self
         }
     } };
@@ -261,9 +267,9 @@ gen_subsystem_builder! {
     CpuBuilder,
     "CPU",
 
-    gen_setter_opt!(cpu; shares, u64, "CPU time shares");
-    gen_setter_opt!(cpu; cfs_period_us, u64, "length of period (in microseconds)");
-    gen_setter_opt!(cpu; cfs_quota_us, i64, "total available CPU time within a period (in microseconds)");
+    gen_setter_opt!(cpu; "CPU time shares", shares, u64);
+    gen_setter_opt!(cpu; "length of period (in microseconds)", cfs_period_us, u64);
+    gen_setter_opt!(cpu; "total available CPU time within a period (in microseconds)", cfs_quota_us, i64);
 }
 
 gen_subsystem_builder! {
@@ -273,42 +279,44 @@ gen_subsystem_builder! {
 
     gen_setter_opt!(
         cpuset;
+        "a set of Cpus on which task in this cgroup can run",
         cpus,
-        cpuset::IdSet,
-        "a set of Cpus on which task in this cgroup can run"
+        cpuset::IdSet
     );
 
     gen_setter_opt!(
         cpuset;
+        "a set of memory nodes which tasks in this cgroup can use",
         mems,
-        cpuset::IdSet,
-        "a set of memory nodes which tasks in this cgroup can use"
+        cpuset::IdSet
     );
+
     gen_setter_opt!(
         cpuset;
+        "whether the memory used by tasks in this cgroup should beb migrated when memory selection is updated",
         memory_migrate,
-        bool,
-        "whether the memory used by tasks in this cgroup should beb migrated when memory selection is updated"
+        bool
     );
+
     gen_setter_opt!(
         cpuset;
+        "whether the selected CPUs should be exclusive to this cgroup",
         cpu_exclusive,
-        bool,
-        "whether the selected CPUs should be exclusive to this cgroup"
+        bool
     );
 
     gen_setter_opt!(
         cpuset;
+        "whether the selected memory nodes should be exclusive to this cgroup",
         mem_exclusive,
-        bool,
-        "whether the selected memory nodes should be exclusive to this cgroup"
+        bool
     );
 
     gen_setter_opt!(
         cpuset;
+        "whether this cgroup is \"hardwalled\"",
         mem_hardwall,
-        bool,
-        "whether this cgroup is \"hardwalled\""
+        bool
     );
 
     /// Sets whether the kernel computes the memory pressure of this cgroup.
@@ -324,30 +332,92 @@ gen_subsystem_builder! {
 
     gen_setter_opt!(
         cpuset;
+        "whether file system buffers are spread across the selected memory nodes",
         memory_spread_page,
-        bool,
-        "whether file system buffers are spread across the selected memory nodes"
+        bool
     );
 
     gen_setter_opt!(
         cpuset;
+        "whether file system buffers are spread across the selected memory nodes",
         memory_spread_slab,
-        bool,
-        "whether file system buffers are spread across the selected memory nodes"
+        bool
     );
 
     gen_setter_opt!(
         cpuset;
+        "whether the kernel balances the load across the selected CPUs",
         sched_load_balance,
-        bool,
-        "whether the kernel balances the load across the selected CPUs"
+        bool
     );
 
     gen_setter_opt!(
         cpuset;
+        "how much work the kernel do to balance the load on this cgroup",
         sched_relax_domain_level,
-        i32,
-        "how much work the kernel do to balance the load on this cgroup"
+        i32
+    );
+}
+
+gen_subsystem_builder! {
+    memory,
+    MemoryBuilder,
+    "memory",
+    
+    gen_setter_opt!(
+        memory;
+        "limit on memory usage by this cgroup",
+        limit_in_bytes,
+        u64 as i64 // not i64 because setting `-1` to a new cgroup does not make sense
+    );
+
+    gen_setter_opt!(
+        memory;
+        "limit on total of memory and swap usage by this cgroup",
+        memsw_limit_in_bytes,
+        u64 as i64
+    );
+
+    gen_setter_opt!(
+        memory;
+        "limit on kernel memory usage by this cgroup",
+        kmem_limit_in_bytes,
+        u64 as i64
+    );
+
+    gen_setter_opt!(
+        memory;
+        "limit on kernel memory usage for TCP by this cgroup",
+        kmem_tcp_limit_in_bytes,
+        u64 as i64
+    );
+
+    gen_setter_opt!(
+        memory;
+        "soft limit on memory usage by this cgroup",
+        soft_limit_in_bytes,
+        u64 as i64
+    );
+
+    gen_setter_opt!(
+        memory;
+        "whether pages may be recharged to the new cgroup when a task is moved",
+        move_charge_at_immigrate,
+        bool
+    );
+
+    gen_setter_opt!(
+        memory;
+        "kernel's tendency to swap out pages consumed by this cgroup",
+        swappiness,
+        u64
+    );
+
+    gen_setter_opt!(
+        memory;
+        "whether the OOM killer tries to reclaim memory from the self and descendant cgroups",
+        use_hierarchy,
+        bool
     );
 }
 
@@ -358,9 +428,9 @@ gen_subsystem_builder! {
 
     gen_setter_opt!(
         pids;
+        "a maximum number of tasks this cgroup can have",
         max,
-        Max<u32>,
-        "a maximum number of tasks this cgroup can have"
+        Max<u32>
     );
 }
 
@@ -371,16 +441,16 @@ gen_subsystem_builder! {
 
     gen_setter!(
         devices;
+        "a list of allowed device accesses",
         allow,
-        Vec<devices::Access>,
-        "a list of allowed device accesses"
+        Vec<devices::Access>
     );
 
     gen_setter!(
         devices;
+        "a list of denied device accesses",
         deny,
-        Vec<devices::Access>,
-        "a list of denied device accesses"
+        Vec<devices::Access>
     );
 }
 
@@ -430,9 +500,9 @@ gen_subsystem_builder! {
 
     gen_setter!(
         net_prio;
+        "a map of priorities assigned to traffic originating from this cgroup",
         ifpriomap,
-        HashMap<String, u32>,
-        "a map of priorities assigned to traffic originating from this cgroup"
+        HashMap<String, u32>
     );
 }
 
@@ -443,9 +513,9 @@ gen_subsystem_builder! {
 
     gen_setter!(
         rdma;
+        "limits of the usage of RDMA/IB devices",
         max,
-        HashMap<String, rdma::Limit>,
-        "limits of the usage of RDMA/IB devices"
+        HashMap<String, rdma::Limit>
     );
 }
 

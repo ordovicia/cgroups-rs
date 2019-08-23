@@ -279,6 +279,7 @@ gen_unified_repr! {
     (cpu, cpu_mut, Cpu, "CPU"),
     (cpuset, cpuset_mut, Cpuset, "cpuset"),
     (cpuacct, cpuacct_mut, Cpuacct, "cpuacct"),
+    (memory, memory_mut, Memory, "memory"),
     (pids, pids_mut, Pids, "pids"),
     (devices, devices_mut, Devices, "devices"),
     (hugetlb, hugetlb_mut, HugeTlb, "hugetlb"),
@@ -389,9 +390,7 @@ mod tests {
 
         let pid = Pid::from(std::process::id());
 
-        // Add self to the cgroup
         cgroups.add_task(pid)?;
-        // Verify that self is indeed in the cgroup
         assert_eq!(cgroups.cpu().unwrap().tasks()?, vec![pid]);
         assert_eq!(
             cgroups.tasks()?,
@@ -401,9 +400,7 @@ mod tests {
                 .collect::<HashMap<_, _>>()
         );
 
-        // Now, try removing self
         cgroups.remove_task(pid)?;
-        // Verify that it was indeed removed
         assert!(cgroups.cpu().unwrap().tasks()?.is_empty());
         assert!(cgroups.tasks()?[&SubsystemKind::Cpu].is_empty());
 

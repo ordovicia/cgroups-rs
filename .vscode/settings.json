@@ -19,12 +19,19 @@
         "hugepage",
         "hugetlb",
         "ifpriomap",
+        "kmem",
         "mems",
+        "memsw",
         "mknod",
         "net_cls",
         "net_prio",
+        "numa",
         "percpu",
         "perf_event",
+        "pgfault",
+        "pgmajfault",
+        "pgpgin",
+        "pgpgout",
         "pids",
         "prio",
         "prioidx",
@@ -34,7 +41,12 @@
         "repr",
         "rustfmt",
         "sched",
+        "shmem",
         "structfield",
-        "tymethod"
+        "swappiness",
+        "tmpfs",
+        "tymethod",
+        "unevictable",
+        "writeback"
     ]
 }
