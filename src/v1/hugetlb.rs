@@ -36,11 +36,10 @@
 use std::{fmt, path::PathBuf};
 
 use crate::{
-    v1::{self, Cgroup, CgroupPath, SubsystemKind},
+    util::parse,
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
     Result,
 };
-
-use crate::{util::parse, v1::cgroup::CgroupHelper};
 
 /// Handler of a hugetlb subsystem.
 #[derive(Debug)]

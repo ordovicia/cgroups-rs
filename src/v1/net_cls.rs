@@ -30,11 +30,10 @@
 use std::{fmt, path::PathBuf, str::FromStr};
 
 use crate::{
+    util::parse,
     v1::{self, Cgroup, CgroupPath, SubsystemKind},
     Error, ErrorKind, Result,
 };
-
-use crate::util::parse;
 
 /// Handler of a net_cls subsystem.
 #[derive(Debug)]

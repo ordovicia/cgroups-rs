@@ -44,13 +44,9 @@
 use std::{collections::HashSet, fmt, iter::FromIterator, path::PathBuf};
 
 use crate::{
-    v1::{self, Cgroup, CgroupPath, SubsystemKind},
-    Error, ErrorKind, Result,
-};
-
-use crate::{
     util::{parse, parse_01_bool},
-    v1::cgroup::CgroupHelper,
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
+    Error, ErrorKind, Result,
 };
 
 /// Handler of a cpuset subsystem.

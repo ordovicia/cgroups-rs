@@ -33,13 +33,9 @@
 use std::path::PathBuf;
 
 use crate::{
-    v1::{self, Cgroup, CgroupPath, SubsystemKind},
-    Max, Result,
-};
-
-use crate::{
     util::{parse, parse_option},
-    v1::cgroup::CgroupHelper,
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
+    Max, Result,
 };
 
 /// Handler of a pids subsystem.

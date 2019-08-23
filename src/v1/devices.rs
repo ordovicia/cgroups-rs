@@ -39,11 +39,10 @@
 use std::{fmt, path::PathBuf, str::FromStr};
 
 use crate::{
-    v1::{self, Cgroup, CgroupPath, SubsystemKind},
+    util::parse_option,
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
     Error, ErrorKind, Result,
 };
-
-use crate::{util::parse_option, v1::cgroup::CgroupHelper};
 
 /// Handler of a devices subsystem.
 #[derive(Debug)]
