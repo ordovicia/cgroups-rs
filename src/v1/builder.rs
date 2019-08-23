@@ -143,7 +143,7 @@ pub struct Builder {
     resources: Resources,
 }
 
-macro_rules! gen_subsystem_builder_call {
+macro_rules! gen_subsystem_builder_calls {
     ( $( ($subsystem: ident, $kind: ident, $builder: ident, $name: literal) ),* ) => { $(
         with_doc! {
             concat!("Starts configuring the ", $name, " subsystem."),
@@ -168,7 +168,7 @@ impl Builder {
         }
     }
 
-    gen_subsystem_builder_call! {
+    gen_subsystem_builder_calls! {
         (cpu, Cpu, CpuBuilder, "CPU"),
         (cpuset, Cpuset, CpusetBuilder, "cpuset"),
         (pids, Pids, PidsBuilder, "pids"),
@@ -198,6 +198,32 @@ impl Builder {
         unified_repr.apply(&self.resources)?;
         Ok(unified_repr)
     }
+}
+
+macro_rules! gen_subsystem_builder {
+    ($subsystem: ident, $builder: ident, $name: literal, $($tt: tt)*) => {
+        with_doc! {
+            concat!(
+                $name, " subsystem builder.\n\n",
+                "This struct is crated by [`Builder::", stringify!($subsystem), "`](struct.Builder.html#method.", stringify!($subsystem), ") method."
+            ),
+            #[derive(Debug)]
+            pub struct $builder {
+                builder: Builder,
+            }
+        }
+
+        impl $builder {
+            $($tt)*
+
+            with_doc! {
+                concat!("Finishes configuring this ", $name, " subsystem."),
+                pub fn done(self) -> Builder {
+                    self.builder
+                }
+            }
+        }
+    };
 }
 
 macro_rules! gen_setter_opt {
@@ -230,46 +256,21 @@ for more information."
     } };
 }
 
-/// CPU subsystem builder.
-///
-/// This struct is created by [`Builder::cpu`](struct.Builder.html#method.cpu) method.
-#[derive(Debug)]
-pub struct CpuBuilder {
-    builder: Builder,
-}
+gen_subsystem_builder! {
+    cpu,
+    CpuBuilder,
+    "CPU",
 
-impl CpuBuilder {
     gen_setter_opt!(cpu; shares, u64, "CPU time shares");
-
-    gen_setter_opt!(
-        cpu;
-        cfs_period_us,
-        u64,
-        "length of period (in microseconds)"
-    );
-
-    gen_setter_opt!(
-        cpu;
-        cfs_quota_us,
-        i64,
-        "total available CPU time within a period (in microseconds)"
-    );
-
-    /// Finishes configuring this CPU subsystem.
-    pub fn done(self) -> Builder {
-        self.builder
-    }
+    gen_setter_opt!(cpu; cfs_period_us, u64, "length of period (in microseconds)");
+    gen_setter_opt!(cpu; cfs_quota_us, i64, "total available CPU time within a period (in microseconds)");
 }
 
-/// cpuset subsystem builder.
-///
-/// This struct is created by [`Builder::cpuset`](struct.Builder.html#method.cpuset) method.
-#[derive(Debug)]
-pub struct CpusetBuilder {
-    builder: Builder,
-}
+gen_subsystem_builder! {
+    cpuset,
+    CpusetBuilder,
+    "cpuset",
 
-impl CpusetBuilder {
     gen_setter_opt!(
         cpuset;
         cpus,
@@ -348,44 +349,26 @@ impl CpusetBuilder {
         i32,
         "how much work the kernel do to balance the load on this cgroup"
     );
-
-    /// Finishes configuring this cpuset subsystem.
-    pub fn done(self) -> Builder {
-        self.builder
-    }
 }
 
-/// pids subsystem builder.
-///
-/// This struct is created by [`Builder::pids`](struct.Builder.html#method.pids) method.
-#[derive(Debug)]
-pub struct PidsBuilder {
-    builder: Builder,
-}
+gen_subsystem_builder! {
+    pids,
+    PidsBuilder,
+    "pids",
 
-impl PidsBuilder {
     gen_setter_opt!(
         pids;
         max,
         Max<u32>,
         "a maximum number of tasks this cgroup can have"
     );
-
-    /// Finishes configuring this pids subsystem.
-    pub fn done(self) -> Builder {
-        self.builder
-    }
 }
 
-/// devices subsystem builder.
-///
-/// This struct is created by [`Builder::devices`](struct.Builder.html#method.devices) method.
-#[derive(Debug)]
-pub struct DevicesBuilder {
-    builder: Builder,
-}
+gen_subsystem_builder! {
+    devices,
+    DevicesBuilder,
+    "devices",
 
-impl DevicesBuilder {
     gen_setter!(
         devices;
         allow,
@@ -399,22 +382,13 @@ impl DevicesBuilder {
         Vec<devices::Access>,
         "a list of denied device accesses"
     );
-
-    /// Finishes configuring this devices subsystem.
-    pub fn done(self) -> Builder {
-        self.builder
-    }
 }
 
-/// hugetlb subsystem builder.
-///
-/// This struct is created by [`Builder::hugetlb`](struct.Builder.html#method.hugetlb) method.
-#[derive(Debug)]
-pub struct HugeTlbBuilder {
-    builder: Builder,
-}
+gen_subsystem_builder! {
+    hugetlb,
+    HugeTlbBuilder,
+    "hugetlb",
 
-impl HugeTlbBuilder {
     /// Sets a limit of 2 MB hugepage TLB usage.
     ///
     /// See [`hugetlb::Subsystem::set_limit`](../hugetlb/struct.Subsystem.html#method.set_limit) for
@@ -432,22 +406,13 @@ impl HugeTlbBuilder {
         self.builder.resources.hugetlb.limit_1gb = Some(limit);
         self
     }
-
-    /// Finishes configuring this hugetlb subsystem.
-    pub fn done(self) -> Builder {
-        self.builder
-    }
 }
 
-/// net_cls subsystem builder.
-///
-/// This struct is created by [`Builder::net_cls`](struct.Builder.html#method.net_cls) method.
-#[derive(Debug)]
-pub struct NetClsBuilder {
-    builder: Builder,
-}
+gen_subsystem_builder! {
+    net_cls,
+    NetClsBuilder,
+    "net_cls",
 
-impl NetClsBuilder {
     /// Tags network packet from this cgroup with a class ID.
     ///
     /// See [`net_cls::Subsystem::set_classid`](../net_cls/struct.Subsystem.html#method.set_classid)
@@ -456,55 +421,32 @@ impl NetClsBuilder {
         self.builder.resources.net_cls.classid = Some(class_id);
         self
     }
-
-    /// Finishes configuring this net_cls subsystem.
-    pub fn done(self) -> Builder {
-        self.builder
-    }
 }
 
-/// net_prio subsystem builder.
-///
-/// This struct is created by [`Builder::net_prio`](struct.Builder.html#method.net_prio) method.
-#[derive(Debug)]
-pub struct NetPrioBuilder {
-    builder: Builder,
-}
+gen_subsystem_builder! {
+    net_prio,
+    NetPrioBuilder,
+    "net_prio",
 
-impl NetPrioBuilder {
     gen_setter!(
         net_prio;
         ifpriomap,
         HashMap<String, u32>,
         "a map of priorities assigned to traffic originating from this cgroup"
     );
-
-    /// Finishes configuring this net_prio subsystem.
-    pub fn done(self) -> Builder {
-        self.builder
-    }
 }
 
-/// RDMA subsystem builder.
-///
-/// This struct is created by [`Builder::rdma`](struct.Builder.html#method.rdma) method.
-#[derive(Debug)]
-pub struct RdmaBuilder {
-    builder: Builder,
-}
+gen_subsystem_builder! {
+    rdma,
+    RdmaBuilder,
+    "RDMA",
 
-impl RdmaBuilder {
     gen_setter!(
         rdma;
         max,
         HashMap<String, rdma::Limit>,
         "limits of the usage of RDMA/IB devices"
     );
-
-    /// Finishes configuring this RDMA subsystem.
-    pub fn done(self) -> Builder {
-        self.builder
-    }
 }
 
 #[cfg(test)]
