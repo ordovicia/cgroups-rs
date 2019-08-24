@@ -851,44 +851,59 @@ mod tests {
         // TODO: test on NUMA systems
     }
 
+    macro_rules! gen_getters_test {
+        ($getter: ident, $memsw: ident, $kmem: ident, $tcp: ident, $val: expr) => {{
+            let mut cgroup =
+                Subsystem::new(CgroupPath::new(SubsystemKind::Memory, gen_cgroup_name!()));
+            cgroup.create()?;
+
+            assert_eq!(cgroup.$getter()?, $val);
+            if cgroup.file_exists(concat!("memory.", stringify!($memsw))) {
+                assert_eq!(cgroup.$memsw()?, $val);
+            }
+            assert_eq!(cgroup.$kmem()?, $val);
+            assert_eq!(cgroup.$tcp()?, $val);
+
+            cgroup.delete()
+        }};
+    }
+
     #[test]
     fn test_subsystem_usage_in_bytes() -> Result<()> {
-        gen_subsystem_test!(Memory; usage_in_bytes, 0)?;
-        // gen_subsystem_test!(Memory; memsw_usage_in_bytes, 0)?; // TODO
-        gen_subsystem_test!(Memory; kmem_usage_in_bytes, 0)?;
-        gen_subsystem_test!(Memory; kmem_tcp_usage_in_bytes, 0)?;
-
-        Ok(())
+        gen_getters_test!(
+            usage_in_bytes,
+            memsw_usage_in_bytes,
+            kmem_usage_in_bytes,
+            kmem_tcp_usage_in_bytes,
+            0
+        )
     }
 
     #[test]
     fn test_subsystem_max_usage_in_bytes() -> Result<()> {
-        gen_subsystem_test!(Memory; max_usage_in_bytes, 0)?;
-        // gen_subsystem_test!(Memory; memsw_max_usage_in_bytes, 0)?; // TODO
-        gen_subsystem_test!(Memory; kmem_max_usage_in_bytes, 0)?;
-        gen_subsystem_test!(Memory; kmem_tcp_max_usage_in_bytes, 0)?;
-
-        Ok(())
+        gen_getters_test!(
+            max_usage_in_bytes,
+            memsw_max_usage_in_bytes,
+            kmem_max_usage_in_bytes,
+            kmem_tcp_max_usage_in_bytes,
+            0
+        )
     }
 
     #[test]
     fn test_subsystem_limit_in_bytes() -> Result<()> {
-        gen_subsystem_test!(Memory; limit_in_bytes, LIMIT_DEFAULT)?;
-        // gen_subsystem_test!(Memory; memsw_limit_in_bytes, LIMIT_DEFAULT)?; // TODO
-        gen_subsystem_test!(Memory; kmem_limit_in_bytes, LIMIT_DEFAULT)?;
-        gen_subsystem_test!(Memory; kmem_tcp_limit_in_bytes, LIMIT_DEFAULT)?;
-
-        Ok(())
+        gen_getters_test!(
+            limit_in_bytes,
+            memsw_limit_in_bytes,
+            kmem_limit_in_bytes,
+            kmem_tcp_limit_in_bytes,
+            LIMIT_DEFAULT
+        )
     }
 
     #[test]
     fn test_subsystem_failcnt() -> Result<()> {
-        gen_subsystem_test!(Memory; failcnt, 0)?;
-        // gen_subsystem_test!(Memory; memsw_failcnt, 0)?; // TODO
-        gen_subsystem_test!(Memory; kmem_failcnt, 0)?;
-        gen_subsystem_test!(Memory; kmem_tcp_failcnt, 0)?;
-
-        Ok(())
+        gen_getters_test!(failcnt, memsw_failcnt, kmem_failcnt, kmem_tcp_failcnt, 0)
     }
 
     #[test]
