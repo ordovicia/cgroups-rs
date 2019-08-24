@@ -775,16 +775,61 @@ mod tests {
 
     #[test]
     fn test_subsystem_stat() -> Result<()> {
-        gen_subsystem_test!(Memory; stat, Stat {
-            cache: 0, rss: 0, rss_huge: 0, shmem: 0, mapped_file: 0, dirty: 0, writeback: 0,
-            swap: None, pgpgin: 0, pgpgout: 0, pgfault: 0, pgmajfault: 0, active_anon: 0,
-            inactive_anon: 0, active_file: 0, inactive_file: 0, unevictable: 0,
-            hierarchical_memory_limit: LIMIT_DEFAULT, hierarchical_memsw_limit: None,
-            total_cache: 0, total_rss: 0, total_rss_huge: 0, total_shmem: 0, total_mapped_file: 0,
-            total_dirty: 0, total_writeback: 0, total_swap: None, total_pgpgin: 0, total_pgpgout: 0,
-            total_pgfault: 0, total_pgmajfault: 0, total_active_anon: 0, total_inactive_anon: 0,
-            total_active_file: 0, total_inactive_file: 0, total_unevictable: 0,
-        })
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Memory, gen_cgroup_name!()));
+        cgroup.create()?;
+
+        let stat = cgroup.stat()?;
+
+        macro_rules! assert_0 {
+            ($( $r: ident ),*) => { $( assert_eq!(stat.$r, 0); )* }
+        }
+
+        assert_0!(
+            cache,
+            rss,
+            rss_huge,
+            shmem,
+            mapped_file,
+            dirty,
+            writeback,
+            pgpgin,
+            pgpgout,
+            pgfault,
+            pgmajfault,
+            active_anon,
+            inactive_anon,
+            active_file,
+            inactive_file,
+            unevictable
+        );
+        assert_eq!(stat.swap.unwrap_or(0), 0);
+        assert_eq!(stat.hierarchical_memory_limit, LIMIT_DEFAULT);
+        assert_eq!(
+            stat.hierarchical_memsw_limit.unwrap_or(LIMIT_DEFAULT),
+            LIMIT_DEFAULT
+        );
+
+        assert_0!(
+            total_cache,
+            total_rss,
+            total_rss_huge,
+            total_shmem,
+            total_mapped_file,
+            total_dirty,
+            total_writeback,
+            total_pgpgin,
+            total_pgpgout,
+            total_pgfault,
+            total_pgmajfault,
+            total_active_anon,
+            total_inactive_anon,
+            total_active_file,
+            total_inactive_file,
+            total_unevictable
+        );
+        assert_eq!(stat.total_swap.unwrap_or(0), 0);
+
+        cgroup.delete()
     }
 
     #[test]

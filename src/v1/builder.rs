@@ -363,7 +363,7 @@ gen_subsystem_builder! {
     memory,
     MemoryBuilder,
     "memory",
-    
+
     gen_setter_opt!(
         memory;
         "limit on memory usage by this cgroup",
