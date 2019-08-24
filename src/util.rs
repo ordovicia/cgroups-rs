@@ -98,11 +98,6 @@ pub fn parse_01_bool<R: std::io::Read>(reader: R) -> Result<bool> {
 }
 
 #[cfg(test)]
-pub fn sleep(millis: u64) {
-    std::thread::sleep(std::time::Duration::from_millis(millis));
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -110,7 +105,7 @@ mod tests {
     fn test_gen_cgroup_name() {
         assert_eq!(
             gen_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-util-112")
+            std::path::PathBuf::from("cgroups_rs-util-107")
         );
     }
 

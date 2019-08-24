@@ -196,6 +196,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // `cargo test` must not be executed in parallel for this test
     fn test_subsystem_current() -> Result<()> {
         use crate::Pid;
 
@@ -208,7 +209,6 @@ mod tests {
         assert!(cgroup.current()? > 0);
 
         cgroup.remove_proc(pid)?;
-        crate::util::sleep(100);
         assert_eq!(cgroup.current()?, 0);
 
         cgroup.delete()

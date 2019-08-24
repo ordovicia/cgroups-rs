@@ -826,13 +826,12 @@ mod tests {
         cgroup.add_task(pid)?;
         assert_eq!(cgroup.tasks()?, vec![pid]);
 
-        let child = Command::new("sleep").arg("1").spawn().unwrap();
+        let mut child = Command::new("sleep").arg("1").spawn().unwrap();
         let child_pid = Pid::from(&child);
-        cgroup.add_task(child_pid)?;
+        cgroup.add_task(child_pid)?; // TODO: really needed?
         assert!(cgroup.tasks()? == vec![pid, child_pid] || cgroup.tasks()? == vec![child_pid, pid]);
 
-        cgroup.remove_task(child_pid)?;
-        assert!(cgroup.tasks()? == vec![pid]);
+        child.wait()?;
 
         cgroup.remove_task(pid)?;
         assert!(cgroup.tasks()?.is_empty());
@@ -842,7 +841,6 @@ mod tests {
 
     #[test]
     fn test_cgroup_add_get_remove_procs() -> Result<()> {
-        use crate::util::sleep;
         use std::process::{self, Command};
 
         let mut cgroup =
@@ -853,17 +851,15 @@ mod tests {
         cgroup.add_proc(pid)?;
         assert_eq!(cgroup.procs()?, vec![pid]);
 
-        let child = Command::new("sleep").arg("1").spawn().unwrap();
+        // child processes are automaticaly added to the cgroup
+        let mut child = Command::new("sleep").arg("1").spawn().unwrap();
         let child_pid = Pid::from(&child);
-        cgroup.add_proc(child_pid)?;
+
         assert!(cgroup.procs()? == vec![pid, child_pid] || cgroup.procs()? == vec![child_pid, pid]);
 
-        cgroup.remove_proc(child_pid)?;
-        sleep(100);
-        assert!(cgroup.procs()? == vec![pid]);
+        child.wait()?;
 
         cgroup.remove_proc(pid)?;
-        sleep(100);
         assert!(cgroup.procs()?.is_empty());
 
         cgroup.delete()
