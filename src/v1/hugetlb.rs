@@ -297,6 +297,9 @@ mod tests {
     use super::*;
     use HugepageSize::*;
 
+    const LIMIT_2MB_BYTES_DEFAULT: u64 = 0x7FFF_FFFF_FFE0_0000;
+    const LIMIT_1GB_BYTES_DEFAULT: u64 = 0x7FFF_FFFF_C000_0000;
+
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
         let mut cgroup =
@@ -340,8 +343,8 @@ mod tests {
         let mut cgroup =
             Subsystem::new(CgroupPath::new(SubsystemKind::HugeTlb, gen_cgroup_name!()));
         cgroup.create()?;
-        assert!(cgroup.limit_in_bytes(Mb2)? > 0);
-        assert!(cgroup.limit_in_bytes(Gb1)? > 0);
+        assert_eq!(cgroup.limit_in_bytes(Mb2)?, LIMIT_2MB_BYTES_DEFAULT);
+        assert_eq!(cgroup.limit_in_bytes(Gb1)?, LIMIT_1GB_BYTES_DEFAULT);
 
         cgroup.set_limit_in_bytes(Mb2, 4 * (1 << 21))?;
         assert_eq!(cgroup.limit_in_bytes(Mb2)?, 4 * (1 << 21));
@@ -357,8 +360,8 @@ mod tests {
         let mut cgroup =
             Subsystem::new(CgroupPath::new(SubsystemKind::HugeTlb, gen_cgroup_name!()));
         cgroup.create()?;
-        assert!(cgroup.limit_in_pages(Mb2)? > 0);
-        assert!(cgroup.limit_in_pages(Gb1)? > 0);
+        assert_eq!(cgroup.limit_in_pages(Mb2)?, LIMIT_2MB_BYTES_DEFAULT >> 21);
+        assert_eq!(cgroup.limit_in_pages(Gb1)?, LIMIT_1GB_BYTES_DEFAULT >> 30);
 
         cgroup.set_limit_in_pages(Mb2, 4)?;
         assert_eq!(cgroup.limit_in_pages(Mb2)?, 4);
