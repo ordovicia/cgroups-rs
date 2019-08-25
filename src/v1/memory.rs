@@ -165,7 +165,8 @@ impl_cgroup! {
 
     /// Applies the `Some` fields in `resources.memory`.
     ///
-    /// See [`Cgroup::apply`] for general information.
+    /// `limit_in_bytes` field is set before `memsw_limit_in_bytes` is. See [`Cgroup::apply`] for
+    /// general information.
     ///
     /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
@@ -733,17 +734,17 @@ mod tests {
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
         let mut files = [
-            "memory.stat",
-            "memory.numa_stat",
-            "memory.swappiness",
-            "memory.oom_control",
-            "memory.move_charge_at_immigrate",
-            "memory.use_hierarchy",
-            "memory.force_empty",
-            "memory.soft_limit_in_bytes",
+            "stat",
+            "numa_stat",
+            "swappiness",
+            "oom_control",
+            "move_charge_at_immigrate",
+            "use_hierarchy",
+            "force_empty",
+            "soft_limit_in_bytes",
         ]
         .iter()
-        .map(|f| f.to_string())
+        .map(|f| format!("memory.{}", f))
         .collect::<Vec<_>>();
 
         let files_sw = vec![
@@ -961,7 +962,7 @@ mod tests {
 
     #[test]
     fn test_parse_stat() -> Result<()> {
-        let content = "\
+        const CONTENT: &str = "\
 cache 806506496
 rss 6950912
 rss_huge 0
@@ -997,7 +998,7 @@ total_active_file 4166680576
 total_unevictable 14004224
 ";
 
-        let stat = parse_stat(content.as_bytes())?;
+        let stat = parse_stat(CONTENT.as_bytes())?;
 
         assert_eq!(
             stat,
@@ -1048,7 +1049,7 @@ total_unevictable 14004224
 
     #[test]
     fn test_parse_numa_stat() -> Result<()> {
-        let content = "\
+        const CONTENT: &str = "\
 total=200910 N0=200910 N1=0
 file=199107 N0=199107 N1=1
 anon=1803 N0=1803 N1=2
@@ -1059,7 +1060,7 @@ hierarchical_anon=2209488 N0=2209492 N1=6
 hierarchical_unevictable=3419 N0=3419 N1=7
 ";
 
-        let numa_stat = parse_numa_stat(content.as_bytes())?;
+        let numa_stat = parse_numa_stat(CONTENT.as_bytes())?;
 
         assert_eq!(
             numa_stat,
@@ -1085,13 +1086,13 @@ hierarchical_unevictable=3419 N0=3419 N1=7
 
     #[test]
     fn test_parse_oom_control() -> Result<()> {
-        let content = "\
+        const CONTENT: &str = "\
 oom_kill_disable 1
 under_oom 1
 oom_kill 42
 ";
 
-        let oom_control = parse_oom_control(content.as_bytes())?;
+        let oom_control = parse_oom_control(CONTENT.as_bytes())?;
 
         assert_eq!(
             oom_control,

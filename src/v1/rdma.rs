@@ -339,12 +339,15 @@ mod tests {
 
     #[test]
     fn test_parse_limits() -> Result<()> {
-        let buf = "\
+        const CONTENT_0: &str = "\
 mlx4_0 hca_handle=2 hca_object=2000
 ocrdma1 hca_handle=3 hca_object=max
 ";
 
-        let actual = parse_limits(buf.as_bytes())?;
+        const CONTENT_1: &str = "\
+mlx4_0 hca_handle=2 hca_object=2000
+ocrdma1 hca_handle=3 hca_object=max
+";
 
         let expected = [
             (
@@ -366,7 +369,11 @@ ocrdma1 hca_handle=3 hca_object=max
         .cloned()
         .collect::<HashMap<_, _>>();
 
-        assert_eq!(expected, actual);
+        assert_eq!(expected, parse_limits(CONTENT_0.as_bytes())?);
+        assert_eq!(expected, parse_limits(CONTENT_1.as_bytes())?);
+
+        assert!(parse_limits(&b""[..])?.is_empty());
+
         Ok(())
     }
 }
