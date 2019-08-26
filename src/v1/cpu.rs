@@ -93,8 +93,8 @@ impl_cgroup! {
         let res: &self::Resources = &resources.cpu;
 
         macro_rules! a {
-            ($resource: ident, $setter: ident) => {
-                if let Some(r) = res.$resource {
+            ($field: ident, $setter: ident) => {
+                if let Some(r) = res.$field {
                     self.$setter(r)?;
                 }
             };
@@ -108,165 +108,93 @@ impl_cgroup! {
     }
 }
 
-#[rustfmt::skip]
-macro_rules! gen_doc {
-    ($desc: literal, $resource: ident) => { concat!(
-"Reads ", $desc, " of this cgroup from `cpu.", stringify!($resource), "` file.
-
-See [`Resources.", stringify!($resource), "`] and the kernel's documentation for more information
-about this field.
-
-[`Resources.", stringify!($resource), "`]: struct.Resources.html#structfield.", stringify!($resource), "\n\n",
-        gen_doc!(err_eg; $resource)
-    ) };
-
-    ($desc: literal, $resource: ident, $val: expr) => { concat!(
-"Sets ", $desc, " to this cgroup by writing to `cpu.", stringify!($resource), "` file.
-
-See [`Resources.", stringify!($resource), "`] and the kernel's documentation for more information
-about this field.
-
-[`Resources.", stringify!($resource), "`]: struct.Resources.html#structfield.", stringify!($resource), "\n\n",
-        gen_doc!(err_eg; $resource, $val)
-    ) };
-
-
-    // Errors and Examples
-    (err_eg; $resource: ident) => { concat!(
-"# Errors
-
-Returns an error if failed to read and parse `cpu.", stringify!($resource), "` file of this cgroup.
-
-# Examples
-
-```no_run
-# fn main() -> cgroups::Result<()> {
-use std::path::PathBuf;
-use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
-
-let cgroup = cpu::Subsystem::new(
-    CgroupPath::new(SubsystemKind::Cpu, PathBuf::from(\"students/charlie\")));
-
-let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
-# Ok(())
-# }
-```") };
-
-    (err_eg; $resource: ident, $val: expr) => { concat!(
-"# Errors
-
-Returns an error if failed to write to `cpu.", stringify!($resource), "` file of this cgroup.
-
-# Examples
-
-```no_run
-# fn main() -> cgroups::Result<()> {
-use std::path::PathBuf;
-use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
-
-let mut cgroup = cpu::Subsystem::new(
-    CgroupPath::new(SubsystemKind::Cpu, PathBuf::from(\"students/charlie\")));
-
-cgroup.set_", stringify!($resource), "(", stringify!($val), ")?;
-# Ok(())
-# }
-```") };
+macro_rules! gen_read {
+    ($desc: literal, $field: ident, $ty: ty, $parser: ident) => {
+        _gen_read!(cpu, Cpu, $desc, $field, $ty, $parser);
+    };
 }
 
-const STAT: &str = "cpu.stat";
-const SHARES: &str = "cpu.shares";
-const CFS_PERIOD: &str = "cpu.cfs_period_us";
-const CFS_QUOTA: &str = "cpu.cfs_quota_us";
+macro_rules! gen_write {
+    ($desc: literal, $field: ident, $setter: ident, $ty: ty, $val: expr) => {
+        _gen_write!(cpu, Cpu, $desc, $field, $setter, $ty, $val);
+    };
+}
 
 impl Subsystem {
-    with_doc! { concat!(
-        "Reads the throttling statistics of this cgroup from `cpu.stat` file.\n\n",
-        "See the kernel's documentation for more information about this field.\n\n",
-        gen_doc!(err_eg; stat)),
-        pub fn stat(&self) -> Result<Stat> {
-            use std::io::{BufRead, BufReader};
+    _gen_read!(
+        no_ref; cpu, Cpu,
+        "the throttling statistics of this cgroup",
+        stat,
+        Stat,
+        parse_stat
+    );
 
-            let (mut nr_periods, mut nr_throttled, mut throttled_time) = (None, None, None);
-            let buf = BufReader::new(self.open_file_read(STAT)?);
+    gen_read!("the CPU time shares", shares, u64, parse);
 
-            for line in buf.lines() {
-                let line = line?;
-                let mut entry = line.split_whitespace();
+    gen_write!("CPU time shares", shares, set_shares, u64, 2048);
 
-                match entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))? {
-                    "nr_periods" => {
-                        nr_periods = Some(parse_option(entry.next())?);
-                    }
-                    "nr_throttled" => {
-                        nr_throttled = Some(parse_option(entry.next())?);
-                    }
-                    "throttled_time" => {
-                        throttled_time = Some(parse_option(entry.next())?);
-                    }
-                    _ => return Err(Error::new(ErrorKind::Parse)),
-                }
+    gen_read!(
+        "the total available CPU time within a period (in microseconds)",
+        cfs_quota_us,
+        i64,
+        parse
+    );
+
+    gen_write!(
+        "total available CPU time within a period (in microseconds)",
+        cfs_quota_us,
+        set_cfs_quota_us,
+        i64,
+        500 * 1000
+    );
+
+    gen_read!(
+        "the length of period (in microseconds)",
+        cfs_period_us,
+        u64,
+        parse
+    );
+
+    gen_write!(
+        "length of period (in microseconds)",
+        cfs_period_us,
+        set_cfs_period_us,
+        u64,
+        1000 * 1000
+    );
+}
+
+fn parse_stat(reader: impl std::io::Read) -> Result<Stat> {
+    use std::io::{BufRead, BufReader};
+
+    let (mut nr_periods, mut nr_throttled, mut throttled_time) = (None, None, None);
+    let buf = BufReader::new(reader);
+
+    for line in buf.lines() {
+        let line = line?;
+        let mut entry = line.split_whitespace();
+
+        match entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))? {
+            "nr_periods" => {
+                nr_periods = Some(parse_option(entry.next())?);
             }
-
-            if let Some(nr_periods) = nr_periods {
-                if let Some(nr_throttled) = nr_throttled {
-                    if let Some(throttled_time) = throttled_time {
-                        return Ok(Stat {
-                            nr_periods,
-                            nr_throttled,
-                            throttled_time,
-                        });
-                    }
-                }
+            "nr_throttled" => {
+                nr_throttled = Some(parse_option(entry.next())?);
             }
-
-            Err(Error::new(ErrorKind::Parse))
+            "throttled_time" => {
+                throttled_time = Some(parse_option(entry.next())?);
+            }
+            _ => return Err(Error::new(ErrorKind::Parse)),
         }
     }
 
-    with_doc! {
-        gen_doc!("the CPU time shares", shares),
-        pub fn shares(&self) -> Result<u64> {
-            self.open_file_read(SHARES).and_then(parse)
-        }
-    }
-
-    with_doc! {
-        gen_doc!("CPU time shares", shares, 2048),
-        pub fn set_shares(&mut self, shares: u64) -> Result<()> {
-            self.write_file(SHARES, shares)
-        }
-    }
-
-    with_doc! {
-        gen_doc!("the total available CPU time within a period (in microseconds)", cfs_quota_us),
-        pub fn cfs_quota_us(&self) -> Result<i64> {
-            self.open_file_read(CFS_QUOTA).and_then(parse)
-        }
-    }
-
-    with_doc! {
-        gen_doc!(
-            "total available CPU time within a period (in microseconds)",
-            cfs_quota_us,
-            500 * 1000
-        ),
-        pub fn set_cfs_quota_us(&mut self, quota_us: i64) -> Result<()> {
-            self.write_file(CFS_QUOTA, quota_us)
-        }
-    }
-
-    with_doc! {
-        gen_doc!("the length of period (in microseconds)", cfs_period_us),
-        pub fn cfs_period_us(&self) -> Result<u64> {
-            self.open_file_read(CFS_PERIOD).and_then(parse)
-        }
-    }
-
-    with_doc! {
-        gen_doc!("length of period (in microseconds)", cfs_period_us, 1000 * 1000),
-        pub fn set_cfs_period_us(&mut self, period_us: u64) -> Result<()> {
-            self.write_file(CFS_PERIOD, period_us)
-        }
+    match (nr_periods, nr_throttled, throttled_time) {
+        (Some(nr_periods), Some(nr_throttled), Some(throttled_time)) => Ok(Stat {
+            nr_periods,
+            nr_throttled,
+            throttled_time,
+        }),
+        _ => Err(Error::new(ErrorKind::Parse)),
     }
 }
 
@@ -285,19 +213,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
-        cgroup.create()?;
-        assert!([STAT, SHARES, CFS_QUOTA, CFS_PERIOD]
-            .iter()
-            .all(|f| cgroup.file_exists(f)));
-        assert!(!cgroup.file_exists("does_not_exist"));
-
-        cgroup.delete()?;
-        assert!([STAT, SHARES, CFS_QUOTA, CFS_PERIOD]
-            .iter()
-            .all(|f| !cgroup.file_exists(f)));
-
-        Ok(())
+        gen_subsystem_test!(Cpu; cpu, ["stat", "shares", "cfs_quota_us", "cfs_period_us"])
     }
 
     #[test]
@@ -332,5 +248,27 @@ mod tests {
             set_cfs_period_us,
             1000 * 1000
         )
+    }
+
+    #[test]
+    fn test_parse_stat() -> Result<()> {
+        const CONTENT: &str = "\
+nr_periods 256
+nr_throttled 8
+throttled_time 32
+";
+
+        assert_eq!(
+            parse_stat(CONTENT.as_bytes())?,
+            Stat {
+                nr_periods: 256,
+                nr_throttled: 8,
+                throttled_time: 32
+            }
+        );
+
+        assert_eq!(parse_stat(&b""[..]).unwrap_err().kind(), ErrorKind::Parse);
+
+        Ok(())
     }
 }

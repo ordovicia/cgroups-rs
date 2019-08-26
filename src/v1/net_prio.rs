@@ -74,122 +74,62 @@ impl_cgroup! {
     }
 }
 
-const PRIOIDX: &str = "net_prio.prioidx";
-const IFPRIOMAP: &str = "net_prio.ifpriomap";
-
 impl Subsystem {
-    /// Reads the system-internal representation of this cgroup from `net_prio.prioidx` file.
-    ///
-    /// See the kernel's documentation for more information about this field.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to read and parse `net_prio.prioidx` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::path::PathBuf;
-    /// use cgroups::v1::{net_prio, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let cgroup = net_prio::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::NetPrio, PathBuf::from("students/charlie")));
-    ///
-    /// let prio_idx = cgroup.prioidx()?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn prioidx(&self) -> Result<u64> {
-        self.open_file_read(PRIOIDX).and_then(parse)
-    }
+    _gen_read!(
+        no_ref; net_prio, NetPrio,
+        "the system-internal representation of this cgroup",
+        prioidx,
+        u64,
+        parse
+    );
 
-    /// Reads the map of priorities assigned to traffic originating from this cgroup, from
-    /// `net_prio.ifpriomap` file.
-    ///
-    /// See [`Resources.ifpriomap`] and the kernel's documentation for more information about this
-    /// field.
-    ///
-    /// [`Resources.ifpriomap`]: struct.Resources.html#structfield.ifpriomap
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to read and parse `net_prio.ifpriomap` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::path::PathBuf;
-    /// use cgroups::v1::{net_prio, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let cgroup = net_prio::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::NetPrio, PathBuf::from("students/charlie")));
-    ///
-    /// let prio_map = cgroup.ifpriomap()?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn ifpriomap(&self) -> Result<HashMap<String, u32>> {
-        use std::io::{BufRead, BufReader};
+    _gen_read!(
+        net_prio, NetPrio,
+        "the map of priorities assigned to traffic originating from this cgroup,",
+        ifpriomap,
+        HashMap<String, u32>,
+        parse_ifpriomap
+    );
 
-        let mut prio_map = HashMap::new();
-        let buf = BufReader::new(self.open_file_read(IFPRIOMAP)?);
+    with_doc! { concat!(
+        _gen_doc!(
+            sets;
+            "a map of priorities assigned to traffic originating from this cgroup,",
+            net_prio,
+            ifpriomap
+        ),
+        _gen_doc!(see; ifpriomap),
+        _gen_doc!(err_write; net_prio, ifpriomap),
+"# Examples
 
-        for line in buf.lines() {
-            let line = line?;
-            let mut entry = line.split_whitespace();
+```no_run
+# fn main() -> cgroups::Result<()> {
+use std::{collections::HashMap, path::PathBuf};
+use cgroups::v1::{net_prio, Cgroup, CgroupPath, SubsystemKind};
 
-            let interface = entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))?;
-            let prio = parse_option(entry.next())?;
+let mut cgroup = net_prio::Subsystem::new(
+    CgroupPath::new(SubsystemKind::NetPrio, PathBuf::from(\"students/charlie\")));
 
-            prio_map.insert(interface.to_string(), prio);
+let prio_map = [(\"lo\", 0), (\"wlp1s\", 1)].iter().copied().collect::<HashMap<_, _>>();
+cgroup.set_ifpriomap(prio_map)?;
+# Ok(())
+# }
+```"),
+        pub fn set_ifpriomap<I, T>(&mut self, prio_map: I) -> Result<()>
+        where
+            I: IntoIterator<Item = (T, u32)>,
+            T: AsRef<str> + std::fmt::Display,
+        {
+            use std::io::Write;
+
+            let mut file = self.open_file_write("net_prio.ifpriomap")?;
+            for (interface, prio) in prio_map.into_iter() {
+                // write!(file, "{} {}", interface, prio)?; // not work
+                file.write_all(format!("{} {}", interface, prio).as_bytes())?;
+            }
+
+            Ok(())
         }
-
-        Ok(prio_map)
-    }
-
-    /// Sets a map of priorities assigned to traffic originating from this cgroup, by writing to
-    /// `net_prio.ifpriomap` file.
-    ///
-    /// See [`Resources.ifpriomap`] and the kernel's documentation for more information about this
-    /// field.
-    ///
-    /// [`Resources.ifpriomap`]: struct.Resources.html#structfield.ifpriomap
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to write to `net_prio.ifpriomap` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::{collections::HashMap, path::PathBuf};
-    /// use cgroups::v1::{net_prio, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let mut cgroup = net_prio::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::NetPrio, PathBuf::from("students/charlie")));
-    ///
-    /// let prio_map = [("lo", 0), ("wlp1s0", 1)].iter().copied().collect::<HashMap<_, _>>();
-    /// cgroup.set_ifpriomap(prio_map)?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn set_ifpriomap<I, T>(&mut self, prio_map: I) -> Result<()>
-    where
-        I: IntoIterator<Item = (T, u32)>,
-        T: AsRef<str> + std::fmt::Display,
-    {
-        use std::io::Write;
-
-        let mut file = self.open_file_write(IFPRIOMAP)?;
-        for (interface, prio) in prio_map.into_iter() {
-            // write!(file, "{} {}", interface, prio)?; // not work
-            file.write_all(format!("{} {}", interface, prio).as_bytes())?;
-        }
-
-        Ok(())
     }
 }
 
@@ -202,23 +142,32 @@ impl Into<v1::Resources> for Resources {
     }
 }
 
+fn parse_ifpriomap(reader: impl std::io::Read) -> Result<HashMap<String, u32>> {
+    use std::io::{BufRead, BufReader};
+
+    let mut prio_map = HashMap::new();
+    let buf = BufReader::new(reader);
+
+    for line in buf.lines() {
+        let line = line?;
+        let mut entry = line.split_whitespace();
+
+        let interface = entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))?;
+        let prio = parse_option(entry.next())?;
+
+        prio_map.insert(interface.to_string(), prio);
+    }
+
+    Ok(prio_map)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        let mut cgroup =
-            Subsystem::new(CgroupPath::new(SubsystemKind::NetPrio, gen_cgroup_name!()));
-        cgroup.create()?;
-
-        assert!([PRIOIDX, IFPRIOMAP].iter().all(|f| cgroup.file_exists(f)));
-        assert!(!cgroup.file_exists("does_not_exist"));
-
-        cgroup.delete()?;
-        assert!([PRIOIDX, IFPRIOMAP].iter().all(|f| !cgroup.file_exists(f)));
-
-        Ok(())
+        gen_subsystem_test!(NetPrio; net_prio, ["prioidx", "ifpriomap"])
     }
 
     #[test]
@@ -251,5 +200,22 @@ mod tests {
         assert_eq!(cgroup.ifpriomap()?, priorities);
 
         cgroup.delete()
+    }
+
+    #[test]
+    fn test_parse_ifpriomap() -> Result<()> {
+        const CONTENT: &str = "\
+lo 0
+wlp1s0 1
+";
+
+        assert_eq!(
+            parse_ifpriomap(CONTENT.as_bytes())?,
+            hashmap![("lo".to_string(), 0), ("wlp1s0".to_string(), 1),]
+        );
+
+        assert_eq!(parse_ifpriomap(&b""[..])?, HashMap::new(),);
+
+        Ok(())
     }
 }

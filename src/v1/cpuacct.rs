@@ -33,7 +33,10 @@
 //! # }
 //! ```
 
-use std::path::PathBuf;
+use std::{
+    io::{self, BufRead},
+    path::PathBuf,
+};
 
 use crate::{
     parse::{parse, parse_option, parse_vec},
@@ -69,197 +72,147 @@ impl_cgroup! {
     }
 }
 
-const STAT: &str = "cpuacct.stat";
-const USAGE: &str = "cpuacct.usage";
-const USAGE_ALL: &str = "cpuacct.usage_all";
-const USAGE_PERCPU: &str = "cpuacct.usage_percpu";
-const USAGE_PERCPU_SYS: &str = "cpuacct.usage_percpu_sys";
-const USAGE_PERCPU_USER: &str = "cpuacct.usage_percpu_user";
-const USAGE_SYS: &str = "cpuacct.usage_sys";
-const USAGE_USER: &str = "cpuacct.usage_user";
-
-#[rustfmt::skip]
-macro_rules! gen_doc {
-    ($resource: ident) => { concat!(
-        "See the kernel's documentation for more information about this field.\n\n",
-        "# Errors\n\n",
-        "Returns an error if failed to read and parse `cpuacct.", stringify!($resource), "` file of this cgroup.\n\n",
-        "# Examples\n\n",
-"```no_run
-# fn main() -> cgroups::Result<()> {
-use std::path::PathBuf;
-use cgroups::v1::{cpuacct, Cgroup, CgroupPath, SubsystemKind};
-
-let cgroup = cpuacct::Subsystem::new(
-    CgroupPath::new(SubsystemKind::Cpuacct, PathBuf::from(\"students/charlie\")));
-
-let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
-# Ok(())
-# }
-```"
-        )
+macro_rules! gen_read {
+    ($desc: literal, $( $detail: literal, )? $field: ident, $ty: ty, $parser: ident) => {
+        _gen_read!(no_ref; cpuacct, Cpuacct, $desc, $field, $ty, $parser $(, $detail )?);
     };
 }
 
 impl Subsystem {
+    gen_read!(
+        "statistics about how much CPU time is consumed by this cgroup (in `USER_HZ` unit)",
+        "The CPU time is further divided into user and system times.",
+        stat,
+        Stat,
+        parse_stat
+    );
+
+    gen_read!(
+        "the total CPU time consumed by this cgroup (in nanoseconds)",
+        usage,
+        u64,
+        parse
+    );
+
+    gen_read!(
+        "the per-CPU total CPU time consumed by this cgroup (in nanoseconds)",
+        "The CPU time is further divided into user and system times.",
+        usage_all,
+        Vec<Stat>,
+        parse_usage_all
+    );
+
+    gen_read!(
+        "the per-CPU total CPU times consumed by this cgroup (in nanoseconds)",
+        usage_percpu,
+        Vec<u64>,
+        parse_vec
+    );
+
+    gen_read!(
+        "the per-CPU total CPU times consumed by this cgroup in the system (kernel) mode (in nanoseconds)",
+        usage_percpu_sys,
+        Vec<u64>,
+        parse_vec
+    );
+
+    gen_read!(
+        "the per-CPU total CPU times consumed by this cgroup in the user mode (in nanoseconds)",
+        usage_percpu_user,
+        Vec<u64>,
+        parse_vec
+    );
+
+    gen_read!(
+        "the total CPU time consumed by this cgroup in the system (kernel) mode (in nanoseconds)",
+        usage_sys,
+        u64,
+        parse
+    );
+
+    gen_read!(
+        "the total CPU time consumed by this cgroup in the user mode (in nanoseconds)",
+        usage_user,
+        u64,
+        parse
+    );
+
     with_doc! { concat!(
-        "Reads statistics about how much CPU time is consumed by this cgroup (in `USER_HZ` unit) ",
-        "form `cpuacct.stat` file. The CPU time is divided into user and system times.\n\n",
-        gen_doc!(stat)),
-        pub fn stat(&self) -> Result<Stat> {
-            use std::io::{BufRead, BufReader};
+        "Resets the accounted CPU time of this cgroup by writing to `cpuacct.usage` file.\n\n",
+        _gen_doc!(err_write; cpuacct, usage),
+        _gen_doc!(eg_write; cpuacct, Cpuacct, usage)),
+        pub fn reset(&mut self) -> Result<()> {
+            self.write_file("cpuacct.usage", 0)
+        }
+    }
+}
 
-            let (mut system, mut user) = (None, None);
-            let buf = BufReader::new(self.open_file_read(STAT)?);
+fn parse_stat(reader: impl io::Read) -> Result<Stat> {
+    let (mut system, mut user) = (None, None);
+    let buf = io::BufReader::new(reader);
 
-            for line in buf.lines() {
-                let line = line?;
-                let mut entry = line.split_whitespace();
+    for line in buf.lines() {
+        let line = line?;
+        let mut entry = line.split_whitespace();
 
-                match entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))? {
-                    "system" => {
-                        system = Some(parse_option(entry.next())?);
-                    }
-                    "user" => {
-                        user = Some(parse_option(entry.next())?);
-                    }
-                    _ => return Err(Error::new(ErrorKind::Parse)),
-                }
+        match entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))? {
+            "system" => {
+                system = Some(parse_option(entry.next())?);
             }
-
-            if let Some(system) = system {
-                if let Some(user) = user {
-                    return Ok(Stat { system, user });
-                }
+            "user" => {
+                user = Some(parse_option(entry.next())?);
             }
-
-            Err(Error::new(ErrorKind::Parse))
+            _ => return Err(Error::new(ErrorKind::Parse)),
         }
     }
 
-    with_doc! { concat!(
-        "Reads the total CPU time consumed by this cgroup (in nanoseconds) from `cpuacct.usage` ",
-        "file.\n\n",
-        gen_doc!(usage)),
-        pub fn usage(&self) -> Result<u64> {
-            self.open_file_read(USAGE).and_then(parse)
+    match (system, user) {
+        (Some(system), Some(user)) => Ok(Stat { system, user }),
+        _ => Err(Error::new(ErrorKind::Parse)),
+    }
+}
+
+fn parse_usage_all(reader: impl io::Read) -> Result<Vec<Stat>> {
+    let mut buf = io::BufReader::new(reader);
+
+    let mut header = String::new();
+    buf.read_line(&mut header).map_err(Error::parse)?;
+    let mut header = header.split_whitespace();
+
+    if !header.next().map(|h| h == "cpu").unwrap_or(false) {
+        return Err(Error::new(ErrorKind::Parse));
+    }
+
+    let sys_col_num = match (header.next(), header.next()) {
+        (Some("user"), Some("system")) => 1, // FIXME: column order is guaranteed ?
+        (Some("system"), Some("user")) => 0,
+        _ => {
+            return Err(Error::new(ErrorKind::Parse));
+        }
+    };
+
+    let mut stats = Vec::new();
+    for line in buf.lines() {
+        let line = line?;
+        let mut entry = line.split_whitespace().skip(1); // skip CPU ID
+                                                         // FIXME: IDs are guaranteed to be sorted ?
+
+        let usage_0 = parse_option(entry.next())?;
+        let usage_1 = parse_option(entry.next())?;
+        if sys_col_num == 0 {
+            stats.push(Stat {
+                system: usage_0,
+                user: usage_1,
+            });
+        } else {
+            stats.push(Stat {
+                system: usage_1,
+                user: usage_0,
+            });
         }
     }
 
-    with_doc! { concat!(
-        "Reads the per-CPU total CPU times consumed by this cgroup (in nanoseconds) from ",
-        "`cpuacct.usage_all` file. The CPU times are divided into user and system times.\n\n",
-        gen_doc!(usage_all)),
-        pub fn usage_all(&self) -> Result<Vec<Stat>> {
-            use std::io::{BufRead, BufReader};
-
-            let mut buf = BufReader::new(self.open_file_read(USAGE_ALL)?);
-
-            let mut header = String::new();
-            buf.read_line(&mut header).map_err(Error::parse)?;
-            let mut header = header.split_whitespace();
-
-            if !header.next().map(|h| h == "cpu").unwrap_or(false) {
-                return Err(Error::new(ErrorKind::Parse));
-            }
-
-            let sys_col_num = match (header.next(), header.next()) {
-                (Some("user"), Some("system")) => 1, // FIXME: column order is guaranteed ?
-                (Some("system"), Some("user")) => 0,
-                _ => { return Err(Error::new(ErrorKind::Parse)); }
-            };
-
-            let mut stats = Vec::new();
-            for line in buf.lines() {
-                let line = line?;
-                let mut entry = line.split_whitespace().skip(1); // skip CPU ID
-                // FIXME: IDs are guaranteed to be sorted ?
-
-                let usage_0 = parse_option(entry.next())?;
-                let usage_1 = parse_option(entry.next())?;
-                if sys_col_num == 0 {
-                    stats.push(Stat { system: usage_0, user: usage_1 });
-                } else {
-                    stats.push(Stat { system: usage_1, user: usage_0 });
-                }
-            }
-
-            Ok(stats)
-        }
-    }
-
-    with_doc! { concat!(
-        "Reads the per-CPU total CPU times consumed by this cgroup (in nanoseconds) from ",
-        "`cpuacct.usage_percpu` file.\n\n",
-        gen_doc!(usage_percpu)),
-        pub fn usage_percpu(&self) -> Result<Vec<u64>> {
-            self.open_file_read(USAGE_PERCPU)
-                .and_then(parse_vec)
-        }
-    }
-
-    with_doc! { concat!(
-        "Reads the per-CPU total CPU times consumed by this cgroup in the system (kernel) mode ",
-        "(in nanoseconds) from `cpuacct.usage_percpu_sys` file.\n\n",
-        gen_doc!(usage_percpu_sys)),
-        pub fn usage_percpu_sys(&self) -> Result<Vec<u64>> {
-            self.open_file_read(USAGE_PERCPU_SYS)
-                .and_then(parse_vec)
-        }
-    }
-
-    with_doc! { concat!(
-        "Reads the per-CPU total CPU times consumed by this cgroup in the user mode (in ",
-        "nanoseconds) from `cpuacct.usage_percpu_sys` file.\n\n",
-        gen_doc!(usage_percpu_user)),
-        pub fn usage_percpu_user(&self) -> Result<Vec<u64>> {
-            self.open_file_read(USAGE_PERCPU_USER)
-                .and_then(parse_vec)
-        }
-    }
-
-    with_doc! { concat!(
-        "Reads the total CPU times consumed by this cgroup in the system (kernel) mode (in ",
-        "nanoseconds) from `cpuacct.usage_sys` file.\n\n",
-        gen_doc!(usage_sys)),
-        pub fn usage_sys(&self) -> Result<u64> {
-            self.open_file_read(USAGE_SYS).and_then(parse)
-        }
-    }
-
-    with_doc! { concat!(
-        "Reads the total CPU times consumed by this cgroup in the user mode (in nanoseconds) from ",
-        "`cpuacct.usage_user` file.\n\n",
-        gen_doc!(usage_user)),
-        pub fn usage_user(&self) -> Result<u64> {
-            self.open_file_read(USAGE_USER)
-                .and_then(parse)
-        }
-    }
-
-    /// Resets the accounted CPU time of this cgroup by writing to `cpuacct.usage` file.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to write to `cpuacct.usage` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpuacct, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let mut cgroup = cpuacct::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Cpuacct, PathBuf::from("students/charlie")));
-    ///
-    /// cgroup.reset()?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn reset(&mut self) -> Result<()> {
-        self.write_file(USAGE, 0)
-    }
+    Ok(stats)
 }
 
 #[cfg(test)]
@@ -268,38 +221,13 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        let mut cgroup =
-            Subsystem::new(CgroupPath::new(SubsystemKind::Cpuacct, gen_cgroup_name!()));
-        cgroup.create()?;
-        assert!([
-            STAT,
-            USAGE,
-            USAGE_ALL,
-            USAGE_PERCPU,
-            USAGE_PERCPU_SYS,
-            USAGE_PERCPU_USER,
-            USAGE_SYS,
-            USAGE_USER,
-        ]
-        .iter()
-        .all(|f| cgroup.file_exists(f)));
-        assert!(!cgroup.file_exists("does_not_exist"));
-
-        cgroup.delete()?;
-        assert!([
-            STAT,
-            USAGE,
-            USAGE_ALL,
-            USAGE_PERCPU,
-            USAGE_PERCPU_SYS,
-            USAGE_PERCPU_USER,
-            USAGE_SYS,
-            USAGE_USER,
-        ]
-        .iter()
-        .all(|f| !cgroup.file_exists(f)));
-
-        Ok(())
+        gen_subsystem_test!(
+            Cpuacct; cpuacct,
+            [
+                "stat", "usage", "usage_all", "usage_percpu", "usage_percpu_sys",
+                "usage_percpu_user", "usage_sys", "usage_user"
+            ]
+        )
     }
 
     // TODO: test adding tasks

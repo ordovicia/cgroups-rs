@@ -51,7 +51,7 @@ const RELEASE_AGENT: &str = "release_agent";
 /// // Now, remove self process from the cgroup.
 /// cgroup.remove_task(pid)?;
 ///
-/// // And delete the cgroup.
+/// // ... and delete the cgroup.
 /// cgroup.delete()?;
 ///
 /// // Note that cgroup handlers does not implement `Drop` and therefore when the
@@ -703,14 +703,14 @@ impl CgroupPath {
 }
 
 macro_rules! impl_cgroup {
-    ($subsystem: ident, $($tt: tt)*) => {
+    ($kind: ident, $($tt: tt)*) => {
         impl Cgroup for Subsystem {
             fn new(path: CgroupPath) -> Self {
                 Self { path }
             }
 
             fn subsystem_kind(&self) -> SubsystemKind {
-                SubsystemKind::$subsystem
+                SubsystemKind::$kind
             }
 
             fn path(&self) -> PathBuf {

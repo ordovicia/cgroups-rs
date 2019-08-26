@@ -100,18 +100,18 @@ impl_cgroup! {
     }
 }
 
-#[rustfmt::skip]
-macro_rules! gen_doc {
-    ($desc: literal, $resource: ident, $file: literal) => { concat!(
-"Reads ", $desc, " from `hugetlb.<hugepage size>.", $file, "` file.
+macro_rules! gen_read {
+    ($desc: literal, $in_bytes: ident, $in_pages: ident) => {
+        with_doc! { concat!(
+"Reads ", $desc, " in bytes from `hugetlb.<hugepage size>.", stringify!($in_bytes), "` file.\n\n",
+_gen_doc!(see), "\n\n",
+"# Errors
 
-See the kernel's documentation for more information about this field.
-
-# Errors
-
-Returns an error if failed to read and parse `hugetlb.<hugepage size>.", $file, "` file of this cgroup.
+Returns an error if failed to read and parse `hugetlb.<hugepage size>.", stringify!($in_bytes), "`
+file of this cgroup.
 
 # Examples
+
 ```no_run
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
@@ -120,43 +120,28 @@ use cgroups::v1::{hugetlb::{self, HugepageSize}, Cgroup, CgroupPath, SubsystemKi
 let cgroup = hugetlb::Subsystem::new(
     CgroupPath::new(SubsystemKind::HugeTlb, PathBuf::from(\"students/charlie\")));
 
-let ", stringify!($resource), " = cgroup.", stringify!($resource), "(HugepageSize::Mb2)?;
+let ", stringify!($in_bytes), " = cgroup.", stringify!($in_bytes), "(HugepageSize::Mb2)?;
 # Ok(())
 # }
-```") };
+```"),
+        pub fn $in_bytes(&self, size: HugepageSize) -> Result<u64> {
+            self.open_file_read(&format!("hugetlb.{}.{}", size, stringify!($in_bytes)))
+                .and_then(parse)
+        }
+    }
 
-    ($desc: literal, $resource: ident, $file: literal, $val: expr) => { concat!(
-"Sets ", $desc, " by writing to `hugetlb.<hugepage size>.", $file, "` file.
-
-See the kernel's documentation for more information about this field.
-
-# Errors
-
-Returns an error if failed to write to `hugetlb.<hugepage size>.", $file, "` file of this cgroup.
-
-# Examples
-
-```no_run
-# fn main() -> cgroups::Result<()> {
-use std::path::PathBuf;
-use cgroups::v1::{hugetlb::{self, HugepageSize}, Cgroup, CgroupPath, SubsystemKind};
-
-let mut cgroup = hugetlb::Subsystem::new(
-    CgroupPath::new(SubsystemKind::HugeTlb, PathBuf::from(\"students/charlie\")));
-
-cgroup.set_", stringify!($resource), "(HugepageSize::Mb2, ", stringify!($val), ")?;
-# Ok(())
-# }
-```") };
+    with_doc! { concat!(
+        "Reads ", $desc, " in pages. See ", stringify!($in_bytes), " for more information."),
+        pub fn $in_pages(&self, size: HugepageSize) -> Result<u64> {
+            self.$in_bytes(size).map(|b| bytes_to_pages(b, size))
+        }
+    } };
 }
 
 const LIMIT_IN_BYTES: &str = "limit_in_bytes";
 const USAGE_IN_BYTES: &str = "usage_in_bytes";
 const MAX_USAGE_IN_BYTES: &str = "max_usage_in_bytes";
 const FAILCNT: &str = "failcnt";
-
-const MB2_BYTES_PER_PAGE: u64 = 2 << 20;
-const GB1_BYTES_PER_PAGE: u64 = 1 << 30;
 
 impl Subsystem {
     /// Returns whether the system supports hugepage in `size`.
@@ -180,6 +165,7 @@ impl Subsystem {
     /// cgroup.delete()?;
     /// # Ok(())
     /// # }
+    /// ```
     pub fn size_supported(&self, size: HugepageSize) -> bool {
         self.file_exists(&format!("hugetlb.{}.{}", size, LIMIT_IN_BYTES))
             && self.file_exists(&format!("hugetlb.{}.{}", size, USAGE_IN_BYTES))
@@ -187,98 +173,97 @@ impl Subsystem {
             && self.file_exists(&format!("hugetlb.{}.{}", size, FAILCNT))
     }
 
-    with_doc! {
-        gen_doc!("the limit of hugepage TLB usage (in bytes)", limit_in_bytes, "limit_in_bytes"),
-        pub fn limit_in_bytes(&self, size: HugepageSize) -> Result<u64> {
-            self.open_file_read(&format!("hugetlb.{}.{}", size, LIMIT_IN_BYTES))
-                .and_then(parse)
+    gen_read!(
+        "the limit of hugepage TLB usage",
+        limit_in_bytes,
+        limit_in_pages
+    );
+
+    /// Sets a limit of hugepage TLB usage by writing to `hugetlb.<hugepage size>.limit_in_bytes` file.
+    ///
+    /// See the kernel's documentation for more information about this field.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if failed to write to `hugetlb.<hugepage size>.limit_in_bytes` file of this
+    /// cgroup.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{hugetlb::{self, HugepageSize}, Cgroup, CgroupPath, SubsystemKind};
+    ///
+    /// let mut cgroup = hugetlb::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::HugeTlb, PathBuf::from("students/charlie")));
+    /// cgroup.create()?;
+    ///
+    /// cgroup.set_limit(HugepageSize::Mb2, hugetlb::Limit::Pages(4))?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn set_limit(&mut self, size: HugepageSize, limit: Limit) -> Result<()> {
+        match limit {
+            Limit::Bytes(bytes) => self.set_limit_in_bytes(size, bytes),
+            Limit::Pages(pages) => self.set_limit_in_pages(size, pages),
         }
     }
 
-    with_doc! {
-        gen_doc!("the limit of hugepage TLB usage (in pages)", limit_in_pages, "limit_in_bytes"),
-        pub fn limit_in_pages(&self, size: HugepageSize) -> Result<u64> {
-            let bytes: u64 = self.open_file_read(&format!("hugetlb.{}.{}", size, LIMIT_IN_BYTES))
-                .and_then(parse)?;
-            Ok(bytes_to_pages(bytes, size))
-        }
+    /// Sets a limit of hugepage TLB usage in bytes. See `set_limit` for more information.
+    pub fn set_limit_in_bytes(&mut self, size: HugepageSize, bytes: u64) -> Result<()> {
+        self.write_file(&format!("hugetlb.{}.{}", size, LIMIT_IN_BYTES), bytes)
     }
 
-    with_doc! {
-        gen_doc!("a limit of hugepage TLB usage", limit, "limit_in_bytes", hugetlb::Limit::Pages(1)),
-        pub fn set_limit(&mut self, size: HugepageSize, limit: Limit) -> Result<()> {
-            match limit {
-                Limit::Bytes(bytes) => self.set_limit_in_bytes(size, bytes),
-                Limit::Pages(pages) => self.set_limit_in_pages(size, pages),
-            }
-        }
+    /// Sets a limit of hugepage TLB usage in pages. See `set_limit` for more information.
+    pub fn set_limit_in_pages(&mut self, size: HugepageSize, pages: u64) -> Result<()> {
+        self.set_limit_in_bytes(size, pages_to_bytes(pages, size))
     }
 
-    with_doc! {
-        gen_doc!("a limit of hugepage TLB usage (in bytes)", limit_in_bytes, "limit_in_bytes", 1 * (1 << 21)),
-        pub fn set_limit_in_bytes(&mut self, size: HugepageSize, bytes: u64) -> Result<()> {
-            self.write_file(&format!("hugetlb.{}.{}", size, LIMIT_IN_BYTES), bytes)
-        }
-    }
+    gen_read!(
+        "the current usage of hugepage TLB",
+        usage_in_bytes,
+        usage_in_pages
+    );
 
-    with_doc! {
-        gen_doc!("a limit of hugepage TLB usage (in pages)", limit_in_pages, "limit_in_bytes", 4),
-        pub fn set_limit_in_pages(&mut self, size: HugepageSize, pages: u64) -> Result<()> {
-            self.write_file(&format!("hugetlb.{}.{}", size, LIMIT_IN_BYTES), pages_to_bytes(pages, size))
-        }
-    }
+    gen_read!(
+        "the maximum recorded usage of hugepage TLB",
+        max_usage_in_bytes,
+        max_usage_in_pages
+    );
 
-    with_doc! {
-        gen_doc!("the current usage of hugepage TLB (in bytes)", usage_in_bytes, "usage_in_bytes"),
-        pub fn usage_in_bytes(&self, size: HugepageSize) -> Result<u64> {
-            self.open_file_read(&format!("hugetlb.{}.{}", size, USAGE_IN_BYTES))
-                .and_then(parse)
-        }
-    }
-
-    with_doc! {
-        gen_doc!("the current usage of hugepage TLB (in pages)", usage_in_pages, "usage_in_bytes"),
-        pub fn usage_in_pages(&self, size: HugepageSize) -> Result<u64> {
-            let bytes: u64 = self.open_file_read(&format!("hugetlb.{}.{}", size, USAGE_IN_BYTES))
-                .and_then(parse)?;
-            Ok(bytes_to_pages(bytes, size))
-        }
-    }
-
-    with_doc! {
-        gen_doc!("the maximum recorded usage of hugepage TLB (in bytes)", max_usage_in_bytes, "max_usage_in_bytes"),
-        pub fn max_usage_in_bytes(&self, size: HugepageSize) -> Result<u64> {
-            self.open_file_read(&format!("hugetlb.{}.{}", size, MAX_USAGE_IN_BYTES))
-                .and_then(parse)
-        }
-    }
-
-    with_doc! {
-        gen_doc!("the maximum recorded usage of hugepage TLB (in pages)", max_usage_in_pages, "max_usage_in_bytes"),
-        pub fn max_usage_in_pages(&self, size: HugepageSize) -> Result<u64> {
-            let bytes: u64 = self.open_file_read(&format!("hugetlb.{}.{}", size, MAX_USAGE_IN_BYTES))
-                .and_then(parse)?;
-            Ok(bytes_to_pages(bytes, size))
-        }
-    }
-
-    with_doc! {
-        gen_doc!("the number of allocation failure due to the limit", failcnt, "failcnt"),
-        pub fn failcnt(&self, size: HugepageSize) -> Result<u64> {
-            self.open_file_read(&format!("hugetlb.{}.{}", size, FAILCNT))
-                .and_then(parse)
-        }
+    /// Reads the number of allocation failure due to the limit, from
+    /// `hugetlb.<hugepage size>.failcnt` file.
+    ///
+    /// See the kernel's documentation for more information about this field.
+    ///
+    /// # Error
+    ///
+    /// Returns an error if failed to read and parse `hugetlb.<hugepage size>.failcnt` file of this
+    /// cgroup.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{hugetlb::{self, HugepageSize}, Cgroup, CgroupPath, SubsystemKind};
+    ///
+    /// let cgroup = hugetlb::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::HugeTlb, PathBuf::from("students/charlie")));
+    ///
+    /// let failcnt = cgroup.failcnt(HugepageSize::Mb2)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn failcnt(&self, size: HugepageSize) -> Result<u64> {
+        self.open_file_read(&format!("hugetlb.{}.{}", size, FAILCNT))
+            .and_then(parse)
     }
 }
 
-impl Into<v1::Resources> for Resources {
-    fn into(self) -> v1::Resources {
-        v1::Resources {
-            hugetlb: self,
-            ..v1::Resources::default()
-        }
-    }
-}
+const MB2_BYTES_PER_PAGE: u64 = 2 << 20;
+const GB1_BYTES_PER_PAGE: u64 = 1 << 30;
 
 fn bytes_to_pages(bytes: u64, size: HugepageSize) -> u64 {
     match size {
@@ -291,6 +276,15 @@ fn pages_to_bytes(pages: u64, size: HugepageSize) -> u64 {
     match size {
         HugepageSize::Mb2 => pages * MB2_BYTES_PER_PAGE,
         HugepageSize::Gb1 => pages * GB1_BYTES_PER_PAGE,
+    }
+}
+
+impl Into<v1::Resources> for Resources {
+    fn into(self) -> v1::Resources {
+        v1::Resources {
+            hugetlb: self,
+            ..v1::Resources::default()
+        }
     }
 }
 

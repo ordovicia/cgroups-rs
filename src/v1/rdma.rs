@@ -54,7 +54,7 @@
 //! # }
 //! ```
 
-use std::{collections::HashMap, fmt, io, path::PathBuf};
+use std::{collections::HashMap, fmt, path::PathBuf};
 
 use crate::{
     parse::parse_option,
@@ -109,127 +109,77 @@ impl_cgroup! {
     }
 }
 
-const MAX: &str = "rdma.max";
-const CURRENT: &str = "rdma.current";
-
 impl Subsystem {
-    /// Reads the current usage of RDMA/IB devices from `rdma.current` file.
-    ///
-    /// See the kernel's documentation for more information about this field.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to read and parse `rdma.current` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::path::PathBuf;
-    /// use cgroups::v1::{rdma, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let cgroup = rdma::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Rdma, PathBuf::from("students/charlie")));
-    ///
-    /// let current = cgroup.current()?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn current(&self) -> Result<HashMap<String, Limit>> {
-        let buf = io::BufReader::new(self.open_file_read(CURRENT)?);
-        parse_limits(buf)
-    }
+    _gen_read!(
+        no_ref; rdma, Rdma,
+        "the current usage of RDMA/IB devices",
+        current,
+        HashMap<String, Limit>,
+        parse_limits
+    );
 
-    /// Reads the usage limits on RDMA/IB devices from `rdma.max` file.
-    ///
-    /// See [`Resources.max`] and the kernel's documentation for more information about this field.
-    ///
-    /// [`Resources.max`]: struct.Resources.html#structfield.max
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to read and parse `rdma.max` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::path::PathBuf;
-    /// use cgroups::v1::{rdma, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let cgroup = rdma::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Rdma, PathBuf::from("students/charlie")));
-    ///
-    /// let max = cgroup.max()?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn max(&self) -> Result<HashMap<String, Limit>> {
-        let buf = io::BufReader::new(self.open_file_read(MAX)?);
-        parse_limits(buf)
-    }
+    _gen_read!(
+        rdma, Rdma,
+        "the usage limits on RDMA/IB devices",
+        max,
+        HashMap<String, Limit>,
+        parse_limits
+    );
 
-    /// Sets usage limits on RDMA/IB devices by writing to `rdma.max` file.
-    ///
-    /// See [`Resources.max`] and the kernel's documentation for more information about this field.
-    ///
-    /// [`Resources.max`]: struct.Resources.html#structfield.max
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to write to `rdma.max` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::{collections::HashMap, path::PathBuf};
-    /// use cgroups::{Max, v1::{rdma::{self, Limit}, Cgroup, CgroupPath, SubsystemKind}};
-    ///
-    /// let mut cgroup = rdma::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Rdma, PathBuf::from("students/charlie")));
-    ///
-    /// let rdma_limits = [
-    ///     (
-    ///         "mlx4_0",
-    ///         Limit {
-    ///             hca_handle: Max::<u32>::Limit(2),
-    ///             hca_object: Max::<u32>::Limit(2000),
-    ///         },
-    ///     ),
-    ///     (
-    ///         "ocrdma1",
-    ///         Limit {
-    ///             hca_handle: Max::<u32>::Limit(3),
-    ///             hca_object: Max::<u32>::Max,
-    ///         },
-    ///     ),
-    /// ].iter().cloned().collect::<HashMap<_, _>>();
-    ///
-    /// cgroup.set_max(rdma_limits)?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn set_max<I, T>(&mut self, limits: I) -> Result<()>
-    where
-        I: IntoIterator<Item = (T, Limit)>,
-        T: AsRef<str> + fmt::Display,
-    {
-        use std::io::Write;
+    with_doc! { concat!(
+        _gen_doc!(sets; "usage limits on RDMA/IB devices", rdma, max),
+        _gen_doc!(see; max),
+        _gen_doc!(err_write; rdma, max),
+"# Examples
 
-        let mut file = self.open_file_write(MAX)?;
-        for (device, limit) in limits.into_iter() {
-            // write!(file, "{} {}", interface, prio)?; // not work
-            file.write_all(format!("{} {}", device, limit).as_bytes())?;
+```no_run
+# fn main() -> cgroups::Result<()> {
+use std::{collections::HashMap, path::PathBuf};
+use cgroups::{Max, v1::{rdma, Cgroup, CgroupPath, SubsystemKind}};
+
+let mut cgroup = rdma::Subsystem::new(
+    CgroupPath::new(SubsystemKind::Rdma, PathBuf::from(\"students/charlie\")));
+
+let max = [
+        ( 
+            \"mlx4_0\",
+            rdma::Limit {
+                hca_handle: Max::<u32>::Limit(3),
+                hca_object: Max::<u32>::Max,
+            },
+        ),
+    ]
+    .iter()
+    .cloned()
+    .collect::<HashMap<_, _>>();
+
+cgroup.set_max(max)?;
+# Ok(())
+# }
+```"),
+        pub fn set_max<I, T>(&mut self, limits: I) -> Result<()>
+        where
+            I: IntoIterator<Item = (T, Limit)>,
+            T: AsRef<str> + fmt::Display,
+        {
+            use std::io::Write;
+
+            let mut file = self.open_file_write("rdma.max")?;
+            for (device, limit) in limits.into_iter() {
+                // write!(file, "{} {}", interface, prio)?; // not work
+                file.write_all(format!("{} {}", device, limit).as_bytes())?;
+            }
+
+            Ok(())
         }
-
-        Ok(())
     }
 }
 
-// takes `io::BufRead` for testing on systems that does not have RDMA/IB devices.
-fn parse_limits(buf: impl io::BufRead) -> Result<HashMap<String, Limit>> {
+fn parse_limits(reader: impl std::io::Read) -> Result<HashMap<String, Limit>> {
+    use std::io::{BufRead, BufReader};
+
     let mut result = HashMap::new();
+    let buf = BufReader::new(reader);
 
     for line in buf.lines() {
         let line = line?;
@@ -296,15 +246,7 @@ mod tests {
     #[test]
     #[ignore] // some systems have no RDMA/IB devices
     fn test_subsystem_create_file_exists() -> Result<()> {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Rdma, gen_cgroup_name!()));
-        cgroup.create()?;
-        assert!([MAX, CURRENT].iter().all(|f| cgroup.file_exists(f)));
-        assert!(!cgroup.file_exists("does_not_exist"));
-
-        cgroup.delete()?;
-        assert!([MAX, CURRENT].iter().all(|f| !cgroup.file_exists(f)));
-
-        Ok(())
+        gen_subsystem_test!(Rdma; rdma, ["current", "max"])
     }
 
     #[test]

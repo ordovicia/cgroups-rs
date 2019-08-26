@@ -57,10 +57,10 @@ pub struct Subsystem {
 /// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
-    /// Allow this cgroup to perform these accesses.
-    pub allow: Vec<Access>,
     /// Deny this cgroup to perform these accesses.
     pub deny: Vec<Access>,
+    /// Allow this cgroup to perform these accesses.
+    pub allow: Vec<Access>,
 }
 
 /// Access to devices of specific type and number.
@@ -148,7 +148,7 @@ pub struct AccessType {
 impl_cgroup! {
     Devices,
 
-    /// Applies `resources.devices`. `deny` list is applied first, and `allow` list then.
+    /// Applies `resources.devices`. `deny` list is applied first, and then `allow` list is.
     ///
     /// See [`Cgroup::apply`] for general information.
     ///
@@ -166,122 +166,68 @@ impl_cgroup! {
     }
 }
 
-const LIST: &str = "devices.list";
-const ALLOW: &str = "devices.allow";
-const DENY: &str = "devices.deny";
+#[rustfmt::skip]
+macro_rules! gen_write {
+    ($desc: literal, $field: ident) => { with_doc! { concat!(
+        $desc, " this cgroup to perform a type of access to devices with specific type and number,",
+        " by writing to `devices.", stringify!($field), "` file.\n\n",
+        _gen_doc!(see; $field),
+        _gen_doc!(err_write; devices, $field),
+        gen_write!(_eg; $field)),
+        pub fn $field(&mut self, access: &Access) -> Result<()> {
+            self.write_file(concat!("devices.", stringify!($field)), access)
+        }
+    } };
+
+    (_eg; $field: ident) => { concat!(
+"# Examples
+
+```no_run
+# fn main() -> cgroups::Result<()> {
+use std::path::PathBuf;
+use cgroups::{Device, v1::{devices, Cgroup, CgroupPath, SubsystemKind}};
+
+let mut cgroup = devices::Subsystem::new(
+    CgroupPath::new(SubsystemKind::Devices, PathBuf::from(\"students/charlie\")));
+
+let access = devices::Access {
+    device_type: devices::DeviceType::Char,
+    device_number: [8, 0].into(),
+    access_type: devices::AccessType { read: true, write: false, mknod: true },
+};
+
+cgroup.", stringify!($field), "(&access)?;
+# Ok(())
+# }
+```") };
+}
 
 impl Subsystem {
-    /// Reads allowed accesses of this cgroup from `devices.list` file.
-    ///
-    /// See the kernel's documentation for more information about this field.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to write to `devices.list` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::path::PathBuf;
-    /// use cgroups::v1::{devices, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let cgroup = devices::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Devices, PathBuf::from("students/charlie")));
-    ///
-    /// let accesses = cgroup.list()?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn list(&self) -> Result<Vec<Access>> {
-        use std::io::{BufRead, BufReader};
+    _gen_read!(
+        devices,
+        Devices,
+        "allowed device access of this cgroup",
+        list,
+        Vec<Access>,
+        parse_list
+    );
 
-        let mut result = Vec::new();
-        let buf = BufReader::new(self.open_file_read(LIST)?);
+    gen_write!("Denies", deny);
+    gen_write!("Allows", allow);
+}
 
-        for line in buf.lines() {
-            let line = line?;
-            result.push(line.parse::<Access>()?);
-        }
+fn parse_list(reader: impl std::io::Read) -> Result<Vec<Access>> {
+    use std::io::{BufRead, BufReader};
 
-        Ok(result)
+    let mut result = Vec::new();
+    let buf = BufReader::new(reader);
+
+    for line in buf.lines() {
+        let line = line?;
+        result.push(line.parse::<Access>()?);
     }
 
-    /// Denies this cgroup to perform an access to devices with specific type and number, by
-    /// writing to `devices.deny` file.
-    ///
-    /// See [`Resources.deny`](struct.Resources.html#structfield.deny) and the kernel's
-    /// documentation for more information about this field.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to write to `devices.deny` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::path::PathBuf;
-    /// use cgroups::{
-    ///     Device, DeviceNumber,
-    ///     v1::{
-    ///         devices::{self, Access, AccessType, DeviceType},
-    ///         Cgroup, CgroupPath, SubsystemKind,
-    ///     }
-    /// };
-    ///
-    /// let mut cgroup = devices::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Devices, PathBuf::from("students/charlie")));
-    ///
-    /// cgroup.deny(&Access {
-    ///     device_type: DeviceType::Char,
-    ///     device_number: Device { major: DeviceNumber::Number(1), minor: DeviceNumber::Number(3) },
-    ///     access_type: AccessType { read: true, write: false, mknod: true },
-    /// })?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn deny(&mut self, access: &Access) -> Result<()> {
-        self.write_file(DENY, access)
-    }
-
-    /// Allows this cgroup to perform an access to devices with specific type and number, by
-    /// writing to `devices.allow` file.
-    ///
-    /// See [`Resources.allow`](struct.Resources.html#structfield.allow) and the kernel's
-    /// documentation for more information about this field.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to write to `devices.allow` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::path::PathBuf;
-    /// use cgroups::{
-    ///     Device, DeviceNumber,
-    ///     v1::{
-    ///         devices::{self, Access, AccessType, DeviceType},
-    ///         Cgroup, CgroupPath, SubsystemKind,
-    ///     }
-    /// };
-    ///
-    /// let mut cgroup = devices::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Devices, PathBuf::from("students/charlie")));
-    ///
-    /// cgroup.deny(&Access {
-    ///     device_type: DeviceType::Char,
-    ///     device_number: Device { major: DeviceNumber::Number(1), minor: DeviceNumber::Number(3) },
-    ///     access_type: AccessType { read: true, write: false, mknod: true },
-    /// })?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn allow(&mut self, access: &Access) -> Result<()> {
-        self.write_file(ALLOW, access)
-    }
+    Ok(result)
 }
 
 impl Into<v1::Resources> for Resources {
@@ -303,36 +249,6 @@ impl fmt::Display for Access {
     }
 }
 
-impl fmt::Display for DeviceType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use std::fmt::Write;
-
-        f.write_char(match self {
-            Self::All => 'a',
-            Self::Char => 'c',
-            Self::Block => 'b',
-        })
-    }
-}
-
-impl fmt::Display for AccessType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use std::fmt::Write;
-
-        if self.read {
-            f.write_char('r')?;
-        }
-        if self.write {
-            f.write_char('w')?;
-        }
-        if self.mknod {
-            f.write_char('m')?;
-        }
-
-        Ok(())
-    }
-}
-
 impl FromStr for Access {
     type Err = Error;
 
@@ -351,6 +267,18 @@ impl FromStr for Access {
     }
 }
 
+impl fmt::Display for DeviceType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use std::fmt::Write;
+
+        f.write_char(match self {
+            Self::All => 'a',
+            Self::Char => 'c',
+            Self::Block => 'b',
+        })
+    }
+}
+
 impl FromStr for DeviceType {
     type Err = Error;
 
@@ -361,6 +289,24 @@ impl FromStr for DeviceType {
             "b" => Ok(Self::Block),
             _ => Err(Error::new(ErrorKind::Parse)),
         }
+    }
+}
+
+impl fmt::Display for AccessType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use std::fmt::Write;
+
+        if self.read {
+            f.write_char('r')?;
+        }
+        if self.write {
+            f.write_char('w')?;
+        }
+        if self.mknod {
+            f.write_char('m')?;
+        }
+
+        Ok(())
     }
 }
 
@@ -410,16 +356,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        let mut cgroup =
-            Subsystem::new(CgroupPath::new(SubsystemKind::Devices, gen_cgroup_name!()));
-        cgroup.create()?;
-        assert!([ALLOW, DENY, LIST].iter().all(|f| cgroup.file_exists(f)));
-        assert!(!cgroup.file_exists("does_not_exist"));
-
-        cgroup.delete()?;
-        assert!([ALLOW, DENY, LIST].iter().all(|f| !cgroup.file_exists(f)));
-
-        Ok(())
+        gen_subsystem_test!(Devices; devices, ["allow", "deny", "list"])
     }
 
     #[test]
@@ -459,5 +396,63 @@ mod tests {
         assert_eq!(cgroup.list()?, vec![c_1_3_rm]);
 
         cgroup.delete()
+    }
+
+    #[test]
+    fn test_parse_list() -> Result<()> {
+        const CONTENT_0: &str = "a *:* rwm\n";
+        assert_eq!(
+            parse_list(CONTENT_0.as_bytes())?,
+            vec![Access {
+                device_type: DeviceType::All,
+                device_number: Device {
+                    major: DeviceNumber::Any,
+                    minor: DeviceNumber::Any
+                },
+                access_type: AccessType {
+                    read: true,
+                    write: true,
+                    mknod: true
+                }
+            }]
+        );
+
+        const CONTENT_1: &str = "\
+c 1:3 rm
+b 8:0 rw
+";
+        assert_eq!(
+            parse_list(CONTENT_1.as_bytes())?,
+            vec![
+                Access {
+                    device_type: DeviceType::Char,
+                    device_number: Device {
+                        major: DeviceNumber::Number(1),
+                        minor: DeviceNumber::Number(3)
+                    },
+                    access_type: AccessType {
+                        read: true,
+                        write: false,
+                        mknod: true
+                    }
+                },
+                Access {
+                    device_type: DeviceType::Block,
+                    device_number: Device {
+                        major: DeviceNumber::Number(8),
+                        minor: DeviceNumber::Number(0)
+                    },
+                    access_type: AccessType {
+                        read: true,
+                        write: true,
+                        mknod: false
+                    }
+                },
+            ]
+        );
+
+        assert_eq!(parse_list(&b""[..])?, vec![]);
+
+        Ok(())
     }
 }

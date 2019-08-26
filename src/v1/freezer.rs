@@ -127,92 +127,45 @@ impl_cgroup! {
     }
 }
 
-#[rustfmt::skip]
-macro_rules! gen_doc {
-    (reads; $desc: literal, $resource: ident) => { concat!(
-        "Reads ", $desc, " from `freezer.", stringify!($resource), "` file.\n\n",
-        "See the kernel's documentation for more information about this field.\n\n",
-        "# Errors\n\n",
-        "Returns an error if failed to read and parse `freezer.", stringify!($resource), "` file of this cgroup.\n\n",
-        "# Examples\n\n",
-"```no_run
-# fn main() -> cgroups::Result<()> {
-use std::path::PathBuf;
-use cgroups::v1::{freezer, Cgroup, CgroupPath, SubsystemKind};
-
-let cgroup = freezer::Subsystem::new(
-    CgroupPath::new(SubsystemKind::Freezer, PathBuf::from(\"students/charlie\")));
-
-let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
-# Ok(())
-# }
-```") };
-
-    (sets; $desc: literal, $setter: ident) => { concat!(
-        $desc, " tasks in this cgroup by writing to `freezer.state` file.\n\n",
-        "See the kernel's documentation for more information about this field.\n\n",
-        "# Errors\n\n",
-        "Returns an error if failed to write to `freezer.state` file of this cgroup.\n\n",
-        "# Examples\n\n",
-"```no_run
-# fn main() -> cgroups::Result<()> {
-use std::path::PathBuf;
-use cgroups::v1::{freezer, Cgroup, CgroupPath, SubsystemKind};
-
-let mut cgroup = freezer::Subsystem::new(
-    CgroupPath::new(SubsystemKind::Freezer, PathBuf::from(\"students/charlie\")));
-
-cgroup.", stringify!($setter), "()?;
-# Ok(())
-# }
-```") };
+macro_rules! gen_read {
+    ($desc: literal, $field: ident, $ty: ty, $parser: ident) => {
+        _gen_read!(no_ref; freezer, Freezer, $desc, $field, $ty, $parser);
+    };
 }
 
-const STATE: &str = "freezer.state";
-const SELF_FREEZING: &str = "freezer.self_freezing";
-const PARENT_FREEZING: &str = "freezer.parent_freezing";
+macro_rules! gen_write {
+    ($desc: literal, $setter: ident, $val: expr) => {
+        with_doc! { concat!(
+            $desc, " tasks in this cgroup by writing to `freezer.state` file.\n\n",
+            _gen_doc!(see),
+            _gen_doc!(err_write; freezer, state),
+            _gen_doc!(eg_write; freezer, Freezer, $setter)),
+            pub fn $setter(&mut self) -> Result<()> {
+                self.write_file("freezer.state", $val)
+            }
+        }
+    };
+}
 
 impl Subsystem {
-    with_doc! {
-        gen_doc!(reads; "the current state of this cgroup", state),
-        pub fn state(&self) -> Result<State> {
-            self.open_file_read(STATE).and_then(parse)
-        }
-    }
+    gen_read!("the current state of this cgroup", state, State, parse);
 
-    with_doc! {
-        gen_doc!(reads; "whether this cgroup itself is being freezing or frozen", self_freezing),
-        pub fn self_freezing(&self) -> Result<bool> {
-            self.open_file_read(SELF_FREEZING)
-                .and_then(parse_01_bool)
-        }
-    }
+    gen_read!(
+        "whether this cgroup itself is frozen or in processes of being frozen",
+        self_freezing,
+        bool,
+        parse_01_bool
+    );
 
-    with_doc! {
-        gen_doc!(
-            reads;
-            "whether any parent cgroups of this cgroup is being freezing or frozen",
-            parent_freezing
-        ),
-        pub fn parent_freezing(&self) -> Result<bool> {
-            self.open_file_read(PARENT_FREEZING)
-                .and_then(parse_01_bool)
-        }
-    }
+    gen_read!(
+        "whether any parent cgroups of this cgroup is frozen or in processes of being frozen",
+        parent_freezing,
+        bool,
+        parse_01_bool
+    );
 
-    with_doc! {
-        gen_doc!(sets; "Freezes", freeze),
-        pub fn freeze(&mut self) -> Result<()> {
-            self.write_file(STATE, State::Frozen)
-        }
-    }
-
-    with_doc! {
-        gen_doc!(sets; "Thaws, i.e. un-freezes", thaw),
-        pub fn thaw(&mut self) -> Result<()> {
-            self.write_file(STATE, State::Thawed)
-        }
-    }
+    gen_write!("Freezes", freeze, State::Frozen);
+    gen_write!("Thaws, i.e. un-freezes", thaw, State::Thawed);
 }
 
 impl Into<v1::Resources> for Resources {
@@ -253,20 +206,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        let mut cgroup =
-            Subsystem::new(CgroupPath::new(SubsystemKind::Freezer, gen_cgroup_name!()));
-        cgroup.create()?;
-        assert!([STATE, SELF_FREEZING, PARENT_FREEZING]
-            .iter()
-            .all(|f| cgroup.file_exists(f)));
-        assert!(!cgroup.file_exists("does_not_exist"));
-
-        cgroup.delete()?;
-        assert!([STATE, SELF_FREEZING, PARENT_FREEZING]
-            .iter()
-            .all(|f| !cgroup.file_exists(f)));
-
-        Ok(())
+        gen_subsystem_test!(Freezer; freezer, ["state", "self_freezing", "parent_freezing"])
     }
 
     #[test]

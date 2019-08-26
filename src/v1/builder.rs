@@ -22,7 +22,7 @@ use crate::{
 /// ```no_run
 /// # fn main() -> cgroups::Result<()> {
 /// use std::{collections::HashMap, path::PathBuf};
-/// use cgroups::{Device, Max, v1::{cpuset, devices, hugetlb, net_cls, pids, rdma, Builder}};
+/// use cgroups::{Device, Max, v1::{devices, hugetlb, net_cls, rdma, Builder}};
 ///
 /// let mut cgroups =
 ///     // Start building a (set of) cgroup(s).
@@ -69,9 +69,9 @@ use crate::{
 ///         .done()
 ///     .blkio()
 ///         .weight(1000)
-///         .weight_device([(Device::from([8, 0]), 100)].iter().copied().collect())
-///         .read_bps_device([(Device::from([8, 0]), 10 * (1 << 20))].iter().copied().collect())
-///         .write_iops_device([(Device::from([8, 0]), 100)].iter().copied().collect())
+///         .weight_device([([8, 0].into(), 100)].iter().copied().collect())
+///         .read_bps_device([([8, 0].into(), 10 * (1 << 20))].iter().copied().collect())
+///         .write_iops_device([([8, 0].into(), 100)].iter().copied().collect())
 ///         .done()
 ///     .rdma()
 ///         .max(
@@ -92,7 +92,6 @@ use crate::{
 ///         // perf_event subsystem has no parameter, so this method does not
 ///         // return a subsystem builder, just enables the monitoring.
 ///     // Actually build cgroups with the configuration.
-///     // Only create a directory for the CPU, cpuset, and pids subsystems.
 ///     .build()?;
 ///
 /// let pid = std::process::id().into();
@@ -215,11 +214,9 @@ impl Builder {
 
 macro_rules! gen_subsystem_builder {
     ($subsystem: ident, $builder: ident, $name: literal, $($tt: tt)*) => {
-        with_doc! {
-            concat!(
-                $name, " subsystem builder.\n\n",
-                "This struct is crated by [`Builder::", stringify!($subsystem), "`](struct.Builder.html#method.", stringify!($subsystem), ") method."
-            ),
+        with_doc! { concat!(
+            $name, " subsystem builder.\n\n",
+            "This struct is crated by [`Builder::", stringify!($subsystem), "`](struct.Builder.html#method.", stringify!($subsystem), ") method."),
             #[derive(Debug)]
             pub struct $builder {
                 builder: Builder,
@@ -240,30 +237,30 @@ macro_rules! gen_subsystem_builder {
 }
 
 macro_rules! gen_setter_opt {
-    ($subsystem: ident; $desc: literal, $resource: ident, $ty: ty $( as $as: ty )?) => { with_doc! {
+    ($subsystem: ident; $desc: literal, $field: ident, $ty: ty $( as $as: ty )?) => { with_doc! {
         concat!(
 "Sets ", $desc, ".
 
-See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($resource), "`](../", stringify!($subsystem), "/struct.Subsystem.html#method.set_", stringify!($resource), ")
+See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($field), "`](../", stringify!($subsystem), "/struct.Subsystem.html#method.set_", stringify!($field), ")
 for more information."
 ),
-        pub fn $resource(mut self, $resource: $ty) -> Self {
-            self.builder.resources.$subsystem.$resource = Some($resource $( as $as )*);
+        pub fn $field(mut self, $field: $ty) -> Self {
+            self.builder.resources.$subsystem.$field = Some($field $( as $as )*);
             self
         }
     } };
 }
 
 macro_rules! gen_setter {
-    ($subsystem: ident; $desc: literal, $resource: ident, $ty: ty) => { with_doc! {
+    ($subsystem: ident; $desc: literal, $field: ident, $ty: ty) => { with_doc! {
         concat!(
 "Sets ", $desc, ".
 
-See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($resource), "`](../", stringify!($subsystem), "/struct.Subsystem.html#method.set_", stringify!($resource), ")
+See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($field), "`](../", stringify!($subsystem), "/struct.Subsystem.html#method.set_", stringify!($field), ")
 for more information."
 ),
-        pub fn $resource(mut self, $resource: $ty) -> Self {
-            self.builder.resources.$subsystem.$resource = $resource;
+        pub fn $field(mut self, $field: $ty) -> Self {
+            self.builder.resources.$subsystem.$field = $field;
             self
         }
     } };

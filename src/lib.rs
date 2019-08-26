@@ -47,7 +47,7 @@
 //! // Now, remove self process from the cgroup.
 //! cgroup.remove_task(pid)?;
 //!
-//! // And delete the cgroup.
+//! // ... and delete the cgroup.
 //! cgroup.delete()?;
 //!
 //! // Note that cgroup handlers does not implement `Drop` and therefore when the
@@ -63,7 +63,7 @@
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
 //! use std::{collections::HashMap, path::PathBuf};
-//! use cgroups::{Device, Max, v1::{cpuset, devices, hugetlb, net_cls, pids, rdma, Builder}};
+//! use cgroups::{Device, Max, v1::{devices, hugetlb, net_cls, rdma, Builder}};
 //!
 //! let mut cgroups =
 //!     // Start building a (set of) cgroup(s).
@@ -110,9 +110,9 @@
 //!         .done()
 //!     .blkio()
 //!         .weight(1000)
-//!         .weight_device([(Device::from([8, 0]), 100)].iter().copied().collect())
-//!         .read_bps_device([(Device::from([8, 0]), 10 * (1 << 20))].iter().copied().collect())
-//!         .write_iops_device([(Device::from([8, 0]), 100)].iter().copied().collect())
+//!         .weight_device([([8, 0].into(), 100)].iter().copied().collect())
+//!         .read_bps_device([([8, 0].into(), 10 * (1 << 20))].iter().copied().collect())
+//!         .write_iops_device([([8, 0].into(), 100)].iter().copied().collect())
 //!         .done()
 //!     .rdma()
 //!         .max(
@@ -133,7 +133,6 @@
 //!         // perf_event subsystem has no parameter, so this method does not
 //!         // return a subsystem builder, just enables the monitoring.
 //!     // Actually build cgroups with the configuration.
-//!     // Only create a directory for the CPU, cpuset, and pids subsystems.
 //!     .build()?;
 //!
 //! let pid = std::process::id().into();

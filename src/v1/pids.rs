@@ -73,108 +73,41 @@ impl_cgroup! {
     }
 }
 
-#[rustfmt::skip]
-macro_rules! gen_doc {
-    ($desc: literal, $resource: ident) => { concat!(
-        "Reads ", $desc, " from `pids.", stringify!($resource), "` file.\n\n",
-        "See the kernel's documentation for more information about this field.\n\n",
-        gen_doc!(_err_eg; $resource)
-    ) };
-
-    (ref; $desc: literal, $resource: ident) => { concat!(
-        "Reads ", $desc, " from `pids.", stringify!($resource), "` file.\n\n",
-        "See [`Resources.", stringify!($resource), "`] and ",
-        "the kernel's documentation for more information about this field.\n\n",
-        "[`Resources.", stringify!($resource), "`]: struct.Resources.html#structfield.", stringify!($resource), "\n\n",
-        gen_doc!(_err_eg; $resource)
-    ) };
-
-    (_err_eg; $resource: ident) => { concat!(
-"# Errors
-
-Returns an error if failed to read and parse `pids.", stringify!($resource), "` file of this cgroup.
-
-# Examples
-
-```no_run
-# fn main() -> cgroups::Result<()> {
-use std::path::PathBuf;
-use cgroups::v1::{pids, Cgroup, CgroupPath, SubsystemKind};
-
-let cgroup = pids::Subsystem::new(
-    CgroupPath::new(SubsystemKind::Pids, PathBuf::from(\"students/charlie\")));
-
-let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
-# Ok(())
-# }
-```") };
-}
-
-const MAX: &str = "pids.max";
-const CURRENT: &str = "pids.current";
-const EVENTS: &str = "pids.events";
-
 impl Subsystem {
-    with_doc! {
-        gen_doc!(ref; "the maximum number of processes this cgroup can have", max),
-        pub fn max(&self) -> Result<Max<u32>> {
-            self.open_file_read(MAX).and_then(parse)
-        }
-    }
+    _gen_read!(
+        pids,
+        Pids,
+        "the maximum number of processes this cgroup can have",
+        max,
+        Max<u32>,
+        parse
+    );
 
-    /// Sets the maximum number of processes this cgroup can have, by writing to `pids.max` file.
-    ///
-    /// See [`Resources.max`] and the kernel's documentation for more information about this field.
-    ///
-    /// [`Resources.max`]: struct.Resources.html#structfield.max
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to write to `pids.max` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::path::PathBuf;
-    /// use cgroups::{Max, v1::{pids, Cgroup, CgroupPath, SubsystemKind}};
-    ///
-    /// let mut cgroup = pids::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Pids, PathBuf::from("students/charlie")));
-    /// cgroup.set_max(Max::<u32>::Limit(2))?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn set_max(&mut self, max: Max<u32>) -> Result<()> {
-        self.write_file(MAX, max)
-    }
+    _gen_write!(
+        pids,
+        Pids,
+        "a maximum number of processes this cgroup can have,",
+        max,
+        set_max,
+        Max<u32>,
+        cgroups::Max::<u32>::Limit(2)
+    );
 
-    with_doc! {
-        gen_doc!("the number of processes this cgroup currently has", current),
-        pub fn current(&self) -> Result<u32> {
-            self.open_file_read(CURRENT).and_then(parse)
-        }
-    }
+    _gen_read!(
+        no_ref; pids, Pids,
+        "the number of processes this cgroup currently has",
+        current,
+        u32,
+        parse
+    );
 
-    with_doc! {
-        gen_doc!(
-            "the event counter, i.e. a pair of the maximum number of processes, and the number of times fork failed due to the limit",
-            events
-        ),
-        pub fn events(&self) -> Result<(Max<u32>, u64)> {
-            use std::io::Read;
-
-            let mut file = self.open_file_read(EVENTS)?;
-            let mut buf = String::new();
-            file.read_to_string(&mut buf)?;
-
-            let mut entry = buf.split_whitespace();
-            let max = parse_option(entry.next())?;
-            let cnt = parse_option(entry.next())?;
-
-            Ok((max, cnt))
-        }
-    }
+    _gen_read!(
+        no_ref; pids, Pids,
+        "the event counter, i.e. a pair of the maximum number of processes, and the number of times fork failed due to the limit",
+        events,
+        (Max<u32>, u64),
+        parse_events
+    );
 }
 
 impl Into<v1::Resources> for Resources {
@@ -186,23 +119,24 @@ impl Into<v1::Resources> for Resources {
     }
 }
 
+fn parse_events(mut reader: impl std::io::Read) -> Result<(Max<u32>, u64)> {
+    let mut buf = String::new();
+    reader.read_to_string(&mut buf)?;
+
+    let mut entry = buf.split_whitespace();
+    let max = parse_option(entry.next())?;
+    let cnt = parse_option(entry.next())?;
+
+    Ok((max, cnt))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Pids, gen_cgroup_name!()));
-        cgroup.create()?;
-        assert!([MAX, CURRENT, EVENTS].iter().all(|f| cgroup.file_exists(f)));
-        assert!(!cgroup.file_exists("does_not_exist"));
-
-        cgroup.delete()?;
-        assert!([MAX, CURRENT, EVENTS]
-            .iter()
-            .all(|f| !cgroup.file_exists(f)));
-
-        Ok(())
+        gen_subsystem_test!(Pids; pids, ["max", "current", "events"])
     }
 
     #[test]

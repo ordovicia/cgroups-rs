@@ -135,64 +135,26 @@ impl_cgroup! {
 const CLASSID: &str = "net_cls.classid";
 
 impl Subsystem {
-    /// Reads the class ID of this cgroup from `net_cls.classid` file.
-    ///
-    /// See [`Resources.classid`] and the kernel's documentation for more information about this
-    /// field.
-    ///
-    /// [`Resources.classid`]: struct.Resources.html#structfield.classid
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to read and parse `net_cls.classid` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::path::PathBuf;
-    /// use cgroups::v1::{net_cls, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let cgroup = net_cls::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::NetCls, PathBuf::from("students/charlie")));
-    ///
-    /// let class_id = cgroup.classid()?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn classid(&self) -> Result<ClassId> {
-        let raw: u32 = self.open_file_read(CLASSID).and_then(parse)?;
-        Ok(raw.into())
+    with_doc! { concat!(
+        _gen_doc!(reads; "the class ID of network packets from this cgroup,", net_cls, classid),
+        _gen_doc!(see; classid),
+        _gen_doc!(err_read; net_cls, classid),
+        _gen_doc!(eg_read; net_cls, NetCls, classid)),
+        pub fn classid(&self) -> Result<ClassId> {
+            let raw: u32 = self.open_file_read(CLASSID).and_then(parse)?;
+            Ok(raw.into())
+        }
     }
 
-    /// Sets a class ID to this cgroup by writing to `net_cls.classid` file.
-    ///
-    /// See [`Resources.classid`] and the kernel's documentation for more information about this
-    /// field.
-    ///
-    /// [`Resources.classid`]: struct.Resources.html#structfield.classid
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to write to `net_cls.classid` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::path::PathBuf;
-    /// use cgroups::v1::{net_cls, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let mut cgroup = net_cls::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::NetCls, PathBuf::from("students/charlie")));
-    ///
-    /// cgroup.set_classid(net_cls::ClassId { major: 0x10, minor: 0x1 })?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn set_classid(&mut self, id: ClassId) -> Result<()> {
-        let raw: u32 = id.into();
-        std::fs::write(self.path().join(CLASSID), format!("{:#08X}", raw)).map_err(Into::into)
+    with_doc! { concat!(
+        _gen_doc!(sets; "a class ID to network packets from this cgroup,", net_cls, classid),
+        _gen_doc!(see; classid),
+        _gen_doc!(err_write; net_cls, classid),
+        _gen_doc!(eg_write; net_cls, NetCls, set_classid, [0x10, 0x1].into())),
+        pub fn set_classid(&mut self, id: ClassId) -> Result<()> {
+            let raw: u32 = id.into();
+            std::fs::write(self.path().join(CLASSID), format!("{:#08X}", raw)).map_err(Into::into)
+        }
     }
 }
 
@@ -263,14 +225,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::NetCls, gen_cgroup_name!()));
-        cgroup.create()?;
-        assert!(cgroup.file_exists(CLASSID));
-
-        cgroup.delete()?;
-        assert!(!cgroup.file_exists(CLASSID));
-
-        Ok(())
+        gen_subsystem_test!(NetCls; net_cls, ["classid"])
     }
 
     #[test]

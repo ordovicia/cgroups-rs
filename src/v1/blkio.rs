@@ -17,9 +17,9 @@
 //! // Define how to throttle bandwidth of block I/O by a cgroup.
 //! let resources = blkio::Resources {
 //!     weight: Some(1000),
-//!     weight_device: [(Device::from([8, 0]), 100)].iter().copied().collect(),
-//!     read_bps_device: [(Device::from([8, 0]), 10 * (1 << 20))].iter().copied().collect(),
-//!     write_iops_device: [(Device::from([8, 0]), 100)].iter().copied().collect(),
+//!     weight_device: [([8, 0].into(), 100)].iter().copied().collect(),
+//!     read_bps_device: [([8, 0].into(), 10 * (1 << 20))].iter().copied().collect(),
+//!     write_iops_device: [([8, 0].into(), 100)].iter().copied().collect(),
 //!     ..blkio::Resources::default()
 //! };
 //!
@@ -158,119 +158,56 @@ impl_cgroup! {
 }
 
 macro_rules! gen_read {
-    (single; $desc: literal, $resource: ident, $ty: ty) => { with_doc! { concat!(
-        "Reads ", $desc, " from `blkio.", stringify!($resource), "` file.\n\n",
-        "See the kernel's documentation for more information about this field.\n\n",
-        gen_read!(_err_eg; $resource)),
-        pub fn $resource(&self) -> Result<$ty> {
-            self.open_file_read(concat!("blkio.", stringify!($resource))).and_then(parse)
-        }
-    } };
-
-    (single_ref; $desc: literal, $resource: ident, $ty: ty) => { with_doc! { concat!(
-"Reads ", $desc, " from `blkio.", stringify!($resource), "` file.
-
-See [`Resources.", stringify!($resource), "`] and the kernel's documentation for more information
-about this field.
-
-[`Resources.", stringify!($resource), "`]: struct.Resources.html#structfield.", stringify!($resource), "\n\n",
-        gen_read!(_err_eg; $resource)),
-        pub fn $resource(&self) -> Result<$ty> {
-            self.open_file_read(concat!("blkio.", stringify!($resource))).and_then(parse)
-        }
-    } };
-
-    (map; $desc: literal, $resource: ident, $ty: ty $(, $recursive: ident )? ) => {
-        with_doc! { concat!(
-            "Reads ", $desc, " from `blkio.", stringify!($resource), "` file.\n\n",
-            "See the kernel's documentation for more information about this field.\n\n",
-            gen_read!(_err_eg; $resource)),
-            pub fn $resource(&self) -> Result<HashMap<Device, $ty>> {
-                let file = self.open_file_read(concat!("blkio.", stringify!($resource)))?;
-                parse_map(file)
-            }
-        }
-
-        $( with_doc! { concat!(
-            "Reads from `blkio.", stringify!($recursive), "` file. ",
-            "See `", stringify!($resource), "` for more information."),
-            pub fn $recursive(&self) -> Result<HashMap<Device, $ty>> {
-                let file = self.open_file_read(concat!("blkio.", stringify!($recursive)))?;
-                parse_map(file)
-            }
-        })?
+    ($desc: literal, $field: ident, $ty: ty, $parser: ident) => {
+        _gen_read!(blkio, BlkIo, $desc, $field, $ty, $parser);
     };
 
-    (io_service; $desc: literal, $resource: ident, $recursive: ident) => {
-        with_doc! { concat!(
-            "Reads ", $desc, " from `blkio.", stringify!($resource), "` file.\n\n",
-            "See the kernel's documentation for more information about this field.\n\n",
-            gen_read!(_err_eg; $resource)),
-            pub fn $resource(&self) -> Result<IoService> {
-                let file = self.open_file_read(concat!("blkio.", stringify!($resource)))?;
-                parse_io_service(file)
-            }
-        }
-
-        with_doc! { concat!(
-            "Reads from `blkio.", stringify!($recursive), "` file. ",
-            "See `", stringify!($resource), "` for more information."),
-            pub fn $recursive(&self) -> Result<IoService> {
-                let file = self.open_file_read(concat!("blkio.", stringify!($recursive)))?;
-                parse_io_service(file)
-            }
-        }
+    (map; $desc: literal, $field: ident, $ty: ty $(, $recursive: ident )?) => {
+        _gen_read!(blkio, BlkIo, $desc, $field, HashMap<Device, $ty>, parse_map);
+        $( gen_read!(_recursive; $recursive, $field, HashMap<Device, $ty>, parse_map); )?
     };
 
-    // errors and examples sections
-    (_err_eg; $resource: ident) => { concat!(
-"# Errors
+    (map_no_ref; $desc: literal, $field: ident, $ty: ty $(, $recursive: ident )?) => {
+        _gen_read!(no_ref; blkio, BlkIo, $desc, $field, HashMap<Device, $ty>, parse_map);
+        $( gen_read!(_recursive; $recursive, $field, HashMap<Device, $ty>, parse_map); )?
+    };
 
-Returns an error if failed to read and parse `blkio.", stringify!($resource), "` file of this cgroup.
+    (io_service; $desc: literal, $field: ident, $recursive: ident) => {
+        _gen_read!(no_ref; blkio, BlkIo, $desc, $field, IoService, parse_io_service);
+        gen_read!(_recursive; $recursive, $field, IoService, parse_io_service);
+    };
 
-# Examples
-
-```no_run
-# fn main() -> cgroups::Result<()> {
-use std::path::PathBuf;
-use cgroups::v1::{blkio, Cgroup, CgroupPath, SubsystemKind};
-
-let cgroup = blkio::Subsystem::new(
-    CgroupPath::new(SubsystemKind::BlkIo, PathBuf::from(\"students/charlie\")));
-
-let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
-# Ok(())
-# }
-```") };
+    (_recursive; $recursive: ident, $field: ident, $ty: ty, $parser: ident) => {
+        with_doc! { concat!(
+            "Reads from `blkio.", stringify!($recursive), "` file.",
+            " See `", stringify!($field), "` for more information."),
+            pub fn $recursive(&self) -> Result<$ty> {
+                self.open_file_read(concat!("blkio.", stringify!($recursive)))
+                    .and_then($parser)
+            }
+        }
+    }
 }
 
 macro_rules! gen_write {
-    (weight; $desc: literal, $setter: ident, $resource: literal) => { with_doc! { concat!(
-"Sets ", $desc, " by writing to `blkio.", $resource, "` file. The value must be between 10 and 1000
-(inclusive).
-
-See [`Resources.", $resource, "`] and the kernel's documentation for more information
-about this field.
-
-[`Resources.", $resource, "`]: struct.Resources.html#structfield.", $resource, "\n\n",
-gen_write!(_weight_err_eg; $resource, $setter, 1000)),
+    (weight; $desc: literal, $field: ident, $setter: ident) => { with_doc! { concat!(
+        _gen_doc!(sets; $desc, blkio, $field, "The value must be between 10 and 1000 (inclusive)."),
+        _gen_doc!(see; $field),
+        gen_write!(_err_weight; $field),
+        _gen_doc!(eg_write; blkio, BlkIo, $setter, 1000)),
         pub fn $setter(&mut self, weight: u16) -> Result<()> {
             if weight < 10 || weight > 1000 {
                 return Err(Error::new(ErrorKind::InvalidArgument));
             }
-            self.write_file(concat!("blkio.", $resource), weight)
+            self.write_file(concat!("blkio.", stringify!($field)), weight)
         }
     } };
 
-    (weight_map; $desc: literal, $setter: ident, $resource: literal) => { with_doc!{ concat!(
-"Sets ", $desc, " for a device by writing to `blkio.", $resource, "` file. The value must be between
-10 and 1000 (inclusive).
-
-See [`Resources.", $resource, "`] and the kernel's documentation for more information
-about this field.
-
-[`Resources.", $resource, "`]: struct.Resources.html#structfield.", $resource, "\n\n",
-gen_write!(_weight_err_eg; $resource, $setter, &cgroups::Device::from([8, 0]), 1000)),
+    (weight_map; $desc: literal, $field: ident, $setter: ident) => { with_doc!{ concat!(
+        _gen_doc!(sets; $desc, blkio, $field, "The value must be between 10 and 1000 (inclusive)."),
+        _gen_doc!(see; $field),
+        gen_write!(_err_weight; $field),
+        _gen_doc!(eg_write; blkio, BlkIo, $setter, &[8, 0].into(), 1000)),
         pub fn $setter(&mut self, device: &Device, weight: u16) -> Result<()> {
             use std::io::Write;
 
@@ -278,98 +215,81 @@ gen_write!(_weight_err_eg; $resource, $setter, &cgroups::Device::from([8, 0]), 1
                 return Err(Error::new(ErrorKind::InvalidArgument));
             }
 
-            let mut file = self.open_file_write(concat!("blkio.", $resource))?;
+            let mut file = self.open_file_write(concat!("blkio.", stringify!($field)))?;
             write!(file, "{} {}", device, weight).map_err(Into::into)
         }
     } };
 
-    (throttle; $desc: literal, $setter: ident, $resource: literal, $arg: ident, $ty: ty) => { with_doc! { concat!(
-"Throttles ", $desc, " for a device, by writing to `blkio.throttle.", $resource, "` file.
-
-See [`Resources.", $resource, "`] and the kernel's documentation for more information
-about this field.
-
-[`Resources.", $resource, "`]: struct.Resources.html#structfield.", $resource, "
-
-# Errors
-
-Returns an error if failed to write to `blkio.throttle.", $resource, "` file of this cgroup.\n\n",
-gen_write!(_eg; $setter, &cgroups::Device::from([8, 0]), 100)),
+    (throttle; $desc: literal, $field: ident, $setter: ident, $arg: ident, $ty: ty) => { with_doc! {
+        concat!(
+            "Throttles ", $desc, " for a device, by writing to `blkio.throttle.",
+            stringify!($field), "` file.",
+            _gen_doc!(see; $field),
+            _gen_doc!(err_write; blkio, $field),
+            _gen_doc!(eg_write; blkio, BlkIo, $setter, &[8, 0].into(), 100),
+        ),
         pub fn $setter(&mut self, device: &Device, $arg: $ty) -> Result<()> {
             use std::io::Write;
 
-            let mut file = self.open_file_write(concat!("blkio.throttle.", $resource))?;
+            let mut file = self.open_file_write(concat!("blkio.throttle.", stringify!($field)))?;
             // write!(file, "{} {}", device, $arg).map_err(Into::into) // not work
             file.write_all(format!("{} {}", device, $arg).as_bytes()).map_err(Into::into)
         }
     } };
 
-    // Errors and Examples sections
-    (_weight_err_eg; $file: literal, $setter: ident, $( $val: expr ),*) => { concat!(
+    (_err_weight; $field: ident) => { concat!(
 "# Errors
 
 Returns an error with kind [`ErrorKind::InvalidArgument`] if the weight is out-of-range. Returns an
-error if failed to write to `blkio.", $file, "` file of this cgroup.
+error if failed to write to `blkio.", stringify!($field), "` file of this cgroup.
 
 [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument\n\n",
-gen_write!(_eg; $setter, $( $val ),* ))
-    };
-
-    // Examples section
-    (_eg; $setter: ident, $( $val: expr ),*) => { concat!(
-"# Examples
-
-```no_run
-# fn main() -> cgroups::Result<()> {
-use std::path::PathBuf;
-use cgroups::v1::{blkio, Cgroup, CgroupPath, SubsystemKind};
-
-let mut cgroup = blkio::Subsystem::new(
-    CgroupPath::new(SubsystemKind::BlkIo, PathBuf::from(\"students/charlie\")));
-
-cgroup.", stringify!($setter), "(", stringify!($( $val ),* ), ")?;
-# Ok(())
-# }
-```") };
+    ) };
 }
 
 impl Subsystem {
-    gen_read!(single_ref; "the relative weight of block I/O by this cgroup,", weight, u16);
-    gen_write!(weight; "a relative weight of block I/O by this cgroup,", set_weight, "weight");
+    gen_read!(
+        "the relative weight of block I/O by this cgroup",
+        weight,
+        u16,
+        parse
+    );
+    gen_write!(weight; "a relative weight of block I/O by this cgroup", weight, set_weight);
 
     gen_read!(map; "the overriding weight for devices", weight_device, u16);
-    gen_write!(weight_map; "the overriding weight", set_weight_device, "weight_device");
+    gen_write!(weight_map; "the overriding weight for a device", weight_device, set_weight_device);
 
     gen_read!(
-        single_ref;
         "the weight this cgroup has while competing against descendant cgroups,",
         leaf_weight,
-        u16
+        u16,
+        parse
     );
     gen_write!(
         weight;
         "a weight this cgroup has while competing against descendant cgroups,",
-        set_leaf_weight,
-        "leaf_weight"
+        leaf_weight,
+        set_leaf_weight
     );
 
     gen_read!(map; "the overriding leaf weight for devices", leaf_weight_device, u16);
     gen_write!(
         weight_map;
-        "the overriding leaf weight",
-        set_leaf_weight_device,
-        "leaf_weight_device"
+        "the overriding leaf weight for a device",
+        leaf_weight_device,
+        set_leaf_weight_device
     );
 
     gen_read!(
-        map;
+        map_no_ref;
         "the I/O time allocated to this cgroup per device (in milliseconds)",
         time,
         u64,
         time_recursive
     );
+
     gen_read!(
-        map;
+        map_no_ref;
         "the number of sectors transferred by this cgroup,",
         sectors,
         u64,
@@ -408,6 +328,7 @@ impl Subsystem {
         io_merged,
         io_merged_recursive
     );
+
     gen_read!(
         io_service;
         "the number of I/O operations queued by this cgroup,",
@@ -418,16 +339,16 @@ impl Subsystem {
     gen_write!(
         throttle;
         "bandwidth of read access in terms of bytes/s",
+        read_bps_device,
         throttle_read_bps_device,
-        "read_bps_device",
         bps,
         u64
     );
     gen_write!(
         throttle;
         "bandwidth of write access in terms of bytes/s",
+        write_bps_device,
         throttle_write_bps_device,
-        "write_bps_device",
         bps,
         u64
     );
@@ -435,46 +356,28 @@ impl Subsystem {
     gen_write!(
         throttle;
         "bandwidth of read access in terms of ops/s",
+        read_iops_device,
         throttle_read_iops_device,
-        "read_iops_device",
         iops,
         u64
     );
     gen_write!(
         throttle;
         "bandwidth of write access in terms of ops/s",
+        write_iops_device,
         throttle_write_iops_device,
-        "write_iops_device",
         iops,
         u64
     );
 
-    /// Resets all statistics about block I/O for this cgroup, by writing to `blkio.reset_stats` file.
-    ///
-    /// See the kernel's documentation for more information about this field.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to write to `blkio.reset_stats` file of this cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
-    /// use std::path::PathBuf;
-    /// use cgroups::v1::{blkio, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let mut cgroup = blkio::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::BlkIo, PathBuf::from("students/charlie")));
-    ///
-    /// // Do something ...
-    ///
-    /// cgroup.reset_stats()?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn reset_stats(&mut self) -> Result<()> {
-        self.write_file("blkio.reset_stats", 0)
+    with_doc! { concat!(
+        "Resets all statistics about block I/O for this cgroup, by writing to `blkio.reset_stats` file.\n\n",
+        _gen_doc!(see),
+        _gen_doc!(err_write; blkio, reset_stats),
+        _gen_doc!(eg_write; blkio, BlkIo, reset_stats)),
+        pub fn reset_stats(&mut self) -> Result<()> {
+            self.write_file("blkio.reset_stats", 0)
+        }
     }
 }
 
@@ -625,6 +528,23 @@ mod tests {
     fn test_subsystem_weight() -> Result<()> {
         gen_subsystem_test!(BlkIo; weight, 500, set_weight, 1000)?;
         gen_subsystem_test!(BlkIo; leaf_weight, 500, set_leaf_weight, 1000)
+    }
+
+    #[test]
+    fn err_subsystem_weight() -> Result<()> {
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::BlkIo, gen_cgroup_name!()));
+        cgroup.create()?;
+
+        assert_eq!(
+            cgroup.set_weight(9).unwrap_err().kind(),
+            ErrorKind::InvalidArgument
+        );
+        assert_eq!(
+            cgroup.set_weight(1001).unwrap_err().kind(),
+            ErrorKind::InvalidArgument
+        );
+
+        cgroup.delete()
     }
 
     #[test]

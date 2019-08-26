@@ -271,7 +271,6 @@ impl UnifiedRepr {
         Ok(())
     }
 }
-
     };
 }
 
@@ -286,7 +285,7 @@ gen_unified_repr! {
     (net_cls, net_cls_mut, NetCls, "net_cls"),
     (net_prio, net_prio_mut, NetPrio, "net_prio"),
     (blkio, blkio_mut, BlkIo, "blkio"),
-    (rdma, rdma_mut, Rdma, "rdma"),
+    (rdma, rdma_mut, Rdma, "RDMA"),
     (freezer, freezer_mut, Freezer, "freezer"),
     (perf_event, perf_event_mut, PerfEvent, "perf_event"),
 }
