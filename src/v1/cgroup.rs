@@ -777,7 +777,7 @@ mod tests {
     #[test]
     fn test_cgroup_subsystem_kind() {
         macro_rules! t {
-            ( $( ($subsystem: ident, $kind: ident) ),* ) => {{ $(
+            ( $( ($subsystem: ident, $kind: ident) ),* $(, )? ) => {{ $(
                 let cgroup = crate::v1::$subsystem::Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
                 assert_eq!(cgroup.subsystem_kind(), SubsystemKind::$kind);
             )* }};
@@ -795,7 +795,7 @@ mod tests {
             (net_prio, NetPrio),
             (rdma, Rdma),
             (freezer, Freezer),
-            (perf_event, PerfEvent)
+            (perf_event, PerfEvent),
         }
     }
 

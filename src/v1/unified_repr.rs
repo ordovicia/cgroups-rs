@@ -6,7 +6,7 @@ use crate::{
 };
 
 macro_rules! gen_unified_repr {
-    ( $( ($subsystem: ident, $subsystem_mut: ident, $kind: ident, $name: literal) ),* ) => {
+    ( $( ($subsystem: ident, $subsystem_mut: ident, $kind: ident, $name: literal) ),* $(, )? ) => {
 
 use crate::v1::{$($subsystem),*};
 
@@ -287,7 +287,7 @@ gen_unified_repr! {
     (net_prio, net_prio_mut, NetPrio, "net_prio"),
     (rdma, rdma_mut, Rdma, "rdma"),
     (freezer, freezer_mut, Freezer, "freezer"),
-    (perf_event, perf_event_mut, PerfEvent, "perf_event")
+    (perf_event, perf_event_mut, PerfEvent, "perf_event"),
 }
 
 #[cfg(test)]

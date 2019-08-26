@@ -782,7 +782,7 @@ mod tests {
         let stat = cgroup.stat()?;
 
         macro_rules! assert_0 {
-            ($( $r: ident ),*) => { $( assert_eq!(stat.$r, 0); )* }
+            ( $( $r: ident ),* $(, )? ) => { $( assert_eq!(stat.$r, 0); )* }
         }
 
         assert_0!(
@@ -801,7 +801,7 @@ mod tests {
             inactive_anon,
             active_file,
             inactive_file,
-            unevictable
+            unevictable,
         );
         assert_eq!(stat.swap.unwrap_or(0), 0);
         assert_eq!(stat.hierarchical_memory_limit, LIMIT_DEFAULT);
@@ -826,7 +826,7 @@ mod tests {
             total_inactive_anon,
             total_active_file,
             total_inactive_file,
-            total_unevictable
+            total_unevictable,
         );
         assert_eq!(stat.total_swap.unwrap_or(0), 0);
 

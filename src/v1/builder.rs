@@ -149,7 +149,7 @@ pub struct Builder {
 }
 
 macro_rules! gen_subsystem_builder_calls {
-    ( $( ($subsystem: ident, $kind: ident, $builder: ident, $name: literal) ),* ) => { $(
+    ( $( ($subsystem: ident, $kind: ident, $builder: ident, $name: literal) ),* $(, )? ) => { $(
         with_doc! {
             concat!("Starts configuring the ", $name, " subsystem."),
             pub fn $subsystem(mut self) -> $builder {
@@ -182,7 +182,7 @@ impl Builder {
         (hugetlb, HugeTlb, HugeTlbBuilder, "hugetlb"),
         (net_cls, NetCls, NetClsBuilder, "net_cls"),
         (net_prio, NetPrio, NetPrioBuilder, "net_prio"),
-        (rdma, Rdma, RdmaBuilder, "rdma")
+        (rdma, Rdma, RdmaBuilder, "rdma"),
     }
 
     // Calling `cpu()` twice will push duplicated `SubsystemKind::Cpu`, but it is not a problem for
@@ -248,7 +248,7 @@ for more information."
 }
 
 macro_rules! gen_setter {
-    ($subsystem: ident; $desc: literal, $resource: ident, $ty: ty $(, $tt: tt )*) => { with_doc! {
+    ($subsystem: ident; $desc: literal, $resource: ident, $ty: ty) => { with_doc! {
         concat!(
 "Sets ", $desc, ".
 
@@ -256,7 +256,7 @@ See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($resource), "`]
 for more information."
 ),
         pub fn $resource(mut self, $resource: $ty) -> Self {
-            self.builder.resources.$subsystem.$resource = $resource $( $tt )*;
+            self.builder.resources.$subsystem.$resource = $resource;
             self
         }
     } };

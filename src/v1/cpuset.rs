@@ -935,12 +935,10 @@ mod tests {
     #[test]
     fn test_id_set_from_str() {
         macro_rules! hashset {
-            ($($x: expr),*) => {{
+            ( $($x: expr),* $(, )? ) => {{
                 #![allow(unused_mut)]
                 let mut s = HashSet::new();
-                $(
-                    s.insert($x);
-                )*
+                $( s.insert($x); )*
                 s
             }};
         }
