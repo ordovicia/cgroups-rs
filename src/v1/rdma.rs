@@ -57,7 +57,7 @@
 use std::{collections::HashMap, fmt, io, path::PathBuf};
 
 use crate::{
-    util::parse_option,
+    parse::parse_option,
     v1::{self, Cgroup, CgroupPath, SubsystemKind},
     Error, ErrorKind, Max, Result,
 };

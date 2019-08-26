@@ -39,7 +39,7 @@
 use std::{fmt, path::PathBuf};
 
 use crate::{
-    util::{parse, parse_01_bool},
+    parse::{parse, parse_01_bool},
     v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
     Error, ErrorKind, Result,
 };

@@ -36,7 +36,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    util::{parse, parse_option, parse_vec},
+    parse::{parse, parse_option, parse_vec},
     v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
     Error, ErrorKind, Result,
 };

@@ -33,7 +33,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
-    util::{parse, parse_option},
+    parse::{parse, parse_option},
     v1::{self, Cgroup, CgroupPath, SubsystemKind},
     Error, ErrorKind, Result,
 };

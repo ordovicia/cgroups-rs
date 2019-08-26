@@ -38,7 +38,7 @@
 use std::{fmt, path::PathBuf};
 
 use crate::{
-    util::parse,
+    parse::parse,
     v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
     Result,
 };

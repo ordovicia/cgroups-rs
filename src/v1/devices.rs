@@ -41,7 +41,7 @@
 use std::{fmt, path::PathBuf, str::FromStr};
 
 use crate::{
-    util::parse_option,
+    parse::parse_option,
     v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
     Error, ErrorKind, Result,
 };

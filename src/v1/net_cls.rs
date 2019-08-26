@@ -32,7 +32,7 @@
 use std::{fmt, path::PathBuf, str::FromStr};
 
 use crate::{
-    util::parse,
+    parse::parse,
     v1::{self, Cgroup, CgroupPath, SubsystemKind},
     Error, ErrorKind, Result,
 };

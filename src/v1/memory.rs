@@ -47,7 +47,7 @@ use std::{
 };
 
 use crate::{
-    util::{parse, parse_01_bool, parse_option},
+    parse::{parse, parse_01_bool, parse_option},
     v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
     Error, ErrorKind, Result,
 };

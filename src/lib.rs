@@ -151,8 +151,9 @@
 //! [`v1::Builder`]: v1/builder/struct.Builder.html
 
 #[macro_use]
-mod util;
+mod macros;
 mod error;
+mod parse;
 pub mod v1;
 
 use std::{fmt, str::FromStr};
@@ -410,8 +411,8 @@ impl FromStr for Device {
 
     fn from_str(s: &str) -> Result<Self> {
         let mut comma_sp = s.split(':');
-        let major = util::parse_option(comma_sp.next())?;
-        let minor = util::parse_option(comma_sp.next())?;
+        let major = parse::parse_option(comma_sp.next())?;
+        let minor = parse::parse_option(comma_sp.next())?;
 
         Ok(Device { major, minor })
     }

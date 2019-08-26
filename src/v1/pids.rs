@@ -35,7 +35,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    util::{parse, parse_option},
+    parse::{parse, parse_option},
     v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
     Max, Result,
 };

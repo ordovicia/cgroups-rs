@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    util::parse_01_bool,
+    parse::parse_01_bool,
     v1::{self, Resources, SubsystemKind},
     Error, ErrorKind, Pid, Result,
 };
