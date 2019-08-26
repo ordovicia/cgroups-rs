@@ -30,6 +30,8 @@
 //!     println!("{}", access);
 //! }
 //!
+//! // Do something ...
+//!
 //! devices_cgroup.remove_task(pid)?;
 //! devices_cgroup.delete()?;
 //! # Ok(())

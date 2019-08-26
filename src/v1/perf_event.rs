@@ -27,6 +27,8 @@
 //!
 //! // You can monitor the processes with `perf` in the cgroup unit.
 //!
+//! // Do something ...
+//!
 //! perf_event_cgroup.remove_task(child_pid)?;
 //! perf_event_cgroup.remove_task(pid)?;
 //!

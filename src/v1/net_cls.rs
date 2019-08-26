@@ -21,6 +21,8 @@
 //! let pid = Pid::from(std::process::id());
 //! net_cls_cgroup.add_task(pid)?;
 //!
+//! // Do something ...
+//!
 //! net_cls_cgroup.remove_task(pid)?;
 //! net_cls_cgroup.delete()?;
 //! # Ok(())
@@ -135,7 +137,10 @@ const CLASSID: &str = "net_cls.classid";
 impl Subsystem {
     /// Reads the class ID of this cgroup from `net_cls.classid` file.
     ///
-    /// See the kernel's documentation for more information about this field.
+    /// See [`Resources.classid`] and the kernel's documentation for more information about this
+    /// field.
+    ///
+    /// [`Resources.classid`]: struct.Resources.html#structfield.classid
     ///
     /// # Errors
     ///
@@ -162,7 +167,10 @@ impl Subsystem {
 
     /// Sets a class ID to this cgroup by writing to `net_cls.classid` file.
     ///
-    /// See the kernel's documentation for more information about this field.
+    /// See [`Resources.classid`] and the kernel's documentation for more information about this
+    /// field.
+    ///
+    /// [`Resources.classid`]: struct.Resources.html#structfield.classid
     ///
     /// # Errors
     ///

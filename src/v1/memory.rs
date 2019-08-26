@@ -30,6 +30,8 @@
 //! let pid = Pid::from(std::process::id());
 //! mem_cgroup.add_task(pid)?;
 //!
+//! // Do something ...
+//!
 //! // Get the statistics about memory usage of this cgroup.
 //! println!("{:?}", mem_cgroup.stat()?);
 //!
@@ -73,10 +75,10 @@ pub struct Resources {
     pub kmem_tcp_limit_in_bytes: Option<i64>,
     /// Soft limit on memory usage of this cgroup. Setting `-1` removes the current limit.
     pub soft_limit_in_bytes: Option<i64>,
-    /// Whether pages may be recharged to the new cgroup when a task is moved.
-    pub move_charge_at_immigrate: Option<bool>,
     /// Kernel's tendency to swap out pages consumed by this cgroup.
     pub swappiness: Option<u64>,
+    /// Whether pages may be recharged to the new cgroup when a task is moved.
+    pub move_charge_at_immigrate: Option<bool>,
     /// Whether the OOM killer tries to reclaim memory from the self and descendant cgroups.
     pub use_hierarchy: Option<bool>,
 }
@@ -183,8 +185,8 @@ impl_cgroup! {
         a!(kmem_limit_in_bytes, set_kmem_limit_in_bytes);
         a!(kmem_tcp_limit_in_bytes, set_kmem_tcp_limit_in_bytes);
         a!(soft_limit_in_bytes, set_soft_limit_in_bytes);
-        a!(move_charge_at_immigrate, set_move_charge_at_immigrate);
         a!(swappiness, set_swappiness);
+        a!(move_charge_at_immigrate, set_move_charge_at_immigrate);
         a!(use_hierarchy, set_use_hierarchy);
 
         Ok(())
@@ -196,13 +198,32 @@ macro_rules! gen_read {
     ($desc: literal, $resource: ident, $ty: ty) => {
         gen_read!($desc, $resource, $ty, parse);
     };
+    // ... with doc reference to `Resources`
+    (ref; $desc: literal, $resource: ident, $ty: ty) => {
+        gen_read!(ref; $desc, $resource, $ty, parse);
+    };
 
     // Single getter with custom parser
     ($desc: literal, $resource: ident, $ty: ty, $parser: ident) => {
         with_doc! { concat!(
             "Reads ", $desc, " from `memory.", stringify!($resource), "` file.\n\n",
             "See the kernel's documentation for more information about this field.\n\n",
-            gen_read!($resource)),
+            gen_read!(_eg_err; $resource)),
+            pub fn $resource(&self) -> Result<$ty> {
+                self.open_file_read(concat!("memory.", stringify!($resource))).and_then($parser)
+            }
+        }
+    };
+    // ... with doc reference to `Resources`
+    (ref; $desc: literal, $resource: ident, $ty: ty, $parser: ident) => {
+        with_doc! { concat!(
+"Reads ", $desc, " from `memory.", stringify!($resource), "` file.
+
+See [`Resources.", stringify!($resource), "`] and the kernel's documentation for more information
+about this field.
+
+[`Resources.", stringify!($resource), "`]: struct.Resources.html#structfield.", stringify!($resource), "\n\n",
+            gen_read!(_eg_err; $resource)),
             pub fn $resource(&self) -> Result<$ty> {
                 self.open_file_read(concat!("memory.", stringify!($resource))).and_then($parser)
             }
@@ -210,23 +231,38 @@ macro_rules! gen_read {
     };
 
     // Normal getter with `memsw`, `kmem`, `kmem.tcp` variants
-    (
-        $desc: literal,
-        $resource: ident,
-        $memsw: ident,
-        $kmem: ident,
-        $tcp: ident,
-        $ty: ty
-    ) => {
+    ($desc: literal, $resource: ident, $memsw: ident, $kmem: ident, $tcp: ident, $ty: ty) => {
         with_doc! { concat!(
             "Reads ", $desc, " from `memory.", stringify!($resource), "` file.\n\n",
             "See the kernel's documentation for more information about this field.\n\n",
-            gen_read!($resource)),
+            gen_read!(_eg_err; $resource)),
             pub fn $resource(&self) -> Result<$ty> {
                 self.open_file_read(concat!("memory.", stringify!($resource))).and_then(parse)
             }
         }
 
+        gen_read!(_variants; $resource, $memsw, $kmem, $tcp, $ty);
+    };
+    // ... with doc reference to `Resources`
+    (ref; $desc: literal, $resource: ident, $memsw: ident, $kmem: ident, $tcp: ident, $ty: ty) => {
+        with_doc! { concat!(
+"Reads ", $desc, " from `memory.", stringify!($resource), "` file.
+
+See [`Resources.", stringify!($resource), "`] and the kernel's documentation for more information
+about this field.
+
+[`Resources.", stringify!($resource), "`]: struct.Resources.html#structfield.", stringify!($resource), "\n\n",
+            gen_read!(_eg_err; $resource)),
+            pub fn $resource(&self) -> Result<$ty> {
+                self.open_file_read(concat!("memory.", stringify!($resource))).and_then(parse)
+            }
+        }
+
+        gen_read!(_variants; $resource, $memsw, $kmem, $tcp, $ty);
+    };
+
+    // `memsw`, `kmem`, `kmem.tcp` variants
+    (_variants; $resource: ident, $memsw: ident, $kmem: ident, $tcp: ident, $ty: ty) => {
         with_doc! { concat!(
             "Reads from `memory.memsw.", stringify!($resource), "` file. ",
             "See `", stringify!($resource), "` for more information."),
@@ -253,7 +289,7 @@ macro_rules! gen_read {
     };
 
     // Only Errors and Examples sections
-    ($resource: ident) => { concat!(
+    (_eg_err; $resource: ident) => { concat!(
 "# Errors
 
 Returns an error if failed to read and parse `memory.", stringify!($resource), "` file of this cgroup.
@@ -271,8 +307,7 @@ let cgroup = memory::Subsystem::new(
 let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
 # Ok(())
 # }
-```")
-    }
+```") }
 }
 
 macro_rules! gen_write {
@@ -280,21 +315,30 @@ macro_rules! gen_write {
     ($desc: literal, $resource: ident, $setter: ident, $val: expr, $ty: ty, $($tt: tt)*) => {
         gen_write!($desc, $resource, $resource, $setter, $val, $ty, $($tt)*);
     };
+    // ... with doc reference to `Resources`
+    (ref; $desc: literal, $resource: ident, $setter: ident, $val: expr, $ty: ty, $($tt: tt)*) => {
+        gen_write!(ref; $desc, $resource, $resource, $setter, $val, $ty, $($tt)*);
+    };
 
     // Single setter with custom file name
-    (
-        $desc: literal,
-        $file: ident,
-        $resource: ident,
-        $setter: ident,
-        $val: expr,
-        $ty: ty,
-        $($tt: tt)*
-    ) => {
+    ($desc: literal, $file: ident, $resource: ident, $setter: ident, $val: expr, $ty: ty, $($tt: tt)*) => {
         with_doc! { concat!(
             "Sets ", $desc, " by writing to `memory.", stringify!($file), "` file.\n\n",
             "See the kernel's documentation for more information about this field.\n\n",
-            gen_write!($file, $setter, $val)),
+            gen_write!(err_eg; $file, $setter, $val)),
+            pub fn $setter(&mut self, $resource: $ty) -> Result<()> {
+                self.write_file(concat!("memory.", stringify!($file)), $resource $($tt)*)
+            }
+        }
+    };
+    // ... with doc reference to `Resources`
+    (ref; $desc: literal, $file: ident, $resource: ident, $setter: ident, $val: expr, $ty: ty, $($tt: tt)*) => {
+        with_doc! { concat!(
+            "Sets ", $desc, " by writing to `memory.", stringify!($file), "` file.\n\n",
+            "See [`Resources.", stringify!($file), "`] and ",
+            "the kernel's documentation for more information about this field.\n\n",
+            "[`Resources.", stringify!($file), "`]: struct.Resources.html#structfield.", stringify!($file), "\n\n",
+            gen_write!(err_eg; $file, $setter, $val)),
             pub fn $setter(&mut self, $resource: $ty) -> Result<()> {
                 self.write_file(concat!("memory.", stringify!($file)), $resource $($tt)*)
             }
@@ -302,7 +346,7 @@ macro_rules! gen_write {
     };
 
     // Only Errors and Examples sections
-    ($file: ident, $setter: ident $(, $val: expr)?) => { concat!(
+    (err_eg; $file: ident, $setter: ident $(, $val: expr)?) => { concat!(
         "# Errors\n\n",
         "Returns an error if failed to write to `memory.", stringify!($file), "` file of this cgroup.\n\n",
         gen_write!(eg; $setter $(, $val )?)
@@ -323,8 +367,7 @@ let mut cgroup = memory::Subsystem::new(
 cgroup.", stringify!($setter), "(", stringify!($( $val )?), ")?;
 # Ok(())
 # }
-```")
-    }
+```") }
 }
 
 impl Subsystem {
@@ -361,6 +404,7 @@ impl Subsystem {
     );
 
     gen_read!(
+        ref;
         "the limit on memory usage (including file cache) of this cgroup",
         limit_in_bytes,
         memsw_limit_in_bytes,
@@ -370,6 +414,7 @@ impl Subsystem {
     );
 
     gen_read!(
+        ref;
         "the soft limit on memory usage of this cgroup",
         soft_limit_in_bytes,
         u64
@@ -379,7 +424,10 @@ impl Subsystem {
 "Sets a limit on memory usage of this cgroup by writing to `memory.limit_in_bytes` file. Setting
 `-1` removes the current limit.
 
-See the kernel's documentation for more information about this field.
+See [`Resources.limit_in_bytes`] and the kernel's documentation for more information about this
+field.
+
+[`Resources.limit_in_bytes`]: struct.Resources.html#structfield.limit_in_bytes
 
 # Errors
 
@@ -430,7 +478,9 @@ cgroup.\n\n",
 "Sets a soft limit on memory usage of this cgroup by writing to `memory.soft_limit_in_bytes` file.
 Setting `-1` removes the current limit.
 
-See the kernel's documentation for more information about this field.
+See [`Resources.soft_limit_in_bytes`] and the kernel's documentation for more information about this field.
+
+[`Resources.soft_limit_in_bytes`]: struct.Resources.html#structfield.soft_limit_in_bytes
 
 # Errors
 
@@ -439,7 +489,7 @@ error is returned with kind `ErrorKind::InvalidOperation`.
 
 On non-root cgroups, returns an error if failed to write to `memory.limit_in_bytes` file of this
 cgroup.\n\n",
-        gen_write!(soft_limit_in_bytes, set_soft_limit_in_bytes, 4 * (1 << 30))),
+        gen_write!(eg; set_soft_limit_in_bytes, 4 * (1 << 30))),
         pub fn set_soft_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
             if self.is_root() {
                 Err(Error::new(ErrorKind::InvalidOperation))
@@ -459,12 +509,14 @@ cgroup.\n\n",
     );
 
     gen_read!(
+        ref;
         "the tendency of the kernel to swap out pages consumed by this cgroup,",
         swappiness,
         u64
     );
 
     gen_write!(
+        ref;
         "a tendency of the kernel to swap out pages consumed by this cgroup,",
         swappiness,
         set_swappiness,
@@ -490,6 +542,7 @@ cgroup.\n\n",
     );
 
     gen_read!(
+        ref;
         "whether pages may be recharged to the new cgroup when a task is moved,",
         move_charge_at_immigrate,
         bool,
@@ -497,6 +550,7 @@ cgroup.\n\n",
     );
 
     gen_write!(
+        ref;
         "whether pages may be recharged to the new cgroup when a task is moved,",
         move_charge_at_immigrate,
         move_,
@@ -507,6 +561,7 @@ cgroup.\n\n",
     );
 
     gen_read!(
+        ref;
         "whether the OOM killer tries to reclaim memory from the self and descendant cgroups,",
         use_hierarchy,
         bool,
@@ -514,6 +569,7 @@ cgroup.\n\n",
     );
 
     gen_write!(
+        ref;
         "whether the OOM killer tries to reclaim memory from the self and descendant cgroups,",
         use_hierarchy,
         use_,
@@ -526,7 +582,7 @@ cgroup.\n\n",
     with_doc! { concat!(
         "Makes this cgroup's memory usage empty, by writing to `memory.force_empty` file.\n\n",
         "See the kernel's documentation for more information about this field.\n\n",
-        gen_write!(force_empty, force_empty)),
+        gen_write!(err_eg; force_empty, force_empty)),
         pub fn force_empty(&mut self) -> Result<()> {
             self.write_file("memory.force_empty", 0)
         }

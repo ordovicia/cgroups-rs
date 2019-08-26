@@ -41,6 +41,8 @@
 //! let pid = Pid::from(std::process::id());
 //! rdma_cgroup.add_task(pid)?;
 //!
+//! // Do something ...
+//!
 //! // Print the current usage of RDMA/IB devices.
 //! for (device, usage) in rdma_cgroup.current()? {
 //!     println!("{}: {}", device, usage);
@@ -140,7 +142,9 @@ impl Subsystem {
 
     /// Reads the usage limits on RDMA/IB devices from `rdma.max` file.
     ///
-    /// See the kernel's documentation for more information about this field.
+    /// See [`Resources.max`] and the kernel's documentation for more information about this field.
+    ///
+    /// [`Resources.max`]: struct.Resources.html#structfield.max
     ///
     /// # Errors
     ///
@@ -167,7 +171,9 @@ impl Subsystem {
 
     /// Sets usage limits on RDMA/IB devices by writing to `rdma.max` file.
     ///
-    /// See the kernel's documentation for more information about this field.
+    /// See [`Resources.max`] and the kernel's documentation for more information about this field.
+    ///
+    /// [`Resources.max`]: struct.Resources.html#structfield.max
     ///
     /// # Errors
     ///

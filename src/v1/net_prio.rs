@@ -22,6 +22,8 @@
 //! let pid = Pid::from(std::process::id());
 //! net_cls_cgroup.add_task(pid)?;
 //!
+//! // Do something ...
+//!
 //! net_cls_cgroup.remove_task(pid)?;
 //! net_cls_cgroup.delete()?;
 //! # Ok(())
@@ -105,7 +107,10 @@ impl Subsystem {
     /// Reads the map of priorities assigned to traffic originating from this cgroup, from
     /// `net_prio.ifpriomap` file.
     ///
-    /// See the kernel's documentation for more information about this field.
+    /// See [`Resources.ifpriomap`] and the kernel's documentation for more information about this
+    /// field.
+    ///
+    /// [`Resources.ifpriomap`]: struct.Resources.html#structfield.ifpriomap
     ///
     /// # Errors
     ///
@@ -147,7 +152,10 @@ impl Subsystem {
     /// Sets a map of priorities assigned to traffic originating from this cgroup, by writing to
     /// `net_prio.ifpriomap` file.
     ///
-    /// See the kernel's documentation for more information about this field.
+    /// See [`Resources.ifpriomap`] and the kernel's documentation for more information about this
+    /// field.
+    ///
+    /// [`Resources.ifpriomap`]: struct.Resources.html#structfield.ifpriomap
     ///
     /// # Errors
     ///

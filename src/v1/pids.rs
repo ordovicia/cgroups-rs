@@ -24,6 +24,8 @@
 //! println!("cgroup now has {} processes", pids_cgroup.current()?);
 //! println!("cgroup has hit the limit {} times", pids_cgroup.events()?.1);
 //!
+//! // Do something ...
+//!
 //! pids_cgroup.remove_task(pid)?;
 //! pids_cgroup.delete()?;
 //! # Ok(())
@@ -76,10 +78,25 @@ macro_rules! gen_doc {
     ($desc: literal, $resource: ident) => { concat!(
         "Reads ", $desc, " from `pids.", stringify!($resource), "` file.\n\n",
         "See the kernel's documentation for more information about this field.\n\n",
-        "# Errors\n\n",
-        "Returns an error if failed to read and parse `pids.", stringify!($resource), "` file of this cgroup.\n\n",
-        "# Examples\n\n",
-"```no_run
+        gen_doc!(_err_eg; $resource)
+    ) };
+
+    (ref; $desc: literal, $resource: ident) => { concat!(
+        "Reads ", $desc, " from `pids.", stringify!($resource), "` file.\n\n",
+        "See [`Resources.", stringify!($resource), "`] and ",
+        "the kernel's documentation for more information about this field.\n\n",
+        "[`Resources.", stringify!($resource), "`]: struct.Resources.html#structfield.", stringify!($resource), "\n\n",
+        gen_doc!(_err_eg; $resource)
+    ) };
+
+    (_err_eg; $resource: ident) => { concat!(
+"# Errors
+
+Returns an error if failed to read and parse `pids.", stringify!($resource), "` file of this cgroup.
+
+# Examples
+
+```no_run
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
 use cgroups::v1::{pids, Cgroup, CgroupPath, SubsystemKind};
@@ -99,7 +116,7 @@ const EVENTS: &str = "pids.events";
 
 impl Subsystem {
     with_doc! {
-        gen_doc!("the maximum number of processes this cgroup can have", max),
+        gen_doc!(ref; "the maximum number of processes this cgroup can have", max),
         pub fn max(&self) -> Result<Max<u32>> {
             self.open_file_read(MAX).and_then(parse)
         }
@@ -107,7 +124,9 @@ impl Subsystem {
 
     /// Sets the maximum number of processes this cgroup can have, by writing to `pids.max` file.
     ///
-    /// See the kernel's documentation for more information about this field.
+    /// See [`Resources.max`] and the kernel's documentation for more information about this field.
+    ///
+    /// [`Resources.max`]: struct.Resources.html#structfield.max
     ///
     /// # Errors
     ///

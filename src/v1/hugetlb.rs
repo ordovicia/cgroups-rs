@@ -27,6 +27,8 @@
 //! let pid = Pid::from(std::process::id());
 //! hugetlb_cgroup.add_task(pid)?;
 //!
+//! // Do something ...
+//!
 //! hugetlb_cgroup.remove_task(pid)?;
 //! hugetlb_cgroup.delete()?;
 //! # Ok(())
@@ -101,12 +103,16 @@ impl_cgroup! {
 #[rustfmt::skip]
 macro_rules! gen_doc {
     ($desc: literal, $resource: ident, $file: literal) => { concat!(
-        "Reads ", $desc, " from `hugetlb.<hugepage size>.", $file, "` file.\n\n",
-        "See the kernel's documentation for more information about this field.\n\n",
-        "# Errors\n\n",
-        "Returns an error if failed to read and parse `hugetlb.<hugepage size>.", $file, "` file of this cgroup.\n\n",
-        "# Examples\n\n",
-"```no_run
+"Reads ", $desc, " from `hugetlb.<hugepage size>.", $file, "` file.
+
+See the kernel's documentation for more information about this field.
+
+# Errors
+
+Returns an error if failed to read and parse `hugetlb.<hugepage size>.", $file, "` file of this cgroup.
+
+# Examples
+```no_run
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
 use cgroups::v1::{hugetlb::{self, HugepageSize}, Cgroup, CgroupPath, SubsystemKind};
@@ -120,12 +126,17 @@ let ", stringify!($resource), " = cgroup.", stringify!($resource), "(HugepageSiz
 ```") };
 
     ($desc: literal, $resource: ident, $file: literal, $val: expr) => { concat!(
-        "Sets ", $desc, " by writing to `hugetlb.<hugepage size>.", $file, "` file.\n\n",
-        "See the kernel's documentation for more information about this field.\n\n",
-        "# Errors\n\n",
-        "Returns an error if failed to write to `hugetlb.<hugepage size>.", $file, "` file of this cgroup.\n\n",
-        "# Examples\n\n",
-"```no_run
+"Sets ", $desc, " by writing to `hugetlb.<hugepage size>.", $file, "` file.
+
+See the kernel's documentation for more information about this field.
+
+# Errors
+
+Returns an error if failed to write to `hugetlb.<hugepage size>.", $file, "` file of this cgroup.
+
+# Examples
+
+```no_run
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
 use cgroups::v1::{hugetlb::{self, HugepageSize}, Cgroup, CgroupPath, SubsystemKind};

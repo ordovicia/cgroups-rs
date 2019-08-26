@@ -30,6 +30,8 @@
 //! let pid = Pid::from(std::process::id());
 //! cpu_cgroup.add_task(pid)?;
 //!
+//! // Do something ...
+//!
 //! // Get the throttling statistics of this cgroup.
 //! println!("{:?}", cpu_cgroup.stat()?);
 //!
@@ -109,26 +111,35 @@ impl_cgroup! {
 #[rustfmt::skip]
 macro_rules! gen_doc {
     ($desc: literal, $resource: ident) => { concat!(
-        "Reads ", $desc, " of this cgroup from `cpu.", stringify!($resource), "` file.\n\n",
-        "See [`Resources.", stringify!($resource), "`](struct.Resources.html#structfield.", stringify!($resource), ") ",
-        "and the kernel's documentation for more information about this field.\n\n",
+"Reads ", $desc, " of this cgroup from `cpu.", stringify!($resource), "` file.
+
+See [`Resources.", stringify!($resource), "`] and the kernel's documentation for more information
+about this field.
+
+[`Resources.", stringify!($resource), "`]: struct.Resources.html#structfield.", stringify!($resource), "\n\n",
         gen_doc!(err_eg; $resource)
     ) };
 
     ($desc: literal, $resource: ident, $val: expr) => { concat!(
-        "Sets ", $desc, " to this cgroup by writing to `cpu.", stringify!($resource), "` file.\n\n",
-        "See [`Resources.", stringify!($resource), "`](struct.Resources.html#structfield.", stringify!($resource), ") ",
-        "and the kernel's documentation for more information about this field.\n\n",
+"Sets ", $desc, " to this cgroup by writing to `cpu.", stringify!($resource), "` file.
+
+See [`Resources.", stringify!($resource), "`] and the kernel's documentation for more information
+about this field.
+
+[`Resources.", stringify!($resource), "`]: struct.Resources.html#structfield.", stringify!($resource), "\n\n",
         gen_doc!(err_eg; $resource, $val)
     ) };
 
 
     // Errors and Examples
     (err_eg; $resource: ident) => { concat!(
-        "# Errors\n\n",
-        "Returns an error if failed to read and parse `cpu.", stringify!($resource), "` file of this cgroup.\n\n",
-        "# Examples\n\n",
-"```no_run
+"# Errors
+
+Returns an error if failed to read and parse `cpu.", stringify!($resource), "` file of this cgroup.
+
+# Examples
+
+```no_run
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
 use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
@@ -142,10 +153,13 @@ let ", stringify!($resource), " = cgroup.", stringify!($resource), "()?;
 ```") };
 
     (err_eg; $resource: ident, $val: expr) => { concat!(
-        "# Errors\n\n",
-        "Returns an error if failed to write to `cpu.", stringify!($resource), "` file of this cgroup.\n\n",
-        "# Examples\n\n",
-"```no_run
+"# Errors
+
+Returns an error if failed to write to `cpu.", stringify!($resource), "` file of this cgroup.
+
+# Examples
+
+```no_run
 # fn main() -> cgroups::Result<()> {
 use std::path::PathBuf;
 use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};

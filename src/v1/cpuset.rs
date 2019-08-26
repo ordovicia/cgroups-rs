@@ -35,6 +35,8 @@
 //! let pid = Pid::from(std::process::id());
 //! cpuset_cgroup.add_task(pid)?;
 //!
+//! // Do something ...
+//!
 //! cpuset_cgroup.remove_task(pid)?;
 //! cpuset_cgroup.delete()?;
 //! # Ok(())
@@ -226,7 +228,7 @@ macro_rules! gen_doc {
     ) };
     ($desc: literal, $resource: ident, $val: expr) => { concat!(
         gen_doc!(sets; $desc, $resource), "\n\n",
-        gen_doc!(err_write; $resource), "\n\n",
+        gen_doc!(_err_write; $resource), "\n\n",
         gen_doc!(eg; $resource, $val), "\n",
     ) };
 
@@ -249,7 +251,7 @@ macro_rules! gen_doc {
         "# Errors\n\n",
         "Returns an error if failed to read and parse `cpuset.", stringify!($resource), "` file of this cgroup."
     ) };
-    (err_write; $resource: ident) => { concat!(
+    (_err_write; $resource: ident) => { concat!(
         "# Errors\n\n",
         "Returns an error if failed to write to `cpuset.", stringify!($resource), "` file of this cgroup."
     ) };
@@ -444,11 +446,13 @@ impl Subsystem {
             "whether the kernel computes the memory pressure of this cgroup",
             memory_pressure_enabled
         ), "\n\n",
-        "# Errors\n\n",
-        "This field is present only in the root cgroup. If you call this method on a non-root ",
-        "cgroup, an error is returned with kind `ErrorKind::InvalidOperation`.\n\n",
-        "On the root cgroup, returns an error if failed to read and parse ",
-        "`cpuset.memory_pressure_enabled` file.\n\n",
+"# Errors
+
+This field is present only in the root cgroup. If you call this method on a non-root cgroup, an
+error is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup, returns an error if
+failed to read and parse `cpuset.memory_pressure_enabled` file.
+
+[`ErrorKind::InvalidOperation`]: ../../enum.ErrorKind.html#variant.InvalidOperation\n\n",
         gen_doc!(eg; memory_pressure_enabled)),
         pub fn memory_pressure_enabled(&self) -> Result<bool> {
             if self.is_root() {
@@ -466,11 +470,13 @@ impl Subsystem {
             "whether the kernel computes the memory pressure of this cgroup",
             memory_pressure_enabled
         ), "\n\n",
-        "# Errors\n\n",
-        "This field is present only in the root cgroup. If you call this method on a non-root ",
-        "cgroup, an error is returned with kind `ErrorKind::InvalidOperation`.\n\n",
-        "On the root cgroup, returns an error if failed to write to ",
-        "`cpuset.memory_pressure_enabled` file.\n\n",
+"# Errors
+
+This field is present only in the root cgroup. If you call this method on a non-root cgroup, an
+error is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup, returns an error if
+failed to write to `cpuset.memory_pressure_enabled` file.
+
+[`ErrorKind::InvalidOperation`]: ../../enum.ErrorKind.html#variant.InvalidOperation\n\n",
         gen_doc!(eg; memory_pressure_enabled, true)),
         pub fn set_memory_pressure_enabled(&mut self, enable: bool) -> Result<()> {
             if self.is_root() {
@@ -570,10 +576,14 @@ impl Subsystem {
     }
 
     with_doc! { concat!(
-        "Reads whether a new cpuset cgroup will copy the configuration from its parent cgroup, from `cgroups.clone_children` file.\n\n",
-        "See the kernel's documentation for more information about this field.\n\n",
-        "# Errors\n\n",
-        "Returns an error if failed to read and parse `cgroups.clone_children` file of this cgroup.\n\n",
+"Reads whether a new cpuset cgroup will copy the configuration from its parent cgroup, from
+`cgroups.clone_children` file.
+
+See the kernel's documentation for more information about this field.
+
+# Errors
+
+Returns an error if failed to read and parse `cgroups.clone_children` file of this cgroup.\n\n",
         gen_doc!(eg; clone_children)),
         pub fn clone_children(&self) -> Result<bool> {
             self.open_file_read(CLONE_CHILDREN).and_then(parse_01_bool)
@@ -581,10 +591,14 @@ impl Subsystem {
     }
 
     with_doc! { concat!(
-        "Sets whether a new cpuset cgroup will copy the configuration from its parent cgroup, by writing to `cgroups.clone_children` file.\n\n",
-        "See the kernel's documentation for more information about this field.\n\n",
-        "# Errors\n\n",
-        "Returns an error if failed to write to `cgroups.clone_children` file of this cgroup.\n\n",
+"Sets whether a new cpuset cgroup will copy the configuration from its parent cgroup, by writing to
+`cgroups.clone_children` file.
+
+See the kernel's documentation for more information about this field.
+
+# Errors
+
+Returns an error if failed to write to `cgroups.clone_children` file of this cgroup.\n\n",
         gen_doc!(eg; clone_children, true)),
         pub fn set_clone_children(&mut self, clone: bool) -> Result<()> {
             self.write_file(CLONE_CHILDREN, clone as i32)
