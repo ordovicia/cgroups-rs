@@ -53,6 +53,16 @@ macro_rules! gen_subsystem_test {
     }};
 }
 
+#[cfg(test)]
+macro_rules! hashmap {
+    ( $( ( $k: expr, $v: expr $(, )? ) ),* $(, )? ) => { {
+        #[allow(unused_mut)]
+        let mut hashmap = HashMap::new();
+        $( hashmap.insert($k, $v); )*
+        hashmap
+    } };
+}
+
 pub fn parse<T, R>(mut reader: R) -> Result<T>
 where
     T: FromStr,
@@ -105,7 +115,7 @@ mod tests {
     fn test_gen_cgroup_name() {
         assert_eq!(
             gen_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-util-107")
+            std::path::PathBuf::from("cgroups_rs-util-117")
         );
     }
 

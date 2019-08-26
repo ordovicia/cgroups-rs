@@ -392,13 +392,7 @@ mod tests {
 
         cgroups.add_task(pid)?;
         assert_eq!(cgroups.cpu().unwrap().tasks()?, vec![pid]);
-        assert_eq!(
-            cgroups.tasks()?,
-            [(SubsystemKind::Cpu, vec![pid])]
-                .iter()
-                .cloned()
-                .collect::<HashMap<_, _>>()
-        );
+        assert_eq!(cgroups.tasks()?, hashmap![(SubsystemKind::Cpu, vec![pid])]);
 
         cgroups.remove_task(pid)?;
         assert!(cgroups.cpu().unwrap().tasks()?.is_empty());
@@ -416,13 +410,7 @@ mod tests {
 
         cgroups.add_proc(pid)?;
         assert_eq!(cgroups.cpu().unwrap().procs()?, vec![pid]);
-        assert_eq!(
-            cgroups.procs()?,
-            [(SubsystemKind::Cpu, vec![pid])]
-                .iter()
-                .cloned()
-                .collect::<HashMap<_, _>>()
-        );
+        assert_eq!(cgroups.procs()?, hashmap![(SubsystemKind::Cpu, vec![pid])]);
 
         cgroups.remove_proc(pid)?;
         assert!(cgroups.cpu().unwrap().procs()?.is_empty());

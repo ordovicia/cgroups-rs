@@ -349,7 +349,7 @@ mlx4_0 hca_handle=2 hca_object=2000
 ocrdma1 hca_handle=3 hca_object=max
 ";
 
-        let expected = [
+        let expected = hashmap![
             (
                 "mlx4_0".to_string(),
                 Limit {
@@ -364,10 +364,7 @@ ocrdma1 hca_handle=3 hca_object=max
                     hca_object: Max::<u32>::Max,
                 },
             ),
-        ]
-        .iter()
-        .cloned()
-        .collect::<HashMap<_, _>>();
+        ];
 
         assert_eq!(expected, parse_limits(CONTENT_0.as_bytes())?);
         assert_eq!(expected, parse_limits(CONTENT_1.as_bytes())?);
