@@ -148,7 +148,7 @@
 //! ```
 //!
 //! [`v1`]: v1/index.html
-//! [`v1::Builder`]: v1/struct.Builder.html
+//! [`v1::Builder`]: v1/builder/struct.Builder.html
 
 #[macro_use]
 mod util;

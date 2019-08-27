@@ -187,8 +187,8 @@ pub trait Cgroup {
     ///
     /// See also implementors' documentation for their specific behavior.
     ///
-    /// [`Error::kind`]: ../enum.ErrorKind.html#method.kind
-    /// [`Error::source`]: ../enum.ErrorKind.html#method.source
+    /// [`Error::kind`]: ../struct.Error.html#method.kind
+    /// [`Error::source`]: ../struct.Error.html#method.source
     ///
     /// # Examples
     ///
