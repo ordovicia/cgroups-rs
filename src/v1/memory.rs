@@ -1,7 +1,9 @@
 //! Operations on a memory subsystem.
 //!
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//!
 //! For more information about this subsystem, see the kernel's documentation
-//! [Documentation/cgroup-v1/memory.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt).
+//! [Documentation/cgroup-v1/memory.txt].
 //!
 //! # Examples
 //!
@@ -32,7 +34,7 @@
 //!
 //! // Do something ...
 //!
-//! // Get the statistics about memory usage of this cgroup.
+//! // Get the statistics about the memory usage of this cgroup.
 //! println!("{:?}", mem_cgroup.stat()?);
 //!
 //! mem_cgroup.remove_task(pid)?;
@@ -40,6 +42,11 @@
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! [`Subsystem`]: struct.Subsystem.html
+//! [`Cgroup`]: ../trait.Cgroup.html
+//!
+//! [Documentation/cgroup-v1/memory.txt]: https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
 
 use std::{
     io::{self, BufRead},
@@ -63,17 +70,17 @@ pub struct Subsystem {
 /// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
-    /// Limit the memory usage of this cgroup. Setting `-1` removes the current limit.
+    /// Limit the memory usage of this cgroup. Setting -1 removes the current limit.
     pub limit_in_bytes: Option<i64>,
-    /// Limit the total of memory and swap usage of this cgroup. Setting `-1` removes the current
+    /// Limit the total of memory and swap usage by this cgroup. Setting -1 removes the current
     /// limit.
     pub memsw_limit_in_bytes: Option<i64>,
-    /// Limit the usage of kernel memory by this cgroup. Setting `-1` removes the current limit.
+    /// Limit the usage of kernel memory by this cgroup. Setting -1 removes the current limit.
     pub kmem_limit_in_bytes: Option<i64>,
-    /// Limit the usage of kernel memory for TCP by this cgroup. Setting `-1` removes the current
+    /// Limit the usage of kernel memory for TCP by this cgroup. Setting -1 removes the current
     /// limit.
     pub kmem_tcp_limit_in_bytes: Option<i64>,
-    /// Soft limit on memory usage of this cgroup. Setting `-1` removes the current limit.
+    /// Soft limit on memory usage of this cgroup. Setting -1 removes the current limit.
     pub soft_limit_in_bytes: Option<i64>,
     /// Kernel's tendency to swap out pages consumed by this cgroup.
     pub swappiness: Option<u64>,
@@ -165,10 +172,10 @@ pub struct OomControl {
 impl_cgroup! {
     Memory,
 
-    /// Applies the `Some` fields in `resources.memory`.
+    /// Applies the `Some` fields in `resources.memory`. `limit_in_bytes` field is set before
+    /// `memsw_limit_in_bytes` is.
     ///
-    /// `limit_in_bytes` field is set before `memsw_limit_in_bytes` is. See [`Cgroup::apply`] for
-    /// general information.
+    /// See [`Cgroup::apply`] for general information.
     ///
     /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
@@ -193,46 +200,44 @@ impl_cgroup! {
     }
 }
 
-macro_rules! gen_read {
-    ($desc: literal, $field: ident, $ty: ty, $parser: ident) => {
-        _gen_read!(memory, Memory, $desc, $field, $ty, $parser);
+macro_rules! _gen_reader {
+    ($desc: literal, $field: ident $( : $link: ident )?, $ty: ty, $parser: ident) => {
+        gen_reader!(memory, Memory, $desc, $field $( : $link )?, $ty, $parser);
     };
 
-    (no_ref; $desc: literal, $field: ident, $ty: ty, $parser: ident) => {
-        _gen_read!(no_ref; memory, Memory, $desc, $field, $ty, $parser);
-    };
-
-    ($desc: literal, $field: ident, $memsw: ident, $kmem: ident, $tcp: ident, $ty: ty) => {
-        gen_read!($desc, $field, $ty, parse);
-        gen_read!(_variants; $field, $memsw, $kmem, $tcp, $ty);
-    };
-
-    (no_ref; $desc: literal, $field: ident, $memsw: ident, $kmem: ident, $tcp: ident, $ty: ty) => {
-        gen_read!(no_ref; $desc, $field, $ty, parse);
-        gen_read!(_variants; $field, $memsw, $kmem, $tcp, $ty);
+    (
+        $desc: literal,
+        $field: ident $( : $link : ident )?,
+        $memsw: ident,
+        $kmem: ident,
+        $tcp: ident,
+        $ty: ty
+    ) => {
+        _gen_reader!($desc, $field $( : $link )?, $ty, parse);
+        _gen_reader!(_variants; $field, $memsw, $kmem, $tcp, $ty);
     };
 
     // `memsw`, `kmem`, `kmem.tcp` variants
     (_variants; $field: ident, $memsw: ident, $kmem: ident, $tcp: ident, $ty: ty) => {
         with_doc! { concat!(
-            "Reads from `memory.memsw.", stringify!($field), "` file. ",
-            "See `", stringify!($field), "` for more information."),
+            "Reads from `memory.memsw.", stringify!($field), "` file. See [`", stringify!($field),
+            "`](#method.", stringify!($field), ") method for more information."),
             pub fn $memsw(&self) -> Result<$ty> {
                 self.open_file_read(concat!("memory.memsw.", stringify!($field))).and_then(parse)
             }
         }
 
         with_doc! { concat!(
-            "Reads from `memory.kmem.", stringify!($field), "` file. ",
-            "See `", stringify!($field), "` for more information."),
+            "Reads from `memory.kmem.", stringify!($field), "` file. See [`", stringify!($field),
+            "`](#method.", stringify!($field), ") method for more information."),
             pub fn $kmem(&self) -> Result<$ty> {
                 self.open_file_read(concat!("memory.kmem.", stringify!($field))).and_then(parse)
             }
         }
 
         with_doc! { concat!(
-            "Reads from `memory.kmem.tcp.", stringify!($field), "` file. ",
-            "See `", stringify!($field), "` for more information."),
+            "Reads from `memory.kmem.tcp.", stringify!($field), "` file. See [`", stringify!($field),
+            "`](#method.", stringify!($field), ") method for more information."),
             pub fn $tcp(&self) -> Result<$ty> {
                 self.open_file_read(concat!("memory.kmem.tcp.", stringify!($field))).and_then(parse)
             }
@@ -240,17 +245,19 @@ macro_rules! gen_read {
     };
 }
 
-macro_rules! gen_write {
-    ($desc: literal, $field: ident, $setter: ident, $ty: ty, $val: expr) => {
-        _gen_write!(memory, Memory, $desc, $field, $setter, $ty, $val);
+macro_rules! _gen_writer {
+    ($desc: literal, $field: ident : link, $setter: ident, $ty: ty, $val: expr) => {
+        gen_writer!(memory, Memory, $desc, $field : link, $setter, $ty, $val);
     };
 
-    ($desc: literal, $field: ident, $setter: ident, $arg: ident, $ty: ty as $as: ty, $val: expr) => {
-        gen_write!(_as; $desc, $field, $setter, $arg, $ty as $as, $val, $field);
-    };
-
-    (no_ref; $desc: literal, $field: ident, $setter: ident, $arg: ident, $ty: ty as $as: ty, $val: expr) => {
-        gen_write!(_as; $desc, $field, $setter, $arg, $ty as $as, $val);
+    (
+        $desc: literal,
+        $field: ident $( : $link: ident )?,
+        $setter: ident,
+        $arg: ident : $ty: ty as $as: ty,
+        $val: expr
+    ) => {
+        gen_writer!(memory, Memory, $desc, $field $( : $link )?, $setter, $arg : $ty as $as, $val);
     };
 
     (err_invalid; $field: ident) => { concat!(
@@ -262,40 +269,24 @@ if failed to write to `memory.", stringify!($field), "` file of this cgroup.
 
 [`ErrorKind::InvalidOperation`]: ../../enum.ErrorKind.html#variant.InvalidOperation\n\n",
     ); };
-
-    (
-        _as;
-        $desc: literal,
-        $field: ident,
-        $setter: ident,
-        $arg: ident,
-        $ty: ty as $as: ty,
-        $val: expr $(, $ref_ : ident)?
-    ) => {
-        with_doc! { concat!(
-            _gen_doc!(sets; $desc, memory, $field),
-            _gen_doc!(see $(; $ref_ )?) ,
-            _gen_doc!(err_write; memory, $field),
-            _gen_doc!(eg_write; memory, Memory, $setter, $val)),
-            pub fn $setter(&mut self, $arg: $ty) -> Result<()> {
-                self.write_file(concat!("memory.", stringify!($field)), $arg as $as)
-            }
-        }
-    }
 }
 
 impl Subsystem {
-    gen_read!(no_ref; "statistics of memory usage of this cgroup", stat, Stat, parse_stat);
+    _gen_reader!(
+        "statistics of memory usage of this cgroup",
+        stat,
+        Stat,
+        parse_stat
+    );
 
-    gen_read!(no_ref;
+    _gen_reader!(
         "statistics of memory usage per NUMA node of this cgroup",
         numa_stat,
         NumaStat,
         parse_numa_stat
     );
 
-    gen_read!(
-        no_ref;
+    _gen_reader!(
         "the memory usage of this cgroup",
         usage_in_bytes,
         memsw_usage_in_bytes,
@@ -304,8 +295,7 @@ impl Subsystem {
         u64
     );
 
-    gen_read!(
-        no_ref;
+    _gen_reader!(
         "the maximum memory usage of this cgroup",
         max_usage_in_bytes,
         memsw_max_usage_in_bytes,
@@ -314,33 +304,31 @@ impl Subsystem {
         u64
     );
 
-    gen_read!(
+    _gen_reader!(
         "the limit on memory usage (including file cache) of this cgroup",
-        limit_in_bytes,
+        limit_in_bytes: link,
         memsw_limit_in_bytes,
         kmem_limit_in_bytes,
         kmem_tcp_limit_in_bytes,
         u64
     );
 
-    gen_read!(
+    _gen_reader!(
         "the soft limit on memory usage of this cgroup",
-        soft_limit_in_bytes,
+        soft_limit_in_bytes: link,
         u64,
         parse
     );
 
     with_doc! { concat!(
-        _gen_doc!(
-            sets;
-            "a limit on memory usage of this cgroup,",
-            memory,
-            limit_in_bytes,
-            "Setting `-1` removes the current limit."
+        gen_doc!(
+            sets; memory,
+            "a limit on memory usage of this cgroup," : "Setting -1 removes the current limit.",
+            limit_in_bytes
         ),
-        _gen_doc!(see; limit_in_bytes),
-        gen_write!(err_invalid; limit_in_bytes),
-        _gen_doc!(eg_write; memory, Memory, set_limit_in_bytes, 4 * (1 << 30))),
+        gen_doc!(see; limit_in_bytes),
+        _gen_writer!(err_invalid; limit_in_bytes),
+        gen_doc!(eg_write; memory, Memory, set_limit_in_bytes, 4 * (1 << 30))),
         pub fn set_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
             if self.is_root() {
                 Err(Error::new(ErrorKind::InvalidOperation))
@@ -350,7 +338,10 @@ impl Subsystem {
         }
     }
 
-    /// Writes to `memory.memsw.limit_in_bytes` file. See `set_limit_in_bytes` for more information.
+    /// Writes to `memory.memsw.limit_in_bytes` file. See [`set_limit_in_bytes`] for more
+    /// information.
+    ///
+    /// [`set_limit_in_bytes`]: #method.set_limit_in_bytes
     pub fn set_memsw_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
         if self.is_root() {
             Err(Error::new(ErrorKind::InvalidOperation))
@@ -359,7 +350,10 @@ impl Subsystem {
         }
     }
 
-    /// Writes to `memory.kmem.limit_in_bytes` file. See `set_limit_in_bytes` for more information.
+    /// Writes to `memory.kmem.limit_in_bytes` file. See [`set_limit_in_bytes`] for more
+    /// information.
+    ///
+    /// [`set_limit_in_bytes`]: #method.set_limit_in_bytes
     pub fn set_kmem_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
         if self.is_root() {
             Err(Error::new(ErrorKind::InvalidOperation))
@@ -368,8 +362,10 @@ impl Subsystem {
         }
     }
 
-    /// Writes to `memory.kmem.tcp.limit_in_bytes` file. See `set_limit_in_bytes` for more
+    /// Writes to `memory.kmem.tcp.limit_in_bytes` file. See [`set_limit_in_bytes`] for more
     /// information.
+    ///
+    /// [`set_limit_in_bytes`]: #method.set_limit_in_bytes
     pub fn set_kmem_tcp_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
         if self.is_root() {
             Err(Error::new(ErrorKind::InvalidOperation))
@@ -379,16 +375,14 @@ impl Subsystem {
     }
 
     with_doc! { concat!(
-        _gen_doc!(
-            sets;
-            "a soft limit on memory usage of this cgroup,",
-            memory,
-            soft_limit_in_bytes,
-            "Setting `-1` removes the current limit."
+        gen_doc!(
+            sets; memory,
+            "a soft limit on memory usage of this cgroup," : "Setting -1 removes the current limit.",
+            soft_limit_in_bytes
         ),
-        _gen_doc!(see; soft_limit_in_bytes),
-        gen_write!(err_invalid; soft_limit_in_bytes),
-        _gen_doc!(eg_write; memory, Memory, set_soft_limit_in_bytes, 4 * (1 << 30))),
+        gen_doc!(see; soft_limit_in_bytes),
+        _gen_writer!(err_invalid; soft_limit_in_bytes),
+        gen_doc!(eg_write; memory, Memory, set_soft_limit_in_bytes, 4 * (1 << 30))),
         pub fn set_soft_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
             if self.is_root() {
                 Err(Error::new(ErrorKind::InvalidOperation))
@@ -398,8 +392,7 @@ impl Subsystem {
         }
     }
 
-    gen_read!(
-        no_ref;
+    _gen_reader!(
         "the number of memory allocation failure due to the limit",
         failcnt,
         memsw_failcnt,
@@ -408,76 +401,71 @@ impl Subsystem {
         u64
     );
 
-    gen_read!(
+    _gen_reader!(
         "the tendency of the kernel to swap out pages consumed by this cgroup,",
-        swappiness,
+        swappiness: link,
         u64,
         parse
     );
 
-    gen_write!(
+    _gen_writer!(
         "a tendency of the kernel to swap out pages consumed by this cgroup,",
-        swappiness,
+        swappiness: link,
         set_swappiness,
         u64,
         60
     );
 
-    gen_read!(
-        no_ref;
+    _gen_reader!(
         "the status of OOM killer on this cgroup",
         oom_control,
         OomControl,
         parse_oom_control
     );
 
-    gen_write!(
-        no_ref;
+    _gen_writer!(
         "whether the OOM killer is disabled for this cgroup,",
         oom_control,
         disable_oom_killer,
-        disable,
-        bool as i32,
+        disable: bool as i32,
         true
     );
 
-    gen_read!(
+    _gen_reader!(
         "whether pages may be recharged to the new cgroup when a task is moved,",
-        move_charge_at_immigrate,
+        move_charge_at_immigrate: link,
         bool,
         parse_01_bool
     );
 
-    gen_write!(
+    _gen_writer!(
         "whether pages may be recharged to the new cgroup when a task is moved,",
-        move_charge_at_immigrate,
+        move_charge_at_immigrate: link,
         set_move_charge_at_immigrate,
-        move_,
-        bool as i32,
+        move_: bool as i32,
         true
     );
 
-    gen_read!(
+    _gen_reader!(
         "whether the OOM killer tries to reclaim memory from the self and descendant cgroups,",
-        use_hierarchy,
+        use_hierarchy: link,
         bool,
         parse_01_bool
     );
 
-    gen_write!(
+    _gen_writer!(
         "whether the OOM killer tries to reclaim memory from the self and descendant cgroups,",
-        use_hierarchy,
+        use_hierarchy: link,
         set_use_hierarchy,
-        use_,
-        bool as i32,
+        use_: bool as i32,
         true
     );
 
     with_doc! { concat!(
         "Makes this cgroup's memory usage empty, by writing to `memory.force_empty` file.\n\n",
-        _gen_doc!(see),
-        _gen_doc!(err_write; memory, force_empty),
-        _gen_doc!(eg_write; memory, Memory, force_empty)),
+        gen_doc!(see),
+        gen_doc!(err_write; memory, force_empty),
+        gen_doc!(eg_write; memory, Memory, force_empty)),
         pub fn force_empty(&mut self) -> Result<()> {
             self.write_file("memory.force_empty", 0)
         }
@@ -509,7 +497,7 @@ fn parse_stat(reader: impl io::Read) -> Result<Stat> {
     let buf = io::BufReader::new(reader);
 
     macro_rules! gen {
-        ( keys: [ $($key: ident),* ], keys_opt: [ $($key_opt: ident),* ] ) => {
+        ( keys: [ $( $key: ident ),* ], keys_opt: [ $( $key_opt: ident ),* ] ) => {
             $( let mut $key: Option<u64> = None; )*
             $( let mut $key_opt: Option<u64> = None; )*
 
@@ -568,7 +556,7 @@ fn parse_numa_stat(reader: impl io::Read) -> Result<NumaStat> {
             let mut $key0 = None;
             $( let mut $key = None; )*
 
-            gen!(p; $key0, $($key),*);
+            gen!(p; $key0, $( $key ),*);
 
             if $( $key.is_some() && )* $key0.is_some() {
                 let $key0 = $key0.unwrap();
@@ -684,43 +672,17 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        let mut files = [
-            "stat",
-            "numa_stat",
-            "swappiness",
-            "oom_control",
-            "move_charge_at_immigrate",
-            "use_hierarchy",
-            "force_empty",
-            "soft_limit_in_bytes",
-        ]
-        .iter()
-        .map(|f| format!("memory.{}", f))
-        .collect::<Vec<_>>();
+        gen_subsystem_test!(Memory; memory, [
+            "stat", "numa_stat", "swappiness", "oom_control", "move_charge_at_immigrate",
+            "use_hierarchy", "force_empty", "soft_limit_in_bytes",
 
-        let files_sw = vec![
-            "usage_in_bytes",
-            "max_usage_in_bytes",
-            "limit_in_bytes",
-            "failcnt",
-        ];
-
-        files.extend(files_sw.iter().map(|f| format!("memory.{}", f)));
-        // only presents on some systems
-        // files.extend(files_sw.iter().map(|f| format!("memory.memsw.{}", f)));
-        files.extend(files_sw.iter().map(|f| format!("memory.kmem.{}", f)));
-        files.extend(files_sw.iter().map(|f| format!("memory.kmem.tcp.{}", f)));
-
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Memory, gen_cgroup_name!()));
-        cgroup.create()?;
-
-        assert!(files.iter().all(|f| cgroup.file_exists(f)));
-        assert!(!cgroup.file_exists("does_not_exist"));
-
-        cgroup.delete()?;
-        assert!(files.iter().all(|f| !cgroup.file_exists(f)));
-
-        Ok(())
+            "usage_in_bytes", "max_usage_in_bytes", "limit_in_bytes", "failcnt",
+            // "memsw.usage_in_bytes", "memsw.max_usage_in_bytes", "memsw.limit_in_bytes",
+            // "memsw.failcnt",
+            "kmem.usage_in_bytes", "kmem.max_usage_in_bytes", "kmem.limit_in_bytes", "kmem.failcnt",
+            "kmem.tcp.usage_in_bytes", "kmem.tcp.max_usage_in_bytes", "kmem.tcp.limit_in_bytes",
+            "kmem.tcp.failcnt"
+        ])
     }
 
     // TODO: test adding tasks

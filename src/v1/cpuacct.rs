@@ -1,7 +1,9 @@
 //! Operations on a cpuacct (CPU accounting) subsystem.
 //!
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//!
 //! For more information about this subsystem, see the kernel's documentation
-//! [Documentation/cgroup-v1/cpuacct.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt).
+//! [Documentation/cgroup-v1/cpuacct.txt].
 //!
 //! # Examples
 //!
@@ -32,6 +34,11 @@
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! [`Subsystem`]: struct.Subsystem.html
+//! [`Cgroup`]: ../trait.Cgroup.html
+//!
+//! [Documentation/cgroup-v1/cpuacct.txt]: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt
 
 use std::{
     io::{self, BufRead},
@@ -72,65 +79,59 @@ impl_cgroup! {
     }
 }
 
-macro_rules! gen_read {
-    ($desc: literal, $( $detail: literal, )? $field: ident, $ty: ty, $parser: ident) => {
-        _gen_read!(no_ref; cpuacct, Cpuacct, $desc, $field, $ty, $parser $(, $detail )?);
+macro_rules! _gen_reader {
+    ($desc: literal $( : $detail: literal )?, $field: ident, $ty: ty, $parser: ident) => {
+        gen_reader!(cpuacct, Cpuacct, $desc $( : $detail )?, $field, $ty, $parser);
     };
 }
 
 impl Subsystem {
-    gen_read!(
-        "statistics about how much CPU time is consumed by this cgroup (in `USER_HZ` unit)",
+    _gen_reader!(
+        "statistics about how much CPU time is consumed by this cgroup (in `USER_HZ` unit)" :
         "The CPU time is further divided into user and system times.",
-        stat,
-        Stat,
-        parse_stat
+        stat, Stat, parse_stat
     );
 
-    gen_read!(
+    _gen_reader!(
         "the total CPU time consumed by this cgroup (in nanoseconds)",
         usage,
         u64,
         parse
     );
 
-    gen_read!(
-        "the per-CPU total CPU time consumed by this cgroup (in nanoseconds)",
+    _gen_reader!(
+        "the per-CPU total CPU time consumed by this cgroup (in nanoseconds)" :
         "The CPU time is further divided into user and system times.",
-        usage_all,
-        Vec<Stat>,
-        parse_usage_all
+        usage_all, Vec<Stat>, parse_usage_all
     );
 
-    gen_read!(
+    _gen_reader!(
         "the per-CPU total CPU times consumed by this cgroup (in nanoseconds)",
         usage_percpu,
         Vec<u64>,
         parse_vec
     );
 
-    gen_read!(
+    _gen_reader!(
         "the per-CPU total CPU times consumed by this cgroup in the system (kernel) mode (in nanoseconds)",
-        usage_percpu_sys,
-        Vec<u64>,
-        parse_vec
+        usage_percpu_sys, Vec<u64>, parse_vec
     );
 
-    gen_read!(
+    _gen_reader!(
         "the per-CPU total CPU times consumed by this cgroup in the user mode (in nanoseconds)",
         usage_percpu_user,
         Vec<u64>,
         parse_vec
     );
 
-    gen_read!(
+    _gen_reader!(
         "the total CPU time consumed by this cgroup in the system (kernel) mode (in nanoseconds)",
         usage_sys,
         u64,
         parse
     );
 
-    gen_read!(
+    _gen_reader!(
         "the total CPU time consumed by this cgroup in the user mode (in nanoseconds)",
         usage_user,
         u64,
@@ -139,8 +140,8 @@ impl Subsystem {
 
     with_doc! { concat!(
         "Resets the accounted CPU time of this cgroup by writing to `cpuacct.usage` file.\n\n",
-        _gen_doc!(err_write; cpuacct, usage),
-        _gen_doc!(eg_write; cpuacct, Cpuacct, usage)),
+        gen_doc!(err_write; cpuacct, usage),
+        gen_doc!(eg_write; cpuacct, Cpuacct, reset)),
         pub fn reset(&mut self) -> Result<()> {
             self.write_file("cpuacct.usage", 0)
         }

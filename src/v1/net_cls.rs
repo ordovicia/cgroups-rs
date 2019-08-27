@@ -1,7 +1,9 @@
 //! Operations on a net_cls subsystem.
 //!
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//!
 //! For more information about this subsystem, see the kernel's documentation
-//! [Documentation/cgroup-v1/net_cls.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/net_cls.txt).
+//! [Documentation/cgroup-v1/net_cls.txt].
 //!
 //! # Examples
 //!
@@ -28,6 +30,11 @@
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! [`Subsystem`]: struct.Subsystem.html
+//! [`Cgroup`]: ../trait.Cgroup.html
+//!
+//! [Documentation/cgroup-v1/net_cls.txt]: https://www.kernel.org/doc/Documentation/cgroup-v1/net_cls.txt
 
 use std::{fmt, path::PathBuf, str::FromStr};
 
@@ -136,10 +143,10 @@ const CLASSID: &str = "net_cls.classid";
 
 impl Subsystem {
     with_doc! { concat!(
-        _gen_doc!(reads; "the class ID of network packets from this cgroup,", net_cls, classid),
-        _gen_doc!(see; classid),
-        _gen_doc!(err_read; net_cls, classid),
-        _gen_doc!(eg_read; net_cls, NetCls, classid)),
+        gen_doc!(reads; net_cls, "the class ID of network packets from this cgroup,", classid),
+        gen_doc!(see; classid),
+        gen_doc!(err_read; net_cls, classid),
+        gen_doc!(eg_read; net_cls, NetCls, classid)),
         pub fn classid(&self) -> Result<ClassId> {
             let raw: u32 = self.open_file_read(CLASSID).and_then(parse)?;
             Ok(raw.into())
@@ -147,10 +154,10 @@ impl Subsystem {
     }
 
     with_doc! { concat!(
-        _gen_doc!(sets; "a class ID to network packets from this cgroup,", net_cls, classid),
-        _gen_doc!(see; classid),
-        _gen_doc!(err_write; net_cls, classid),
-        _gen_doc!(eg_write; net_cls, NetCls, set_classid, [0x10, 0x1].into())),
+        gen_doc!(sets; net_cls, "a class ID to network packets from this cgroup,", classid),
+        gen_doc!(see; classid),
+        gen_doc!(err_write; net_cls, classid),
+        gen_doc!(eg_write; net_cls, NetCls, set_classid, [0x10, 0x1].into())),
         pub fn set_classid(&mut self, id: ClassId) -> Result<()> {
             let raw: u32 = id.into();
             std::fs::write(self.path().join(CLASSID), format!("{:#08X}", raw)).map_err(Into::into)

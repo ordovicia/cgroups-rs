@@ -1,9 +1,10 @@
 //! Operations on a CPU subsystem.
 //!
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//!
 //! For more information about this subsystem, see the kernel's documentation
-//! [Documentation/scheduler/sched-design-CFS.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt)
-//! paragraph 7 ("GROUP SCHEDULER EXTENSIONS TO CFS"), and
-//! [Documentation/scheduler/sched-bwc.txt](https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt).
+//! [Documentation/scheduler/sched-design-CFS.txt]
+//! paragraph 7 ("GROUP SCHEDULER EXTENSIONS TO CFS"), and [Documentation/scheduler/sched-bwc.txt].
 //!
 //! # Examples
 //!
@@ -40,6 +41,12 @@
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! [`Subsystem`]: struct.Subsystem.html
+//! [`Cgroup`]: ../trait.Cgroup.html
+//!
+//! [Documentation/scheduler/sched-design-CFS.txt]: https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt
+//! [Documentation/scheduler/sched-bwc.txt]: https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt
 
 use std::path::PathBuf;
 
@@ -63,6 +70,8 @@ pub struct Resources {
     /// Weight of how much of the total CPU time should be provided to this cgroup.
     pub shares: Option<u64>,
     /// Total available CPU time for this cgroup within a period (in microseconds).
+    ///
+    /// Setting -1 removes the current limit.
     pub cfs_quota_us: Option<i64>,
     /// Length of a period (in microseconds).
     pub cfs_period_us: Option<u64>,
@@ -108,58 +117,62 @@ impl_cgroup! {
     }
 }
 
-macro_rules! gen_read {
-    ($desc: literal, $field: ident, $ty: ty, $parser: ident) => {
-        _gen_read!(cpu, Cpu, $desc, $field, $ty, $parser);
+macro_rules! _gen_reader {
+    ($desc: literal, $field: ident $( : $link: ident )?, $ty: ty, $parser: ident) => {
+        gen_reader!(cpu, Cpu, $desc, $field $( : $link )?, $ty, $parser);
     };
 }
 
-macro_rules! gen_write {
-    ($desc: literal, $field: ident, $setter: ident, $ty: ty, $val: expr) => {
-        _gen_write!(cpu, Cpu, $desc, $field, $setter, $ty, $val);
+macro_rules! _gen_writer {
+    ($desc: literal, $field: ident : link, $setter: ident, $ty: ty, $val: expr) => {
+        gen_writer!(cpu, Cpu, $desc, $field : link, $setter, $ty, $val);
+    };
+
+    (
+        $desc: literal $( : $detail: literal )?,
+        $field: ident : link,
+        $setter: ident,
+        $arg: ident : $ty: ty,
+        $val: expr
+    ) => {
+        gen_writer!(cpu, Cpu, $desc $( : $detail )?, $field : link, $setter, $arg : $ty, $val);
     };
 }
 
 impl Subsystem {
-    _gen_read!(
-        no_ref; cpu, Cpu,
+    _gen_reader!(
         "the throttling statistics of this cgroup",
         stat,
         Stat,
         parse_stat
     );
 
-    gen_read!("the CPU time shares", shares, u64, parse);
+    _gen_reader!("the CPU time shares", shares: link, u64, parse);
+    _gen_writer!("CPU time shares", shares: link, set_shares, u64, 2048);
 
-    gen_write!("CPU time shares", shares, set_shares, u64, 2048);
-
-    gen_read!(
+    _gen_reader!(
         "the total available CPU time within a period (in microseconds)",
-        cfs_quota_us,
+        cfs_quota_us: link,
         i64,
         parse
     );
-
-    gen_write!(
-        "total available CPU time within a period (in microseconds)",
-        cfs_quota_us,
-        set_cfs_quota_us,
-        i64,
-        500 * 1000
+    _gen_writer!(
+        "total available CPU time within a period (in microseconds)"
+        : "Setting -1 removes the current limit.",
+        cfs_quota_us : link, set_cfs_quota_us, quota: i64, 500 * 1000
     );
 
-    gen_read!(
+    _gen_reader!(
         "the length of period (in microseconds)",
-        cfs_period_us,
+        cfs_period_us: link,
         u64,
         parse
     );
-
-    gen_write!(
+    _gen_writer!(
         "length of period (in microseconds)",
-        cfs_period_us,
+        cfs_period_us: link,
         set_cfs_period_us,
-        u64,
+        period: u64,
         1000 * 1000
     );
 }
@@ -218,15 +231,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_stat() -> Result<()> {
-        gen_subsystem_test!(
-            Cpu;
-            stat,
-            Stat {
-                nr_periods: 0,
-                nr_throttled: 0,
-                throttled_time: 0
-            }
-        )
+        gen_subsystem_test!(Cpu; stat, Stat { nr_periods: 0, nr_throttled: 0, throttled_time: 0 })
     }
 
     #[test]
@@ -241,13 +246,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_cfs_period_us() -> Result<()> {
-        gen_subsystem_test!(
-            Cpu;
-            cfs_period_us,
-            100 * 1000,
-            set_cfs_period_us,
-            1000 * 1000
-        )
+        gen_subsystem_test!(Cpu; cfs_period_us, 100 * 1000, set_cfs_period_us, 1000 * 1000)
     }
 
     #[test]

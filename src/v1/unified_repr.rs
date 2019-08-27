@@ -8,13 +8,13 @@ use crate::{
 macro_rules! gen_unified_repr {
     ( $( ($subsystem: ident, $subsystem_mut: ident, $kind: ident, $name: literal) ),* $(, )? ) => {
 
-use crate::v1::{$($subsystem),*};
+use crate::v1::{$( $subsystem ),*};
 
-/// Unified representation of a set of cgroups sharing a same name.
+/// Unified representation of a set of cgroups sharing the same name.
 ///
 /// In cgroup v1, a system has multiple directory hierarchies for different sets of subsystems
 /// (typically one subsystem). Each cgroup belongs to a hierarchy, and subsystems attached to that
-/// hierarchy control the resource of that cgroup.
+/// hierarchy control the resources of that cgroup.
 ///
 /// In cgroup v2 (not yet fully implemented in the Linux kernel), on the other hand, a system has
 /// only a single unified hierarchy, and subsystems are differently enabled for each cgroup. This
@@ -23,7 +23,8 @@ use crate::v1::{$($subsystem),*};
 ///
 /// `UnifiedRepr` provides an access to a set of cgroups in the v1 hierarchies as if it is in the v2
 /// hierarchy. A unified representation of a set of cgroups appears to have multiple subsystems,
-/// and the set is controlled by the subsystems simultaneously by calling a single method.
+/// and the set is controlled by the subsystems simultaneously by calling a single method of
+/// `UnifiedRepr`.
 ///
 /// For more information about cgroup v2, see the kernel's documentation
 /// [Documentation/cgroup-v2.txt](https://www.kernel.org/doc/Documentation/cgroup-v2.txt).
@@ -35,13 +36,12 @@ use crate::v1::{$($subsystem),*};
 /// use std::path::PathBuf;
 /// use cgroups::{Pid, v1::{Resources, UnifiedRepr}};
 ///
-/// let pid = Pid::from(std::process::id());
-///
-/// // Define and create a new unified representation of a set of cgroup.
-/// let mut cgroups = UnifiedRepr::new(PathBuf::from("test/test_0"));
+/// // Define and create a new unified representation of a set of cgroups.
+/// let mut cgroups = UnifiedRepr::new(PathBuf::from("students/charlie"));
 /// cgroups.create()?;
 ///
 /// // Attach the self process to the cgroup set.
+/// let pid = Pid::from(std::process::id());
 /// cgroups.add_task(pid)?;
 ///
 /// // Define resource limits and constraints for this cgroup set.
@@ -56,14 +56,14 @@ use crate::v1::{$($subsystem),*};
 /// // Now, remove self from the cgroup set.
 /// cgroups.remove_task(pid)?;
 ///
-/// // And delete the cgroup set.
+/// // ... and delete the cgroup set.
 /// cgroups.delete()?;
 /// # Ok(())
 /// # }
 /// ```
 #[derive(Debug)]
 pub struct UnifiedRepr {
-    $($subsystem: Option<$subsystem::Subsystem>),*
+    $( $subsystem: Option<$subsystem::Subsystem> ),*
 }
 
 impl UnifiedRepr {
@@ -104,7 +104,7 @@ impl UnifiedRepr {
             }
         }
 
-        Self { $($subsystem),* }
+        Self { $( $subsystem ),* }
     }
 
     /// Returns whether a subsystem is supported by this unified representation, i.e. included in
@@ -116,8 +116,9 @@ impl UnifiedRepr {
     /// use std::path::PathBuf;
     /// use cgroups::v1::{SubsystemKind, UnifiedRepr};
     ///
-    /// let name = PathBuf::from("students/charlie");
-    /// let cgroups = UnifiedRepr::with_subsystems(name, &[SubsystemKind::Cpu]);
+    /// let cgroups = UnifiedRepr::with_subsystems(
+    ///     PathBuf::from("students/charlie"), &[SubsystemKind::Cpu]);
+    ///
     /// assert!(cgroups.supports(SubsystemKind::Cpu));
     /// assert!(!cgroups.supports(SubsystemKind::Cpuset));
     /// ```
@@ -185,7 +186,7 @@ impl UnifiedRepr {
         Ok(())
     }
 
-    /// Gets a list of tasks attached to each cgroup of the all supported subsystems.
+    /// Reads a list of tasks attached to each cgroup of the all supported subsystems.
     ///
     /// See [`Cgroup::tasks`] for more information.
     ///
@@ -228,7 +229,7 @@ impl UnifiedRepr {
         Ok(())
     }
 
-    /// Gets a list of processes attached to each cgroup of the all supported subsystems.
+    /// Reads a list of processes attached to each cgroup of the all supported subsystems.
     ///
     /// See [`Cgroup::procs`] for more information.
     ///

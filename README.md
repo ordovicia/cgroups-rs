@@ -10,11 +10,11 @@ Currently this crate supports only cgroup v1 hierarchy, implemented in `v1` modu
 
 ```rust
 use std::path::PathBuf;
-use cgroups::{Pid, Max, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
+use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
 
 // Define and create a new cgroup controlled by the CPU subsystem.
-let name = PathBuf::from("students/charlie");
-let mut cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name));
+let mut cgroup = cpu::Subsystem::new(
+    CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
 cgroup.create()?;
 
 // Attach the self process to the cgroup.
@@ -22,7 +22,7 @@ let pid = Pid::from(std::process::id());
 cgroup.add_task(pid)?;
 
 // Define resource limits and constraints for this cgroup.
-// Here we just use the default (no limits and constraints) for an example.
+// Here we just use the default for an example.
 let resources = Resources::default();
 
 // Apply the resource limits.
@@ -39,7 +39,7 @@ cgroup.remove_task(pid)?;
 // ... and delete the cgroup.
 cgroup.delete()?;
 
-// Note that cgroup handlers does not implement `Drop` and therefore when the
+// Note that subsystem handlers does not implement `Drop` and therefore when the
 // handler is dropped, the cgroup will stay around.
 ```
 

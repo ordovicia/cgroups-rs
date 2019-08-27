@@ -26,14 +26,13 @@ const RELEASE_AGENT: &str = "release_agent";
 /// use std::path::PathBuf;
 /// use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
 ///
-/// let pid = Pid::from(std::process::id());
-///
 /// // Define and create a new cgroup controlled by the CPU subsystem.
-/// let name = PathBuf::from("students/charlie");
-/// let mut cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name));
+/// let mut cgroup = cpu::Subsystem::new(
+///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
 /// cgroup.create()?;
 ///
 /// // Attach the self process to the cgroup.
+/// let pid = Pid::from(std::process::id());
 /// cgroup.add_task(pid)?;
 ///
 /// // Define resource limits and constraints for this cgroup.
@@ -54,7 +53,7 @@ const RELEASE_AGENT: &str = "release_agent";
 /// // ... and delete the cgroup.
 /// cgroup.delete()?;
 ///
-/// // Note that cgroup handlers does not implement `Drop` and therefore when the
+/// // Note that subsystem handlers does not implement `Drop` and therefore when the
 /// // handler is dropped, the cgroup will stay around.
 /// # Ok(())
 /// # }
@@ -93,7 +92,7 @@ pub trait Cgroup {
 
     /// Returns the absolute path to this cgroup.
     ///
-    /// The resulting path is a concatenation of 1) the cgroup mount point `sys/fs/cgroup`, 2) the
+    /// The resulting path is the concatenation of 1) the cgroup mount point `sys/fs/cgroup`, 2) the
     /// directory name for the subsystem of this cgroup, and 3) the cgroup name (e.g.
     /// `students/charlie`).
     ///
@@ -110,7 +109,7 @@ pub trait Cgroup {
     /// ```
     fn path(&self) -> PathBuf;
 
-    /// Returns whether this cgroup is a root cgroup of a subsystem.
+    /// Returns whether this cgroup is the root cgroup of a subsystem.
     ///
     /// # Examples
     ///
@@ -182,13 +181,7 @@ pub trait Cgroup {
     ///
     /// # Errors
     ///
-    /// Returns an error if failed to apply the resource configuration. The kind and lower-level
-    /// source of the error can be obtained with [`Error::kind`] and [`Error::source`] methods.
-    ///
-    /// See also implementors' documentation for their specific behavior.
-    ///
-    /// [`Error::kind`]: ../struct.Error.html#method.kind
-    /// [`Error::source`]: ../struct.Error.html#method.source
+    /// Returns an error if failed to apply the resource configuration.
     ///
     /// # Examples
     ///
@@ -203,8 +196,8 @@ pub trait Cgroup {
     /// let resources = Resources {
     ///         cpu: cpu::Resources {
     ///             shares: Some(1024),
-    ///             cfs_quota_us: Some(500_000),
-    ///             cfs_period_us: Some(1_000_000),
+    ///             cfs_quota_us: Some(500 * 1000),
+    ///             cfs_period_us: Some(1000 * 1000),
     ///         },
     ///         ..Resources::default()
     ///     };
@@ -217,17 +210,17 @@ pub trait Cgroup {
 
     /// Deletes a directory of this cgroup.
     ///
+    /// Deleting the directory will fail if this cgroup is in use (e.g. a task is still attached).
+    ///
     /// # Errors
     ///
     /// Returns an error if failed to delete the directory, with kind [`ErrorKind::Io`].
-    ///
-    /// Deleting the directory will fail if this cgroup is in use (e.g. a task is still attached).
     ///
     /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
     ///
     /// # Examples
     ///
-    /// ```no_use
+    /// ```no_run
     /// # fn main() -> cgroups::Result<()> {
     /// use std::path::PathBuf;
     /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
@@ -264,7 +257,7 @@ pub trait Cgroup {
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
     ///
-    /// println!("{:?}", cgroup.tasks()?);
+    /// let tasks = cgroup.tasks()?;
     /// # Ok(())
     /// # }
     /// ```
@@ -290,7 +283,7 @@ pub trait Cgroup {
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
     ///
-    /// cgroup.add_task(Pid::from(std::process::id()));
+    /// cgroup.add_task(std::process::id().into());
     /// # Ok(())
     /// # }
     /// ```
@@ -347,7 +340,7 @@ pub trait Cgroup {
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
     ///
-    /// println!("{:?}", cgroup.procs()?);
+    /// let procs = cgroup.procs()?;
     /// # Ok(())
     /// # }
     /// ```
@@ -373,7 +366,7 @@ pub trait Cgroup {
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
     ///
-    /// cgroup.add_proc(Pid::from(std::process::id()));
+    /// cgroup.add_proc(std::process::id().into());
     /// # Ok(())
     /// # }
     /// ```
@@ -441,7 +434,7 @@ pub trait Cgroup {
     }
 
     /// Sets whether the system executes the executable written in `release_agent` file when a
-    /// cgroup no longer has any task, from `notify_on_release` file.
+    /// cgroup no longer has any task, by writing to `notify_on_release` file.
     ///
     /// See the kernel's documentation for more information about this field.
     ///
@@ -479,9 +472,8 @@ pub trait Cgroup {
     /// # Errors
     ///
     /// This file is present only in the root cgroup. If you call this method on a non-root cgroup,
-    /// an error is returned with kind [`ErrorKind::InvalidOperation`].
-    ///
-    /// On the root cgroup, returns an error if failed to read `release_agent` file.
+    /// an error is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup, returns
+    /// an error if failed to read `release_agent` file.
     ///
     /// [`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation
     ///
@@ -495,7 +487,7 @@ pub trait Cgroup {
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
     ///
-    /// cgroup.release_agent()?;
+    /// let release_agent = cgroup.release_agent()?;
     /// # Ok(())
     /// # }
     /// ```
@@ -513,7 +505,7 @@ pub trait Cgroup {
         Ok(buf)
     }
 
-    /// Sets a path of executable to be executed when "notify on release" is triggered, i.e. this
+    /// Sets a command to be executed when "notify on release" is triggered, i.e. this
     /// cgroup is emptied of all tasks, by writing to `release_agent` file.
     ///
     /// See the kernel's documentation for more information about this field.
@@ -521,9 +513,8 @@ pub trait Cgroup {
     /// # Errors
     ///
     /// This file is present only in the root cgroup. If you call this method on a non-root cgroup,
-    /// an error is returned with kind [`ErrorKind::InvalidOperation`].
-    ///
-    /// On the root cgroup, returns an error if failed to write to `release_agent` file.
+    /// an error is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup, returns
+    /// an error if failed to write to `release_agent` file.
     ///
     /// [`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation
     ///
@@ -560,7 +551,8 @@ pub trait Cgroup {
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
     ///
-    /// let cpu_stat_exists = cgroup.file_exists("cpu.stat");
+    /// assert!(cgroup.file_exists("cpu.stat"));
+    /// assert!(!cgroup.file_exists("does_not_exist"));
     /// # Ok(())
     /// # }
     /// ```
@@ -619,14 +611,13 @@ pub trait Cgroup {
     fn open_file_write(&mut self, name: &str) -> Result<File> {
         fs::OpenOptions::new()
             .write(true)
-            // .create(true)
             .open(self.path().join(name))
             .map_err(Into::into)
     }
 }
 
 /// Path to a cgroup in a cgroup file system.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CgroupPath {
     subsystem_root: PathBuf, // e.g. /sys/fs/cgroup/cpu
     name: Option<PathBuf>,   // e.g. students/charlie
@@ -637,7 +628,7 @@ impl CgroupPath {
     ///
     /// The resulting path is the concatenation of 1) the cgroup mount point `/sys/fs/cgroup`, 2)
     /// the standard directory name for the subsystem (e.g. `SubsystemKind::Cpu` => `cpu`), and 3)
-    /// the cgroup name (e.g. `students/charlie`).
+    /// the given cgroup name (e.g. `students/charlie`).
     ///
     /// If the name is empty, the resulting path points to the root cgroup of the subsystem.
     ///
@@ -656,7 +647,7 @@ impl CgroupPath {
     /// Create a new `CgroupPath` with a custom subsystem directory name and a cgroup name.
     ///
     /// The resulting path is the concatenation of 1) the cgroup mount point `/sys/fs/cgroup`, 2)
-    /// the given custom directory name, and 3) the cgroup name (e.g. `students/charlie`).
+    /// the given custom directory name, and 3) the given cgroup name (e.g. `students/charlie`).
     ///
     /// If the name is empty, the resulting path points to the root cgroup of the subsystem.
     ///
@@ -703,7 +694,7 @@ impl CgroupPath {
 }
 
 macro_rules! impl_cgroup {
-    ($kind: ident, $($tt: tt)*) => {
+    ($kind: ident, $( $tt: tt )*) => {
         impl Cgroup for Subsystem {
             fn new(path: CgroupPath) -> Self {
                 Self { path }
@@ -725,7 +716,7 @@ macro_rules! impl_cgroup {
                 Box::new(Self::new(self.path.subsystem_root()))
             }
 
-            $($tt)*
+            $( $tt )*
         }
     };
 }
@@ -753,7 +744,7 @@ fn parse_tasks_procs(file: File) -> Result<Vec<Pid>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::v1::cpu;
+    use v1::cpu;
 
     #[test]
     fn test_cgroup_path() {
@@ -778,7 +769,8 @@ mod tests {
     fn test_cgroup_subsystem_kind() {
         macro_rules! t {
             ( $( ($subsystem: ident, $kind: ident) ),* $(, )? ) => {{ $(
-                let cgroup = crate::v1::$subsystem::Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
+                let cgroup = v1::$subsystem::Subsystem::new(
+                    CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
                 assert_eq!(cgroup.subsystem_kind(), SubsystemKind::$kind);
             )* }};
         }

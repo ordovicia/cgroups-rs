@@ -1,4 +1,4 @@
-//! Configuring cgroups using the builder pattern.
+//! Configuring a set of cgroups using the builder pattern.
 //!
 //! [`Builder`] struct is the entry point of the pattern. See its documentation.
 //!
@@ -188,11 +188,11 @@ impl Builder {
         (net_cls, NetCls, NetClsBuilder, "net_cls"),
         (net_prio, NetPrio, NetPrioBuilder, "net_prio"),
         (blkio, BlkIo, BlkIoBuilder, "blkio"),
-        (rdma, Rdma, RdmaBuilder, "rdma"),
+        (rdma, Rdma, RdmaBuilder, "RDMA"),
     }
 
-    // Calling `cpu()` twice will push duplicated `SubsystemKind::Cpu`, but it is not a problem for
-    // `UnifiedRepr::with_subsystems()`.
+    // Calling e.g. `cpu()` twice will push duplicated `SubsystemKind::Cpu`, but it is not a problem
+    // for `UnifiedRepr::with_subsystems()`.
 
     /// Enables monitoring this cgroup via `perf` tool.
     pub fn perf_event(mut self) -> Self {
@@ -213,10 +213,10 @@ impl Builder {
 }
 
 macro_rules! gen_subsystem_builder {
-    ($subsystem: ident, $builder: ident, $name: literal, $($tt: tt)*) => {
-        with_doc! { concat!(
+    ($subsystem: ident, $builder: ident, $name: literal, $( $tt: tt )*) => { with_doc! { concat!(
             $name, " subsystem builder.\n\n",
-            "This struct is crated by [`Builder::", stringify!($subsystem), "`](struct.Builder.html#method.", stringify!($subsystem), ") method."),
+            "This struct is crated by [`Builder::", stringify!($subsystem), "`]",
+            "(struct.Builder.html#method.", stringify!($subsystem), ") method."),
             #[derive(Debug)]
             pub struct $builder {
                 builder: Builder,
@@ -224,7 +224,7 @@ macro_rules! gen_subsystem_builder {
         }
 
         impl $builder {
-            $($tt)*
+            $( $tt )*
 
             with_doc! {
                 concat!("Finishes configuring this ", $name, " subsystem."),
@@ -236,202 +236,219 @@ macro_rules! gen_subsystem_builder {
     };
 }
 
-macro_rules! gen_setter_opt {
-    ($subsystem: ident; $desc: literal, $field: ident, $ty: ty $( as $as: ty )?) => { with_doc! {
-        concat!(
-"Sets ", $desc, ".
-
-See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($field), "`](../", stringify!($subsystem), "/struct.Subsystem.html#method.set_", stringify!($field), ")
-for more information."
-),
-        pub fn $field(mut self, $field: $ty) -> Self {
-            self.builder.resources.$subsystem.$field = Some($field $( as $as )*);
-            self
-        }
-    } };
-}
-
 macro_rules! gen_setter {
-    ($subsystem: ident; $desc: literal, $field: ident, $ty: ty) => { with_doc! {
-        concat!(
-"Sets ", $desc, ".
+    (some; $subsystem: ident, $desc: literal, $field: ident, $ty: ty $( as $as: ty )?) => {
+        gen_setter!(some; $subsystem, $desc, $field, $field, $ty $( as $as )?);
+    };
 
-See [`", stringify!($subsystem), "::Subsystem::set_", stringify!($field), "`](../", stringify!($subsystem), "/struct.Subsystem.html#method.set_", stringify!($field), ")
-for more information."
-),
-        pub fn $field(mut self, $field: $ty) -> Self {
-            self.builder.resources.$subsystem.$field = $field;
+    (
+        some;
+        $subsystem: ident,
+        $desc: literal,
+        $field: ident,
+        $arg: ident,
+        $ty: ty $( as $as: ty )?
+    ) => { with_doc! {
+        gen_setter!(_doc; $desc, $subsystem, $field),
+        pub fn $field(mut self, $arg: $ty) -> Self {
+            self.builder.resources.$subsystem.$field = Some($arg $( as $as )*);
             self
         }
     } };
+
+    ($subsystem: ident, $desc: literal, $field: ident, $ty: ty) => {
+        gen_setter!($subsystem, $desc, $field, $field, $ty);
+    };
+
+    ($subsystem: ident, $desc: literal, $field: ident, $arg: ident, $ty: ty) => { with_doc! {
+        gen_setter!(_doc; $desc, $subsystem, $field),
+        pub fn $field(mut self, $arg: $ty) -> Self {
+            self.builder.resources.$subsystem.$field = $arg;
+            self
+        }
+    } };
+
+    (_doc; $desc: literal, $sub: ident, $field: ident) => { concat!(
+        "Sets ", $desc, ".\n\n",
+        "See [`", stringify!($sub), "::Subsystem::set_", stringify!($field), "`]",
+        "(../", stringify!($sub), "/struct.Subsystem.html#method.set_", stringify!($field), ")",
+        " for more information."
+    ) };
 }
 
 gen_subsystem_builder! {
-    cpu,
-    CpuBuilder,
-    "CPU",
+    cpu, CpuBuilder, "CPU",
 
-    gen_setter_opt!(cpu; "CPU time shares", shares, u64);
-    gen_setter_opt!(cpu; "length of period (in microseconds)", cfs_period_us, u64);
-    gen_setter_opt!(cpu; "total available CPU time within a period (in microseconds)", cfs_quota_us, i64);
+    gen_setter!(some; cpu, "CPU time shares", shares, u64);
+    gen_setter!(some; cpu, "length of period (in microseconds)", cfs_period_us, u64);
+    gen_setter!(some; cpu, "total available CPU time within a period (in microseconds)", cfs_quota_us, i64);
 }
 
 gen_subsystem_builder! {
-    cpuset,
-    CpusetBuilder,
-    "cpuset",
+    cpuset, CpusetBuilder, "cpuset",
 
-    gen_setter_opt!(
-        cpuset;
-        "a set of Cpus on which task in this cgroup can run",
+    gen_setter!(
+        some; cpuset,
+        "a set of CPUs this cgroup can run",
         cpus,
         cpuset::IdSet
     );
 
-    gen_setter_opt!(
-        cpuset;
-        "a set of memory nodes which tasks in this cgroup can use",
+    gen_setter!(
+        some; cpuset,
+        "a set of memory nodes this cgroup can use",
         mems,
         cpuset::IdSet
     );
 
-    gen_setter_opt!(
-        cpuset;
-        "whether the memory used by tasks in this cgroup should beb migrated when memory selection is updated",
+    gen_setter!(
+        some; cpuset,
+        "whether the memory used by this cgroup should beb migrated when memory selection is updated",
         memory_migrate,
+        enable,
         bool
     );
 
-    gen_setter_opt!(
-        cpuset;
+    gen_setter!(
+        some; cpuset,
         "whether the selected CPUs should be exclusive to this cgroup",
         cpu_exclusive,
+        exclusive,
         bool
     );
 
-    gen_setter_opt!(
-        cpuset;
+    gen_setter!(
+        some; cpuset,
         "whether the selected memory nodes should be exclusive to this cgroup",
         mem_exclusive,
+        exclusive,
         bool
     );
 
-    gen_setter_opt!(
-        cpuset;
+    gen_setter!(
+        some; cpuset,
         "whether this cgroup is \"hardwalled\"",
         mem_hardwall,
+        enable,
         bool
     );
 
     /// Sets whether the kernel computes the memory pressure of this cgroup.
     ///
     /// This field is valid only for the root cgroup. Building a non-root cgroup with memory
-    /// pressure computation enabled will raises an error with kind [`ErrorKind::InvalidOperation`].
+    /// pressure computation enabled will raise an error with kind [`ErrorKind::InvalidOperation`].
     ///
     /// [`ErrorKind::InvalidOperation`]: ../../enum.ErrorKind.html#variant.InvalidOperation
-    pub fn memory_pressure_enabled(mut self, enabled: bool) -> Self {
-        self.builder.resources.cpuset.memory_pressure_enabled = Some(enabled);
+    pub fn memory_pressure_enabled(mut self, enable: bool) -> Self {
+        self.builder.resources.cpuset.memory_pressure_enabled = Some(enable);
         self
     }
 
-    gen_setter_opt!(
-        cpuset;
+    gen_setter!(
+        some; cpuset,
         "whether file system buffers are spread across the selected memory nodes",
         memory_spread_page,
+        enable,
         bool
     );
 
-    gen_setter_opt!(
-        cpuset;
+    gen_setter!(
+        some; cpuset,
         "whether file system buffers are spread across the selected memory nodes",
         memory_spread_slab,
+        enable,
         bool
     );
 
-    gen_setter_opt!(
-        cpuset;
+    gen_setter!(
+        some; cpuset,
         "whether the kernel balances the load across the selected CPUs",
         sched_load_balance,
+        enable,
         bool
     );
 
-    gen_setter_opt!(
-        cpuset;
+    gen_setter!(
+        some; cpuset,
         "how much work the kernel do to balance the load on this cgroup",
         sched_relax_domain_level,
+        level,
         i32
     );
 }
 
 gen_subsystem_builder! {
-    memory,
-    MemoryBuilder,
-    "memory",
+    memory, MemoryBuilder, "memory",
 
-    gen_setter_opt!(
-        memory;
+    gen_setter!(
+        some; memory,
         "limit on memory usage by this cgroup",
         limit_in_bytes,
-        u64 as i64 // not i64 because setting `-1` to a new cgroup does not make sense
+        limit,
+        u64 as i64 // not i64 because setting -1 to a new cgroup does not make sense
     );
 
-    gen_setter_opt!(
-        memory;
+    gen_setter!(
+        some; memory,
         "limit on total of memory and swap usage by this cgroup",
         memsw_limit_in_bytes,
+        limit,
         u64 as i64
     );
 
-    gen_setter_opt!(
-        memory;
+    gen_setter!(
+        some; memory,
         "limit on kernel memory usage by this cgroup",
         kmem_limit_in_bytes,
+        limit,
         u64 as i64
     );
 
-    gen_setter_opt!(
-        memory;
+    gen_setter!(
+        some; memory,
         "limit on kernel memory usage for TCP by this cgroup",
         kmem_tcp_limit_in_bytes,
+        limit,
         u64 as i64
     );
 
-    gen_setter_opt!(
-        memory;
+    gen_setter!(
+        some; memory,
         "soft limit on memory usage by this cgroup",
         soft_limit_in_bytes,
+        limit,
         u64 as i64
     );
 
-    gen_setter_opt!(
-        memory;
+    gen_setter!(
+        some; memory,
         "whether pages may be recharged to the new cgroup when a task is moved",
         move_charge_at_immigrate,
+        enable,
         bool
     );
 
-    gen_setter_opt!(
-        memory;
-        "kernel's tendency to swap out pages consumed by this cgroup",
+    gen_setter!(
+        some; memory,
+        "the kernel's tendency to swap out pages consumed by this cgroup",
         swappiness,
         u64
     );
 
-    gen_setter_opt!(
-        memory;
+    gen_setter!(
+        some; memory,
         "whether the OOM killer tries to reclaim memory from the self and descendant cgroups",
         use_hierarchy,
+        use_,
         bool
     );
 }
 
 gen_subsystem_builder! {
-    pids,
-    PidsBuilder,
-    "pids",
+    pids, PidsBuilder, "pids",
 
-    gen_setter_opt!(
-        pids;
+    gen_setter!(
+        some; pids,
         "a maximum number of tasks this cgroup can have",
         max,
         Max<u32>
@@ -439,31 +456,27 @@ gen_subsystem_builder! {
 }
 
 gen_subsystem_builder! {
-    devices,
-    DevicesBuilder,
-    "devices",
+    devices, DevicesBuilder, "devices",
 
     gen_setter!(
-        devices;
-        "a list of allowed device accesses",
+        devices,
+        "a list of allowed device accesses. `deny` list is applied first, and then `allow` list is",
         allow,
         Vec<devices::Access>
     );
 
     gen_setter!(
-        devices;
-        "a list of denied device accesses",
+        devices,
+        "a list of denied device accesses. `deny` list is applied first, and then `allow` list is",
         deny,
         Vec<devices::Access>
     );
 }
 
 gen_subsystem_builder! {
-    hugetlb,
-    HugeTlbBuilder,
-    "hugetlb",
+    hugetlb, HugeTlbBuilder, "hugetlb",
 
-    /// Sets a limit of 2 MB hugepage TLB usage.
+    /// Sets a limit on usage of 2 MB hugepage TLB.
     ///
     /// See [`hugetlb::Subsystem::set_limit`](../hugetlb/struct.Subsystem.html#method.set_limit) for
     /// more information.
@@ -472,7 +485,7 @@ gen_subsystem_builder! {
         self
     }
 
-    /// Sets a limit of 1 GB hugepage TLB usage.
+    /// Sets a limit on usage of 1 GB hugepage TLB.
     ///
     /// See [`hugetlb::Subsystem::set_limit`](../hugetlb/struct.Subsystem.html#method.set_limit) for
     /// more information.
@@ -483,27 +496,23 @@ gen_subsystem_builder! {
 }
 
 gen_subsystem_builder! {
-    net_cls,
-    NetClsBuilder,
-    "net_cls",
+    net_cls, NetClsBuilder, "net_cls",
 
     /// Tags network packet from this cgroup with a class ID.
     ///
     /// See [`net_cls::Subsystem::set_classid`](../net_cls/struct.Subsystem.html#method.set_classid)
     /// for more information.
-    pub fn classid(mut self, class_id: net_cls::ClassId) -> Self {
-        self.builder.resources.net_cls.classid = Some(class_id);
+    pub fn classid(mut self, id: net_cls::ClassId) -> Self {
+        self.builder.resources.net_cls.classid = Some(id);
         self
     }
 }
 
 gen_subsystem_builder! {
-    net_prio,
-    NetPrioBuilder,
-    "net_prio",
+    net_prio, NetPrioBuilder, "net_prio",
 
     gen_setter!(
-        net_prio;
+        net_prio,
         "a map of priorities assigned to traffic originating from this cgroup",
         ifpriomap,
         HashMap<String, u32>
@@ -511,60 +520,65 @@ gen_subsystem_builder! {
 }
 
 gen_subsystem_builder! {
-    blkio,
-    BlkIoBuilder,
-    "blkio",
+    blkio, BlkIoBuilder, "blkio",
 
-    gen_setter_opt!(blkio; "a relative weight of block I/O by this cgroup", weight, u16);
-    gen_setter!(blkio; "overriding weights for each device", weight_device, HashMap<Device, u16>);
+    gen_setter!(
+        some; blkio,
+        "a relative weight of block I/O performed by this cgroup",
+        weight,
+        u16
+    );
+    gen_setter!(blkio, "overriding weights for each device", weight_device, HashMap<Device, u16>);
 
-    gen_setter_opt!(
-        blkio;
+    gen_setter!(
+        some; blkio,
         "a weight this cgroup has while competing against descendant cgroups",
         leaf_weight,
         u16
     );
     gen_setter!(
-        blkio;
+        blkio,
         "overriding leaf weights for each device",
         leaf_weight_device,
         HashMap<Device, u16>
     );
 
     gen_setter!(
-        blkio;
+        blkio,
         "a throttling on read access in terms of bytes/s for each device",
         read_bps_device,
+        bps,
         HashMap<Device, u64>
     );
     gen_setter!(
-        blkio;
+        blkio,
         "a throttling on write access in terms of bytes/s for each device",
         write_bps_device,
+        bps,
         HashMap<Device, u64>
     );
     gen_setter!(
-        blkio;
+        blkio,
         "a throttling on read access in terms of ops/s for each device",
         read_iops_device,
+        iops,
         HashMap<Device, u64>
     );
     gen_setter!(
-        blkio;
+        blkio,
         "a throttling on write access in terms of ops/s for each device",
         write_iops_device,
+        iops,
         HashMap<Device, u64>
     );
 }
 
 gen_subsystem_builder! {
-    rdma,
-    RdmaBuilder,
-    "RDMA",
+    rdma, RdmaBuilder, "RDMA",
 
     gen_setter!(
-        rdma;
-        "limits of the usage of RDMA/IB devices",
+        rdma,
+        "limits on the usage of RDMA/IB devices",
         max,
         HashMap<String, rdma::Limit>
     );

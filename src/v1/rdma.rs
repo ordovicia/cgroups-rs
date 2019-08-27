@@ -1,7 +1,9 @@
 //! Operations on an RDMA subsystem.
 //!
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//!
 //! For more information about this subsystem, see the kernel's documentation
-//! [Documentation/cgroup-v1/rdma.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/rdma.txt).
+//! [Documentation/cgroup-v1/rdma.txt].
 //!
 //! # Examples
 //!
@@ -16,24 +18,24 @@
 //!
 //! // Limit the usage of RDMA/IB devices.
 //! let rdma_limits = [
-//!     (
-//!         "mlx4_0",
-//!         rdma::Limit {
-//!             hca_handle: Max::<u32>::Limit(2),
-//!             hca_object: Max::<u32>::Limit(2000),
-//!         },
-//!     ),
-//!     (
-//!         "ocrdma1",
-//!         rdma::Limit {
-//!             hca_handle: Max::<u32>::Limit(3),
-//!             hca_object: Max::<u32>::Max,
-//!         },
-//!     ),
-//! ]
-//! .iter()
-//! .cloned()
-//! .collect::<HashMap<_, _>>();
+//!         (
+//!             "mlx4_0",
+//!             rdma::Limit {
+//!                 hca_handle: Max::<u32>::Limit(2),
+//!                 hca_object: Max::<u32>::Limit(2000),
+//!             },
+//!         ),
+//!         (
+//!             "ocrdma1",
+//!             rdma::Limit {
+//!                 hca_handle: Max::<u32>::Limit(3),
+//!                 hca_object: Max::<u32>::Max,
+//!             },
+//!         ),
+//!     ]
+//!     .iter()
+//!     .copied()
+//!     .collect::<HashMap<_, _>>();
 //!
 //! rdma_cgroup.set_max(rdma_limits)?;
 //!
@@ -53,6 +55,11 @@
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! [`Subsystem`]: struct.Subsystem.html
+//! [`Cgroup`]: ../trait.Cgroup.html
+//!
+//! [Documentation/cgroup-v1/rdma.txt]: https://www.kernel.org/doc/Documentation/cgroup-v1/rdma.txt
 
 use std::{collections::HashMap, fmt, path::PathBuf};
 
@@ -81,7 +88,7 @@ pub struct Resources {
 }
 
 /// Limit or usage of an RDMA/IB device.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Limit {
     /// Max number or usage of HCA handles.
     pub hca_handle: Max<u32>,
@@ -110,26 +117,27 @@ impl_cgroup! {
 }
 
 impl Subsystem {
-    _gen_read!(
-        no_ref; rdma, Rdma,
+    gen_reader!(
+        rdma, Rdma,
         "the current usage of RDMA/IB devices",
-        current,
-        HashMap<String, Limit>,
-        parse_limits
+        current, HashMap<String, Limit>, parse_limits
     );
 
-    _gen_read!(
+    gen_reader!(
         rdma, Rdma,
         "the usage limits on RDMA/IB devices",
-        max,
-        HashMap<String, Limit>,
-        parse_limits
+        max : link, HashMap<String, Limit>, parse_limits
     );
 
     with_doc! { concat!(
-        _gen_doc!(sets; "usage limits on RDMA/IB devices", rdma, max),
-        _gen_doc!(see; max),
-        _gen_doc!(err_write; rdma, max),
+        gen_doc!(
+            sets; rdma,
+            "usage limits on RDMA/IB devices"
+             : "The first element of the iterator item is device name, and the second is limit for the device.",
+             max
+        ),
+        gen_doc!(see; max),
+        gen_doc!(err_write; rdma, max),
 "# Examples
 
 ```no_run
@@ -141,7 +149,7 @@ let mut cgroup = rdma::Subsystem::new(
     CgroupPath::new(SubsystemKind::Rdma, PathBuf::from(\"students/charlie\")));
 
 let max = [
-        ( 
+        (
             \"mlx4_0\",
             rdma::Limit {
                 hca_handle: Max::<u32>::Limit(3),
@@ -150,7 +158,7 @@ let max = [
         ),
     ]
     .iter()
-    .cloned()
+    .copied()
     .collect::<HashMap<_, _>>();
 
 cgroup.set_max(max)?;

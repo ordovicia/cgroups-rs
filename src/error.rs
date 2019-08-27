@@ -3,8 +3,8 @@ use std::{error::Error as StdError, fmt};
 /// Result type returned from this crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// Error type that can be returned from this crate, in the [`Result::Err`] variant. The lower-level
-/// source of this error can be obtained via `source` method.
+/// Error type that can be returned from this crate, in the [`Result::Err`] variant. The kind and
+/// lower-level source of this error can be obtained via `kind` and `source` methods, respectively.
 ///
 /// [`Result::Err`]: https://doc.rust-lang.org/std/result/enum.Result.html#variant.Err
 #[derive(Debug)]
@@ -19,7 +19,7 @@ pub enum ErrorKind {
     /// Failed to do an I/O operation on a cgroup file system.
     Io,
 
-    /// Failed to parse contents in a cgroup file into a value.
+    /// Failed to parse a content of a cgroup file into a value.
     ///
     /// In a future version, there will be some information attached to this variant.
     Parse,
@@ -29,7 +29,7 @@ pub enum ErrorKind {
     /// In a future version, this variant may have some information attached, or be replaced with
     /// more fine-grained variants.
     ///
-    /// Note that this crate does not catch all errors caused by an invalid argument. In some cases,
+    /// Note that this crate catches not all errors caused by an invalid argument. In some cases,
     /// the system (kernel) raises an lower-level error, and this crate returns an `Error` with
     /// other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
     /// `Error::source` method.
@@ -40,9 +40,9 @@ pub enum ErrorKind {
     /// In a future version, this variant may have some information attached, or be replaced with
     /// more fine-grained variants.
     ///
-    /// Note that this crate does not catch all errors caused by an invalid operation. In some
-    /// cases, the system (kernel) raises an lower-level error, and this crate returns an `Error`
-    /// with other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
+    /// Note that this crate catches not all errors caused by an invalid operation. In some cases,
+    /// the system (kernel) raises an lower-level error, and this crate returns an `Error` with
+    /// other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
     /// `Error::source` method.
     InvalidOperation,
 }
@@ -60,9 +60,9 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self.kind {
             ErrorKind::Io => "Unable to do an I/O operation on a cgroup file system",
-            ErrorKind::Parse => "Unable to parse contents in a cgroup file",
+            ErrorKind::Parse => "Unable to parse a content of a cgroup file",
             ErrorKind::InvalidArgument => "Invalid argument",
-            ErrorKind::InvalidOperation => "The requested operation is invalid",
+            ErrorKind::InvalidOperation => "Invalid operation",
         })?;
 
         if let Some(ref source) = self.source {

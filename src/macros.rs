@@ -1,7 +1,7 @@
 macro_rules! with_doc {
-    ($doc: expr, $($tt: tt)*) => {
+    ($doc: expr, $( $tt: tt )*) => {
         #[doc = $doc]
-        $($tt)*
+        $( $tt )*
     };
 }
 
@@ -29,6 +29,12 @@ macro_rules! hashmap {
     } };
 }
 
+macro_rules! subsystem_file {
+    ($subsystem: ident, $field: ident) => {
+        concat!(stringify!($subsystem), ".", stringify!($field))
+    };
+}
+
 #[cfg(test)]
 macro_rules! gen_subsystem_test {
     // Test create, file_exists, and delete
@@ -51,16 +57,16 @@ macro_rules! gen_subsystem_test {
     } };
 
     // Test a read-only field
-    ($kind: ident; $field: ident, $default: expr) => {{
+    ($kind: ident; $field: ident, $default: expr) => { {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
         cgroup.create()?;
         assert_eq!(cgroup.$field()?, $default);
 
         cgroup.delete()
-    }};
+    } };
 
     // Test a read-write field
-    ($kind: ident; $field: ident, $default: expr, $setter: ident, $val: expr) => {{
+    ($kind: ident; $field: ident, $default: expr, $setter: ident, $val: expr) => { {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
         cgroup.create()?;
         assert_eq!(cgroup.$field()?, $default);
@@ -69,46 +75,40 @@ macro_rules! gen_subsystem_test {
         assert_eq!(cgroup.$field()?, $val);
 
         cgroup.delete()
-    }};
+    } };
 }
 
-#[rustfmt::skip]
-macro_rules! _gen_doc {
-    (reads; $desc: literal, $subsystem: ident, $field: ident $(, $detail: literal )?) => { concat!(
-        "Reads ", $desc, " from `",
-        stringify!($subsystem), ".", stringify!($field), "` file. ",
-        $( $detail, )? "\n\n",
+macro_rules! gen_doc {
+    (reads; $subsystem: ident, $desc: literal $( : $detail: literal )?, $field: ident) => { concat!(
+        "Reads ", $desc, " from `", subsystem_file!($subsystem, $field), "` file.",
+        $( " ", $detail, )? "\n\n",
      ) };
 
-    (sets; $desc: literal, $subsystem: ident, $field: ident $(, $detail: literal )?) => { concat!(
-        "Sets ", $desc, " by writing to `",
-        stringify!($subsystem), ".", stringify!($field), "` file. ",
-        $( $detail, )? "\n\n",
+    (sets; $subsystem: ident, $desc: literal $( : $detail: literal )?, $field: ident) => { concat!(
+        "Sets ", $desc, " by writing to `", subsystem_file!($subsystem, $field), "` file.",
+        $( " ", $detail, )? "\n\n",
     ) };
 
     (see $(; $field: ident )?)  => { concat!(
-        "See" $(, _gen_doc!(_ref; $field), " and" )?, 
+        "See"
+        $(, " [`Resources.", stringify!($field), "`]",
+            "(struct.Resources.html#structfield.", stringify!($field), ") and" )?,
         " the kernel's documentation for more information about this field.\n\n"
-    ) };
-
-    (_ref; $field: ident) => { concat!(
-        " [`Resources.", stringify!($field), "`]",
-        "(struct.Resources.html#structfield.", stringify!($field), ")"
     ) };
 
     (err_read; $subsystem: ident, $field: ident) => { concat!(
         "# Errors\n\n",
-        "Returns an error if failed to read `",
-        stringify!($subsystem), ".", stringify!($field), "` file of this cgroup.\n\n"
+        "Returns an error if failed to read and parse `",
+        subsystem_file!($subsystem, $field), "` file of this cgroup.\n\n"
     ) };
 
     (err_write; $subsystem: ident, $field: ident) => { concat!(
-        "# Errors\n\n", 
+        "# Errors\n\n",
         "Returns an error if failed to write to `",
-        stringify!($subsystem), ".", stringify!($field), "` file of this cgroup.\n\n"
+        subsystem_file!($subsystem, $field), "` file of this cgroup.\n\n"
     ) };
 
-    (eg_read; $subsystem: ident, $kind: ident, $field: ident) => { concat!(
+    (eg_read; $subsystem: ident, $kind: ident, $field: ident $(, $val: expr )*) => { concat!(
 "# Examples
 
 ```no_run
@@ -119,7 +119,7 @@ use cgroups::v1::{", stringify!($subsystem), ", Cgroup, CgroupPath, SubsystemKin
 let cgroup = ", stringify!($subsystem), "::Subsystem::new(
     CgroupPath::new(SubsystemKind::", stringify!($kind), ", PathBuf::from(\"students/charlie\")));
 
-let ", stringify!($field), " = cgroup.", stringify!($field), "()?;
+let ", stringify!($field), " = cgroup.", stringify!($field), "(", stringify!($( $val ),* ), ")?;
 # Ok(())
 # }
 ```") };
@@ -141,66 +141,70 @@ cgroup.", stringify!($setter), "(", stringify!($( $val ),* ), ")?;
 ```") };
 }
 
-macro_rules! _gen_read {
-    ($subsystem: ident, $kind: ident, $desc: literal, $field: ident, $ty: ty, $parser: ident) => {
-        with_doc! { concat!(
-            _gen_doc!(reads; $desc, $subsystem, $field),
-            _gen_doc!(see; $field),
-            _gen_doc!(err_read; $subsystem, $field),
-            _gen_doc!(eg_read; $subsystem, $kind, $field)),
-            pub fn $field(&self) -> Result<$ty> {
-                self.open_file_read(
-                    concat!(stringify!($subsystem), ".", stringify!($field))
-                ).and_then($parser)
-            }
-        }
-    };
-
+macro_rules! gen_reader {
     (
-        no_ref;
         $subsystem: ident,
         $kind: ident,
-        $desc: literal,
-        $field: ident,
+        $desc: literal $( : $detail: literal )?,
+        $field: ident $( : $link : ident )?,
         $ty: ty,
         $parser: ident
-        $(, $detail: literal )?
-    ) => {
-        with_doc! { concat!(
-            _gen_doc!(reads; $desc, $subsystem, $field $(, $detail )?),
-            _gen_doc!(see),
-            _gen_doc!(err_read; $subsystem, $field),
-            _gen_doc!(eg_read; $subsystem, $kind, $field)),
-            pub fn $field(&self) -> Result<$ty> {
-                self.open_file_read(
-                    concat!(stringify!($subsystem), ".", stringify!($field))
-                ).and_then($parser)
-            }
+    ) => { with_doc! { concat!(
+        gen_doc!(reads; $subsystem, $desc $( : $detail )?, $field),
+        _link!($field $( : $link )?),
+        gen_doc!(err_read; $subsystem, $field),
+        gen_doc!(eg_read; $subsystem, $kind, $field)),
+        pub fn $field(&self) -> Result<$ty> {
+            self.open_file_read(subsystem_file!($subsystem, $field)).and_then($parser)
         }
-    };
+    } };
 }
 
-macro_rules! _gen_write {
+macro_rules! gen_writer {
     (
         $subsystem: ident,
         $kind: ident,
-        $desc: literal,
-        $field: ident,
+        $desc: literal $( : $detail: literal )?,
+        $field: ident $( : $link: ident )?,
         $setter: ident,
         $ty: ty,
-        $val: expr
-    ) => {
-        with_doc! { concat!(
-            _gen_doc!(sets; $desc, $subsystem, $field),
-            _gen_doc!(see; $field),
-            _gen_doc!(err_write; $subsystem, $field),
-            _gen_doc!(eg_write; $subsystem, $kind, $setter, $val)),
-            pub fn $setter(&mut self, $field: $ty) -> Result<()> {
-                self.write_file(
-                    concat!(stringify!($subsystem), ".", stringify!($field)), $field)
-            }
+        $( $val: expr ),*
+    ) => { with_doc! { concat!(
+        gen_doc!(sets; $subsystem, $desc $( : $detail )?, $field),
+        _link!($field $( : $link )?),
+        gen_doc!(err_write; $subsystem, $field),
+        gen_doc!(eg_write; $subsystem, $kind, $setter, $( $val ),*)),
+        pub fn $setter(&mut self, $field: $ty) -> Result<()> {
+            self.write_file(subsystem_file!($subsystem, $field), $field)
         }
+    } };
+
+    (
+        $subsystem: ident,
+        $kind: ident,
+        $desc: literal $( : $detail: literal )?,
+        $field: ident $( : $link : ident )?,
+        $setter: ident,
+        $arg: ident : $ty: ty $( as $as: ty )?,
+        $( $val: expr ),*
+    ) => { with_doc! { concat!(
+        gen_doc!(sets; $subsystem, $desc $( : $detail )?, $field),
+        _link!($field $( : $link )?),
+        gen_doc!(err_write; $subsystem, $field),
+        gen_doc!(eg_write; $subsystem, $kind, $setter, $( $val ),*)),
+        pub fn $setter(&mut self, $arg: $ty) -> Result<()> {
+            self.write_file(subsystem_file!($subsystem, $field), $arg $( as $as )?)
+        }
+    } };
+}
+
+macro_rules! _link {
+    ($field: ident : link) => {
+        gen_doc!(see; $field);
     };
+    ($field: ident) => {
+        gen_doc!(see);
+    }
 }
 
 #[cfg(test)]
@@ -209,7 +213,7 @@ mod tests {
     fn test_gen_cgroup_name() {
         assert_eq!(
             gen_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-macros-211")
+            std::path::PathBuf::from("cgroups_rs-macros-215")
         );
     }
 }

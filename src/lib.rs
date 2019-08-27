@@ -21,11 +21,11 @@
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::{Pid, Max, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
+//! use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
 //!
 //! // Define and create a new cgroup controlled by the CPU subsystem.
-//! let name = PathBuf::from("students/charlie");
-//! let mut cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name));
+//! let mut cgroup = cpu::Subsystem::new(
+//!     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
 //! cgroup.create()?;
 //!
 //! // Attach the self process to the cgroup.
@@ -33,7 +33,7 @@
 //! cgroup.add_task(pid)?;
 //!
 //! // Define resource limits and constraints for this cgroup.
-//! // Here we just use the default (no limits and constraints) for an example.
+//! // Here we just use the default for an example.
 //! let resources = Resources::default();
 //!
 //! // Apply the resource limits.
@@ -50,7 +50,7 @@
 //! // ... and delete the cgroup.
 //! cgroup.delete()?;
 //!
-//! // Note that cgroup handlers does not implement `Drop` and therefore when the
+//! // Note that subsystem handlers does not implement `Drop` and therefore when the
 //! // handler is dropped, the cgroup will stay around.
 //! # Ok(())
 //! # }
@@ -159,7 +159,21 @@ use std::{fmt, str::FromStr};
 
 pub use error::{Error, ErrorKind, Result};
 
-/// PID or thread ID for attaching a task in a cgroup.
+/// PID or thread ID for attaching a task to a cgroup.
+///
+/// `Pid` can be converted from [`u32`] and [`std::process::Child`].
+///
+/// ```
+/// use cgroups::Pid;
+///
+/// let pid = Pid::from(42_u32);
+///
+/// let child = std::process::Command::new("sleep").arg("1").spawn().unwrap();
+/// let pid = Pid::from(&child);
+/// ```
+///
+/// [`u32`]: https://doc.rust-lang.org/std/primitive.u32.html
+/// [`std::process::Child`]: https://doc.rust-lang.org/std/process/struct.Child.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Pid(u32); // Max PID is 2^15 on 32-bit systems, 2^22 on 64-bit systems
                      // FIXME: ^ also true for thread IDs?
@@ -177,38 +191,30 @@ impl From<&std::process::Child> for Pid {
 }
 
 impl Into<u32> for Pid {
-    /// Returns the underlying PID or thread ID value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use cgroups::Pid;
-    ///
-    /// let pid: u32 = Pid::from(42).into();
-    /// assert_eq!(pid, 42);
-    /// ```
     fn into(self) -> u32 {
         self.0
     }
 }
 
+impl FromStr for Pid {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let n = s.parse::<u32>()?;
+        Ok(Self(n))
+    }
+}
+
 impl fmt::Display for Pid {
-    /// Formats the underlying PID or thread ID value.
-    ///
-    /// ```
-    /// use cgroups::Pid;
-    ///
-    /// assert_eq!(Pid::from(42).to_string(), "42");
-    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
-/// Limit a number/amount of resources, or not limit.
+/// Limit a number or amount of resources, or not limit.
 ///
-/// `Max` implements [`FromStr`], so you can [`parse`] a string into a `Max`. If failed,
-/// `parse` returns an error with kind [`ErrorKind::Parse`].
+/// `Max` implements [`FromStr`] and [`Display`]. You can convert a string into a `Max` and vice
+/// versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if failed.
 ///
 /// ```
 /// use cgroups::Max;
@@ -218,13 +224,6 @@ impl fmt::Display for Pid {
 ///
 /// let num = "42".parse::<Max<u32>>().unwrap();
 /// assert_eq!(num, Max::<u32>::Limit(42));
-/// ```
-///
-/// `Max` also implements [`Display`]. The resulting format is the number or "max".
-///
-/// ```
-/// use std::string::ToString;
-/// use cgroups::Max;
 ///
 /// assert_eq!(Max::<u32>::Max.to_string(), "max");
 /// assert_eq!(Max::<u32>::Limit(42).to_string(), "42");
@@ -239,17 +238,16 @@ impl fmt::Display for Pid {
 /// ```
 ///
 /// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
+/// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 /// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
 /// [`ErrorKind::Parse`]: enum.ErrorKind.html#variant.Parse
-///
-/// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 ///
 /// [`Default`]: https://doc.rust-lang.org/std/default/trait.Default.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Max<T> {
-    /// Not limit the number/amount of resources.
+    /// Not limit the number or amount of resource.
     Max,
-    /// Limits the number/amount of resources to this value.
+    /// Limits the number or amount of resource to this value.
     Limit(T),
 }
 
@@ -292,7 +290,7 @@ impl<T: fmt::Display> fmt::Display for Max<T> {
 
 /// Linux device number.
 ///
-/// `Device` implements [`FromStr`] and [`Display`]. You can convert a `Device` into a string and
+/// `Device` implements [`FromStr`] and [`Display`]. You can convert a string into a `Device` and
 /// vice versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if failed.
 ///
 /// ```
@@ -315,7 +313,7 @@ impl<T: fmt::Display> fmt::Display for Max<T> {
 /// assert_eq!(dev.to_string(), "8:*");
 /// ```
 ///
-/// `Device` also implements [`From`]`<[u16; 2]>` and `From<[DeviceNumber; 2]`.
+/// `Device` also implements [`From`]`<[u16; 2]>` and `From<[DeviceNumber; 2]>`.
 ///
 /// ```
 /// use cgroups::{Device, DeviceNumber};
@@ -346,8 +344,9 @@ pub struct Device {
 
 /// Device major/minor number.
 ///
-/// `DeviceNumber` implements [`FromStr`] and [`Display`]. You can convert a `DeviceNumber` into
-/// a string and vice versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if failed.
+/// `DeviceNumber` implements [`FromStr`] and [`Display`]. You can convert a string into a
+/// `DeviceNumber` and vice versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if
+/// failed.
 ///
 /// ```
 /// use cgroups::DeviceNumber;

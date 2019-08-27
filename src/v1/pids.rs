@@ -1,7 +1,9 @@
 //! Operations on a pids subsystem.
 //!
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//!
 //! For more information about this subsystem, see the kernel's documentation
-//! [Documentation/cgroup-v1/pids.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/pids.txt).
+//! [Documentation/cgroup-v1/pids.txt].
 //!
 //! # Examples
 //!
@@ -21,16 +23,21 @@
 //! let pid = Pid::from(std::process::id());
 //! pids_cgroup.add_task(pid)?;
 //!
+//! // Do something ...
+//!
 //! println!("cgroup now has {} processes", pids_cgroup.current()?);
 //! println!("cgroup has hit the limit {} times", pids_cgroup.events()?.1);
-//!
-//! // Do something ...
 //!
 //! pids_cgroup.remove_task(pid)?;
 //! pids_cgroup.delete()?;
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! [`Subsystem`]: struct.Subsystem.html
+//! [`Cgroup`]: ../trait.Cgroup.html
+//!
+//! [Documentation/cgroup-v1/pids.txt]: https://www.kernel.org/doc/Documentation/cgroup-v1/pids.txt
 
 use std::path::PathBuf;
 
@@ -73,40 +80,40 @@ impl_cgroup! {
     }
 }
 
+macro_rules! _gen_reader {
+    ($desc: literal, $field: ident $( : $link : ident )?, $ty: ty, $parser: ident) => {
+        gen_reader!(pids, Pids, $desc, $field $( : $link )?, $ty, $parser);
+    };
+}
+
 impl Subsystem {
-    _gen_read!(
-        pids,
-        Pids,
+    _gen_reader!(
         "the maximum number of processes this cgroup can have",
-        max,
+        max: link,
         Max<u32>,
         parse
     );
 
-    _gen_write!(
+    gen_writer!(
         pids,
         Pids,
         "a maximum number of processes this cgroup can have,",
-        max,
+        max: link,
         set_max,
         Max<u32>,
         cgroups::Max::<u32>::Limit(2)
     );
 
-    _gen_read!(
-        no_ref; pids, Pids,
+    _gen_reader!(
         "the number of processes this cgroup currently has",
         current,
         u32,
         parse
     );
 
-    _gen_read!(
-        no_ref; pids, Pids,
+    _gen_reader!(
         "the event counter, i.e. a pair of the maximum number of processes, and the number of times fork failed due to the limit",
-        events,
-        (Max<u32>, u64),
-        parse_events
+        events, (Max<u32>, u64), parse_events
     );
 }
 

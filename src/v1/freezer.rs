@@ -1,13 +1,15 @@
 //! Operations on a freezer subsystem.
 //!
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//!
 //! For more information about this subsystem, see the kernel's documentation
-//! [Documentation/cgroup-v1/freezer-subsystem.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/freezer-subsystem.txt).
+//! [Documentation/cgroup-v1/freezer-subsystem.txt].
 //!
 //! # Examples
 //!
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
-//! use std::{path::PathBuf, process::{self, Command}};
+//! use std::{path::PathBuf, process::Command};
 //! use cgroups::{Pid, v1::{freezer, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut freezer_cgroup = freezer::Subsystem::new(
@@ -35,6 +37,11 @@
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! [`Subsystem`]: struct.Subsystem.html
+//! [`Cgroup`]: ../trait.Cgroup.html
+//!
+//! [Documentation/cgroup-v1/freezer-subsystem.txt]: https://www.kernel.org/doc/Documentation/cgroup-v1/freezer-subsystem.txt
 
 use std::{fmt, path::PathBuf};
 
@@ -50,7 +57,7 @@ pub struct Subsystem {
     path: CgroupPath,
 }
 
-/// Whether tasks in a cgroup is freezed.
+/// Freeze tasks in a cgroup.
 ///
 /// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -127,19 +134,19 @@ impl_cgroup! {
     }
 }
 
-macro_rules! gen_read {
-    ($desc: literal, $field: ident, $ty: ty, $parser: ident) => {
-        _gen_read!(no_ref; freezer, Freezer, $desc, $field, $ty, $parser);
+macro_rules! _gen_reader {
+    ($desc: literal, $field: ident $( : $link: ident )?, $ty: ty, $parser: ident) => {
+        gen_reader!(freezer, Freezer, $desc, $field $( : $link )?, $ty, $parser);
     };
 }
 
-macro_rules! gen_write {
+macro_rules! _gen_writer {
     ($desc: literal, $setter: ident, $val: expr) => {
         with_doc! { concat!(
             $desc, " tasks in this cgroup by writing to `freezer.state` file.\n\n",
-            _gen_doc!(see),
-            _gen_doc!(err_write; freezer, state),
-            _gen_doc!(eg_write; freezer, Freezer, $setter)),
+            gen_doc!(see),
+            gen_doc!(err_write; freezer, state),
+            gen_doc!(eg_write; freezer, Freezer, $setter)),
             pub fn $setter(&mut self) -> Result<()> {
                 self.write_file("freezer.state", $val)
             }
@@ -148,24 +155,29 @@ macro_rules! gen_write {
 }
 
 impl Subsystem {
-    gen_read!("the current state of this cgroup", state, State, parse);
+    _gen_reader!(
+        "the current state of this cgroup",
+        state: link,
+        State,
+        parse
+    );
 
-    gen_read!(
-        "whether this cgroup itself is frozen or in processes of being frozen",
+    _gen_reader!(
+        "whether this cgroup itself is frozen or in processes of being frozen,",
         self_freezing,
         bool,
         parse_01_bool
     );
 
-    gen_read!(
-        "whether any parent cgroups of this cgroup is frozen or in processes of being frozen",
+    _gen_reader!(
+        "whether any parent cgroups of this cgroup is frozen or in processes of being frozen,",
         parent_freezing,
         bool,
         parse_01_bool
     );
 
-    gen_write!("Freezes", freeze, State::Frozen);
-    gen_write!("Thaws, i.e. un-freezes", thaw, State::Thawed);
+    _gen_writer!("Freezes", freeze, State::Frozen);
+    _gen_writer!("Thaws, i.e. un-freezes", thaw, State::Thawed);
 }
 
 impl Into<v1::Resources> for Resources {

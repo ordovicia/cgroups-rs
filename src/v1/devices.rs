@@ -1,7 +1,9 @@
 //! Operations on a devices subsystem.
 //!
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//!
 //! For more information about this subsystem, see the kernel's documentation
-//! [Documentation/cgroup-v1/devices.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/devices.txt).
+//! [Documentation/cgroup-v1/devices.txt].
 //!
 //! # Examples
 //!
@@ -37,6 +39,11 @@
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! [`Subsystem`]: struct.Subsystem.html
+//! [`Cgroup`]: ../trait.Cgroup.html
+//!
+//! [Documentation/cgroup-v1/devices.txt]: https://www.kernel.org/doc/Documentation/cgroup-v1/devices.txt
 
 use std::{fmt, path::PathBuf, str::FromStr};
 
@@ -166,16 +173,15 @@ impl_cgroup! {
     }
 }
 
-#[rustfmt::skip]
-macro_rules! gen_write {
+macro_rules! _gen_writer {
     ($desc: literal, $field: ident) => { with_doc! { concat!(
         $desc, " this cgroup to perform a type of access to devices with specific type and number,",
         " by writing to `devices.", stringify!($field), "` file.\n\n",
-        _gen_doc!(see; $field),
-        _gen_doc!(err_write; devices, $field),
-        gen_write!(_eg; $field)),
+        gen_doc!(see; $field),
+        gen_doc!(err_write; devices, $field),
+        _gen_writer!(_eg; $field)),
         pub fn $field(&mut self, access: &Access) -> Result<()> {
-            self.write_file(concat!("devices.", stringify!($field)), access)
+            self.write_file(subsystem_file!(devices, $field), access)
         }
     } };
 
@@ -203,7 +209,7 @@ cgroup.", stringify!($field), "(&access)?;
 }
 
 impl Subsystem {
-    _gen_read!(
+    gen_reader!(
         devices,
         Devices,
         "allowed device access of this cgroup",
@@ -212,8 +218,8 @@ impl Subsystem {
         parse_list
     );
 
-    gen_write!("Denies", deny);
-    gen_write!("Allows", allow);
+    _gen_writer!("Denies", deny);
+    _gen_writer!("Allows", allow);
 }
 
 fn parse_list(reader: impl std::io::Read) -> Result<Vec<Access>> {

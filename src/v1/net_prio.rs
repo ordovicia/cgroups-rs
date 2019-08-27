@@ -1,7 +1,9 @@
 //! Operations on a net_prio subsystem.
 //!
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//!
 //! For more information about this subsystem, see the kernel's documentation
-//! [Documentation/cgroup-v1/net_prio.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/net_prio.txt).
+//! [Documentation/cgroup-v1/net_prio.txt].
 //!
 //! # Examples
 //!
@@ -10,25 +12,30 @@
 //! use std::{collections::HashMap, path::PathBuf};
 //! use cgroups::{Pid, v1::{self, net_prio, Cgroup, CgroupPath, SubsystemKind}};
 //!
-//! let mut net_cls_cgroup = net_prio::Subsystem::new(
+//! let mut net_prio_cgroup = net_prio::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::NetPrio, PathBuf::from("students/charlie")));
-//! net_cls_cgroup.create()?;
+//! net_prio_cgroup.create()?;
 //!
 //! // Set a map of priorities assigned to traffic originating from this cgroup.
 //! let priorities = [("lo", 0), ("wlp1s0", 1)].iter().copied().collect::<HashMap<_, u32>>();
-//! net_cls_cgroup.set_ifpriomap(priorities)?;
+//! net_prio_cgroup.set_ifpriomap(priorities)?;
 //!
 //! // Add a task to this cgroup.
 //! let pid = Pid::from(std::process::id());
-//! net_cls_cgroup.add_task(pid)?;
+//! net_prio_cgroup.add_task(pid)?;
 //!
 //! // Do something ...
 //!
-//! net_cls_cgroup.remove_task(pid)?;
-//! net_cls_cgroup.delete()?;
+//! net_prio_cgroup.remove_task(pid)?;
+//! net_prio_cgroup.delete()?;
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! [`Subsystem`]: struct.Subsystem.html
+//! [`Cgroup`]: ../trait.Cgroup.html
+//!
+//! [Documentation/cgroup-v1/net_prio.txt]: https://www.kernel.org/doc/Documentation/cgroup-v1/net_prio.txt
 
 use std::{collections::HashMap, path::PathBuf};
 
@@ -75,31 +82,30 @@ impl_cgroup! {
 }
 
 impl Subsystem {
-    _gen_read!(
-        no_ref; net_prio, NetPrio,
+    gen_reader!(
+        net_prio,
+        NetPrio,
         "the system-internal representation of this cgroup",
         prioidx,
         u64,
         parse
     );
 
-    _gen_read!(
+    gen_reader!(
         net_prio, NetPrio,
         "the map of priorities assigned to traffic originating from this cgroup,",
-        ifpriomap,
-        HashMap<String, u32>,
-        parse_ifpriomap
+        ifpriomap : link, HashMap<String, u32>, parse_ifpriomap
     );
 
     with_doc! { concat!(
-        _gen_doc!(
-            sets;
-            "a map of priorities assigned to traffic originating from this cgroup,",
-            net_prio,
+        gen_doc!(
+            sets; net_prio,
+            "a map of priorities assigned to traffic originating from this cgroup,"
+            : "The first element of the iterator item is trafic name, and the second is its priority.",
             ifpriomap
         ),
-        _gen_doc!(see; ifpriomap),
-        _gen_doc!(err_write; net_prio, ifpriomap),
+        gen_doc!(see; ifpriomap),
+        gen_doc!(err_write; net_prio, ifpriomap),
 "# Examples
 
 ```no_run
