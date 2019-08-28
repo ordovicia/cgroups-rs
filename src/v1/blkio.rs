@@ -180,6 +180,19 @@ macro_rules! _gen_reader {
         _gen_reader!(_rec; $recursive, $field, IoService, parse_io_service);
     };
 
+    (throttle; $desc: literal, $field: ident : link) => { with_doc! { concat!(
+        "Reads ", $desc,
+        " for each device, from `blkio.throttle.", stringify!($field), "` file.\n\n",
+        gen_doc!(see; $field),
+        "# Errors\n\n",
+        "Returns an error if failed to read and parse `blkio.throttle.", stringify!($field),
+        "`file of this cgroup.\n\n",
+        gen_doc!(eg_read; blkio, BlkIo, $field)),
+        pub fn $field(&self) -> Result<HashMap<Device, u64>> {
+            self.open_file_read(concat!("blkio.throttle.", stringify!($field))).and_then(parse_map)
+        }
+    } };
+
     (_rec; $recursive: ident, $field: ident, $ty: ty, $parser: ident) => { with_doc! { concat!(
         "Reads from `", subsystem_file!(blkio, $recursive), "` file.",
         " See [`", stringify!($field), "`](#method.", stringify!($field), ")",
@@ -222,12 +235,14 @@ macro_rules! _gen_writer {
         }
     } };
 
-    (throttle; $desc: literal, $field: ident, $setter: ident, $arg: ident, $ty: ty) => { with_doc! {
+    (throttle; $desc: literal, $field: ident : link, $setter: ident, $arg: ident, $ty: ty) => { with_doc! {
         concat!(
             "Throttles ", $desc, " for a device,",
             " by writing to `blkio.throttle.", stringify!($field), "` file.\n\n",
             gen_doc!(see; $field),
-            gen_doc!(err_write; blkio, $field),
+            "# Errors\n\n",
+            "Returns an error if failed to write to `blkio.throttle.", stringify!($field),
+            "`file of this cgroup.\n\n",
             gen_doc!(eg_write; blkio, BlkIo, $setter, [8, 0].into(), 100),
         ),
         pub fn $setter(&mut self, device: Device, $arg: $ty) -> Result<()> {
@@ -329,24 +344,39 @@ impl Subsystem {
         io_queued, io_queued_recursive
     );
 
-    // TODO: read throttle
+    _gen_reader!(
+        throttle; "bandwidth of read access in terms of bytes/s",
+        read_bps_device : link
+    );
+    _gen_reader!(
+        throttle; "bandwidth of write access in terms of bytes/s",
+        write_bps_device : link
+    );
+    _gen_reader!(
+        throttle; "bandwidth of read access in terms of ops/s",
+        read_iops_device : link
+    );
+    _gen_reader!(
+        throttle; "bandwidth of write access in terms of ops/s",
+        write_iops_device : link
+    );
 
     _gen_writer!(
         throttle; "bandwidth of read access in terms of bytes/s",
-        read_bps_device, throttle_read_bps_device, bps, u64
+        read_bps_device : link, throttle_read_bps_device, bps, u64
     );
     _gen_writer!(
         throttle; "bandwidth of write access in terms of bytes/s",
-        write_bps_device, throttle_write_bps_device, bps, u64
+        write_bps_device : link, throttle_write_bps_device, bps, u64
     );
 
     _gen_writer!(
         throttle; "bandwidth of read access in terms of ops/s",
-        read_iops_device, throttle_read_iops_device, iops, u64
+        read_iops_device : link, throttle_read_iops_device, iops, u64
     );
     _gen_writer!(
         throttle; "bandwidth of write access in terms of ops/s",
-        write_iops_device, throttle_write_iops_device, iops, u64
+        write_iops_device : link, throttle_write_iops_device, iops, u64
     );
 
     with_doc! { concat!(
@@ -582,10 +612,20 @@ mod tests {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::BlkIo, gen_cgroup_name!()));
         cgroup.create()?;
 
+        assert!(cgroup.read_bps_device()?.is_empty());
+        assert!(cgroup.write_bps_device()?.is_empty());
+        assert!(cgroup.read_iops_device()?.is_empty());
+        assert!(cgroup.write_iops_device()?.is_empty());
+
         cgroup.throttle_read_bps_device(device, 42)?;
         cgroup.throttle_write_bps_device(device, 42)?;
         cgroup.throttle_read_iops_device(device, 42)?;
         cgroup.throttle_write_iops_device(device, 42)?;
+
+        assert_eq!(cgroup.read_bps_device()?, hashmap![(device, 42)]);
+        assert_eq!(cgroup.write_bps_device()?, hashmap![(device, 42)]);
+        assert_eq!(cgroup.read_iops_device()?, hashmap![(device, 42)]);
+        assert_eq!(cgroup.write_iops_device()?, hashmap![(device, 42)]);
 
         cgroup.delete()
     }
