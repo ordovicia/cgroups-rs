@@ -40,6 +40,9 @@
 use std::{fmt, path::Path};
 
 #[macro_use]
+mod macros;
+
+#[macro_use]
 mod cgroup;
 pub mod blkio;
 pub mod builder;
