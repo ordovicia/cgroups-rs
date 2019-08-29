@@ -114,7 +114,7 @@ macro_rules! _gen_getter {
             "# Errors\n\n",
             "Returns an error if failed to read and parse",
             " `hugetlb.<hugepage size>.", stringify!($in_bytes), "` file of this cgroup.\n\n",
-            gen_doc!(eg_read; hugetlb, HugeTlb, $in_bytes, hugetlb::HugepageSize::Mb2)),
+            gen_doc!(eg_read; hugetlb, $in_bytes, hugetlb::HugepageSize::Mb2)),
             pub fn $in_bytes(&self, size: HugepageSize) -> Result<u64> {
                 self.open_file_read(&format!("hugetlb.{}.{}", size, stringify!($in_bytes)))
                     .and_then(parse)
@@ -178,7 +178,7 @@ impl Subsystem {
         "Returns an error if failed to write to",
         " `hugetlb.<hugepage size>.limit_in_bytes` file of this cgroup.\n\n",
         gen_doc!(
-            eg_write; hugetlb, HugeTlb,
+            eg_write; hugetlb,
             set_limit, hugetlb::HugepageSize::Mb2, hugetlb::Limit::Pages(4)
         )),
         pub fn set_limit(&mut self, size: HugepageSize, limit: Limit) -> Result<()> {
@@ -222,7 +222,7 @@ impl Subsystem {
         "# Error\n\n",
         "Returns an error if failed to read and parse `hugetlb.<hugepage size>.failcnt` file of",
         " this cgroup.\n\n",
-        gen_doc!(eg_read; hugetlb, HugeTlb, failcnt, hugetlb::HugepageSize::Mb2)),
+        gen_doc!(eg_read; hugetlb, failcnt, hugetlb::HugepageSize::Mb2)),
         pub fn failcnt(&self, size: HugepageSize) -> Result<u64> {
             self.open_file_read(&format!("hugetlb.{}.{}", size, FAILCNT))
                 .and_then(parse)

@@ -136,7 +136,7 @@ impl_cgroup! {
 
 macro_rules! _gen_getter {
     ($desc: literal, $field: ident $( : $link: ident )?, $ty: ty, $parser: ident) => {
-        gen_getter!(freezer, Freezer, $desc, $field $( : $link )?, $ty, $parser);
+        gen_getter!(freezer, $desc, $field $( : $link )?, $ty, $parser);
     };
 }
 
@@ -146,7 +146,7 @@ macro_rules! _gen_setter {
             $desc, " tasks in this cgroup by writing to `freezer.state` file.\n\n",
             gen_doc!(see),
             gen_doc!(err_write; freezer, state),
-            gen_doc!(eg_write; freezer, Freezer, $setter)),
+            gen_doc!(eg_write; freezer, $setter)),
             pub fn $setter(&mut self) -> Result<()> {
                 self.write_file("freezer.state", $val)
             }
@@ -219,11 +219,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(
-            Freezer,
-            freezer,
-            ["state", "self_freezing", "parent_freezing"]
-        )
+        gen_subsystem_test!(Freezer, ["state", "self_freezing", "parent_freezing"])
     }
 
     #[test]

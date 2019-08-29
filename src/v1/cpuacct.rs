@@ -81,7 +81,7 @@ impl_cgroup! {
 
 macro_rules! _gen_getter {
     ($desc: literal $( : $detail: literal )?, $field: ident, $ty: ty, $parser: ident) => {
-        gen_getter!(cpuacct, Cpuacct, $desc $( : $detail )?, $field, $ty, $parser);
+        gen_getter!(cpuacct, $desc $( : $detail )?, $field, $ty, $parser);
     };
 }
 
@@ -141,7 +141,7 @@ impl Subsystem {
     with_doc! { concat!(
         "Resets the accounted CPU time of this cgroup by writing to `cpuacct.usage` file.\n\n",
         gen_doc!(err_write; cpuacct, usage),
-        gen_doc!(eg_write; cpuacct, Cpuacct, reset)),
+        gen_doc!(eg_write; cpuacct, reset)),
         pub fn reset(&mut self) -> Result<()> {
             self.write_file("cpuacct.usage", 0)
         }
@@ -224,7 +224,7 @@ mod tests {
     #[rustfmt::skip]
     fn test_subsystem_create_file_exists() -> Result<()> {
         gen_subsystem_test!(
-            Cpuacct, cpuacct,
+            Cpuacct, 
             [
                 "stat", "usage", "usage_all", "usage_percpu", "usage_percpu_sys",
                 "usage_percpu_user", "usage_sys", "usage_user"

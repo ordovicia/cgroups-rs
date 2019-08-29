@@ -119,13 +119,13 @@ impl_cgroup! {
 
 macro_rules! _gen_getter {
     ($desc: literal, $field: ident $( : $link: ident )?, $ty: ty, $parser: ident) => {
-        gen_getter!(cpu, Cpu, $desc, $field $( : $link )?, $ty, $parser);
+        gen_getter!(cpu, $desc, $field $( : $link )?, $ty, $parser);
     };
 }
 
 macro_rules! _gen_setter {
     ($desc: literal, $field: ident : link, $setter: ident, $ty: ty, $val: expr) => {
-        gen_setter!(cpu, Cpu, $desc, $field : link, $setter, $ty, $val);
+        gen_setter!(cpu, $desc, $field : link, $setter, $ty, $val);
     };
 
     (
@@ -135,16 +135,14 @@ macro_rules! _gen_setter {
         $arg: ident : $ty: ty,
         $val: expr
     ) => {
-        gen_setter!(cpu, Cpu, $desc $( : $detail )?, $field : link, $setter, $arg : $ty, $val);
+        gen_setter!(cpu, $desc $( : $detail )?, $field : link, $setter, $arg : $ty, $val);
     };
 }
 
 impl Subsystem {
     _gen_getter!(
         "the throttling statistics of this cgroup",
-        stat,
-        Stat,
-        parse_stat
+        stat, Stat, parse_stat
     );
 
     _gen_getter!("the CPU time shares", shares: link, u64, parse);
@@ -228,7 +226,6 @@ mod tests {
     fn test_subsystem_create_file_exists() -> Result<()> {
         gen_subsystem_test!(
             Cpu,
-            cpu,
             ["stat", "shares", "cfs_quota_us", "cfs_period_us"]
         )
     }

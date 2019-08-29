@@ -84,7 +84,6 @@ impl_cgroup! {
 impl Subsystem {
     gen_getter!(
         net_prio,
-        NetPrio,
         "the system-internal representation of this cgroup",
         prioidx,
         u64,
@@ -92,8 +91,7 @@ impl Subsystem {
     );
 
     gen_getter!(
-        net_prio, NetPrio,
-        "the map of priorities assigned to traffic originating from this cgroup,",
+        net_prio, "the map of priorities assigned to traffic originating from this cgroup,",
         ifpriomap : link, HashMap<String, u32>, parse_ifpriomap
     );
 
@@ -174,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(NetPrio, net_prio, ["prioidx", "ifpriomap"])
+        gen_subsystem_test!(NetPrio, ["prioidx", "ifpriomap"])
     }
 
     #[test]

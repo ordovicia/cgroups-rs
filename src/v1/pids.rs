@@ -82,33 +82,24 @@ impl_cgroup! {
 
 macro_rules! _gen_getter {
     ($desc: literal, $field: ident $( : $link : ident )?, $ty: ty, $parser: ident) => {
-        gen_getter!(pids, Pids, $desc, $field $( : $link )?, $ty, $parser);
+        gen_getter!(pids, $desc, $field $( : $link )?, $ty, $parser);
     };
 }
 
 impl Subsystem {
     _gen_getter!(
         "the maximum number of processes this cgroup can have",
-        max: link,
-        Max<u32>,
-        parse
+        max: link, Max<u32>, parse
     );
 
     gen_setter!(
-        pids,
-        Pids,
-        "a maximum number of processes this cgroup can have,",
-        max: link,
-        set_max,
-        Max<u32>,
-        cgroups::Max::<u32>::Limit(2)
+        pids, "a maximum number of processes this cgroup can have,",
+        max: link, set_max, Max<u32>, cgroups::Max::<u32>::Limit(2)
     );
 
     _gen_getter!(
         "the number of processes this cgroup currently has",
-        current,
-        u32,
-        parse
+        current, u32, parse
     );
 
     _gen_getter!(
@@ -143,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Pids, pids, ["max", "current", "events"])
+        gen_subsystem_test!(Pids, ["max", "current", "events"])
     }
 
     #[test]

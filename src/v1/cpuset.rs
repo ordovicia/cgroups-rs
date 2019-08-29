@@ -231,13 +231,13 @@ const CLONE_CHILDREN: &str = "cgroup.clone_children";
 
 macro_rules! _gen_getter {
     ($desc: literal, $field: ident $( : $link : ident )?, $ty: ty, $parser: ident) => {
-        gen_getter!(cpuset, Cpuset, $desc, $field $( : $link )?, $ty, $parser);
+        gen_getter!(cpuset, $desc, $field $( : $link )?, $ty, $parser);
     };
 }
 
 macro_rules! _gen_setter {
     ($desc: literal, $field: ident : link, $setter: ident, $ty: ty, $val: expr) => {
-        gen_setter!(cpuset, Cpuset, $desc, $field: link, $setter, $ty, $val);
+        gen_setter!(cpuset, $desc, $field: link, $setter, $ty, $val);
     };
 
     (
@@ -247,15 +247,7 @@ macro_rules! _gen_setter {
         $arg: ident : $ty: ty as $as: ty,
         $val: expr
     ) => {
-        gen_setter!(
-            cpuset,
-            Cpuset,
-            $desc,
-            $field: link,
-            $setter,
-            $arg: $ty as $as,
-            $val
-        );
+        gen_setter!(cpuset, $desc, $field: link, $setter, $arg: $ty as $as, $val);
     };
 }
 
@@ -366,7 +358,7 @@ error is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup,
 failed to read and parse `cpuset.memory_pressure_enabled` file.
 
 [`ErrorKind::InvalidOperation`]: ../../enum.ErrorKind.html#variant.InvalidOperation\n\n",
-        gen_doc!(eg_read; cpuset, Cpuset, memory_pressure_enabled)),
+        gen_doc!(eg_read; cpuset, memory_pressure_enabled)),
         pub fn memory_pressure_enabled(&self) -> Result<bool> {
             if self.is_root() {
                 self.open_file_read(MEMORY_PRESSURE_ENABLED)
@@ -391,7 +383,7 @@ error is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup,
 failed to write to `cpuset.memory_pressure_enabled` file.
 
 [`ErrorKind::InvalidOperation`]: ../../enum.ErrorKind.html#variant.InvalidOperation\n\n",
-        gen_doc!(eg_write; cpuset, Cpuset, set_memory_pressure_enabled, true)),
+        gen_doc!(eg_write; cpuset, set_memory_pressure_enabled, true)),
         pub fn set_memory_pressure_enabled(&mut self, enable: bool) -> Result<()> {
             if self.is_root() {
                 self.write_file(MEMORY_PRESSURE_ENABLED, enable as i32)
@@ -467,7 +459,7 @@ Returns an error with kind [`ErrorKind::InvalidArgument`] if the level is out-of
 error if failed to write to `cpuset.sched_relax_domain_level` file of this cgroup.
 
 [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument\n\n",
-        gen_doc!(eg_write; cpuset, Cpuset, set_sched_relax_domain_level, 0)),
+        gen_doc!(eg_write; cpuset, set_sched_relax_domain_level, 0)),
         pub fn set_sched_relax_domain_level(&mut self, level: i32) -> Result<()> {
             if level < -1 || level > 5 {
                 return Err(Error::new(ErrorKind::InvalidArgument));
@@ -486,7 +478,7 @@ error if failed to write to `cpuset.sched_relax_domain_level` file of this cgrou
         ),
         gen_doc!(see),
         gen_doc!(err_read; cgroup, clone_children),
-        gen_doc!(eg_read; cpuset, Cpuset, clone_children)),
+        gen_doc!(eg_read; cpuset, clone_children)),
         pub fn clone_children(&self) -> Result<bool> {
             self.open_file_read(CLONE_CHILDREN).and_then(parse_01_bool)
         }
@@ -501,7 +493,7 @@ error if failed to write to `cpuset.sched_relax_domain_level` file of this cgrou
         ),
         gen_doc!(see),
         gen_doc!(err_write; cgroup, clone_children),
-        gen_doc!(eg_write; cpuset, Cpuset, set_clone_children, true)),
+        gen_doc!(eg_write; cpuset, set_clone_children, true)),
         pub fn set_clone_children(&mut self, clone: bool) -> Result<()> {
             self.write_file(CLONE_CHILDREN, clone as i32)
         }
@@ -709,7 +701,7 @@ mod tests {
 
         // non-root
         gen_subsystem_test!(
-            Cpuset, cpuset,
+            Cpuset, 
             [
                 "cpus", "mems", "memory_migrate", "cpu_exclusive", "mem_exclusive", "mem_hardwall",
                 "memory_pressure", // "memory_pressure_enabled",

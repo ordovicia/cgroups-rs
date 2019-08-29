@@ -202,7 +202,7 @@ impl_cgroup! {
 
 macro_rules! _gen_getter {
     ($desc: literal, $field: ident $( : $link: ident )?, $ty: ty, $parser: ident) => {
-        gen_getter!(memory, Memory, $desc, $field $( : $link )?, $ty, $parser);
+        gen_getter!(memory, $desc, $field $( : $link )?, $ty, $parser);
     };
 
     (
@@ -247,7 +247,7 @@ macro_rules! _gen_getter {
 
 macro_rules! _gen_setter {
     ($desc: literal, $field: ident : link, $setter: ident, $ty: ty, $val: expr) => {
-        gen_setter!(memory, Memory, $desc, $field : link, $setter, $ty, $val);
+        gen_setter!(memory, $desc, $field : link, $setter, $ty, $val);
     };
 
     (
@@ -257,7 +257,7 @@ macro_rules! _gen_setter {
         $arg: ident : $ty: ty as $as: ty,
         $val: expr
     ) => {
-        gen_setter!(memory, Memory, $desc, $field $( : $link )?, $setter, $arg : $ty as $as, $val);
+        gen_setter!(memory, $desc, $field $( : $link )?, $setter, $arg : $ty as $as, $val);
     };
 
     (err_invalid; $field: ident) => { concat!(
@@ -328,7 +328,7 @@ impl Subsystem {
         ),
         gen_doc!(see; limit_in_bytes),
         _gen_setter!(err_invalid; limit_in_bytes),
-        gen_doc!(eg_write; memory, Memory, set_limit_in_bytes, 4 * (1 << 30))),
+        gen_doc!(eg_write; memory, set_limit_in_bytes, 4 * (1 << 30))),
         pub fn set_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
             if self.is_root() {
                 Err(Error::new(ErrorKind::InvalidOperation))
@@ -382,7 +382,7 @@ impl Subsystem {
         ),
         gen_doc!(see; soft_limit_in_bytes),
         _gen_setter!(err_invalid; soft_limit_in_bytes),
-        gen_doc!(eg_write; memory, Memory, set_soft_limit_in_bytes, 4 * (1 << 30))),
+        gen_doc!(eg_write; memory, set_soft_limit_in_bytes, 4 * (1 << 30))),
         pub fn set_soft_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
             if self.is_root() {
                 Err(Error::new(ErrorKind::InvalidOperation))
@@ -465,7 +465,7 @@ impl Subsystem {
         "Makes this cgroup's memory usage empty, by writing to `memory.force_empty` file.\n\n",
         gen_doc!(see),
         gen_doc!(err_write; memory, force_empty),
-        gen_doc!(eg_write; memory, Memory, force_empty)),
+        gen_doc!(eg_write; memory, force_empty)),
         pub fn force_empty(&mut self) -> Result<()> {
             self.write_file("memory.force_empty", 0)
         }
@@ -663,17 +663,20 @@ mod tests {
     #[test]
     #[rustfmt::skip]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Memory, memory, [
-            "stat", "numa_stat", "swappiness", "oom_control", "move_charge_at_immigrate",
-            "use_hierarchy", "force_empty", "soft_limit_in_bytes",
+        gen_subsystem_test!(
+            Memory,
+            [
+                "stat", "numa_stat", "swappiness", "oom_control", "move_charge_at_immigrate",
+                "use_hierarchy", "force_empty", "soft_limit_in_bytes",
 
-            "usage_in_bytes", "max_usage_in_bytes", "limit_in_bytes", "failcnt",
-            // "memsw.usage_in_bytes", "memsw.max_usage_in_bytes", "memsw.limit_in_bytes",
-            // "memsw.failcnt",
-            "kmem.usage_in_bytes", "kmem.max_usage_in_bytes", "kmem.limit_in_bytes", "kmem.failcnt",
-            "kmem.tcp.usage_in_bytes", "kmem.tcp.max_usage_in_bytes", "kmem.tcp.limit_in_bytes",
-            "kmem.tcp.failcnt"
-        ])
+                "usage_in_bytes", "max_usage_in_bytes", "limit_in_bytes", "failcnt",
+                // "memsw.usage_in_bytes", "memsw.max_usage_in_bytes", "memsw.limit_in_bytes",
+                // "memsw.failcnt",
+                "kmem.usage_in_bytes", "kmem.max_usage_in_bytes", "kmem.limit_in_bytes", "kmem.failcnt",
+                "kmem.tcp.usage_in_bytes", "kmem.tcp.max_usage_in_bytes", "kmem.tcp.limit_in_bytes",
+                "kmem.tcp.failcnt"
+            ]
+        )
     }
 
     // TODO: test adding tasks

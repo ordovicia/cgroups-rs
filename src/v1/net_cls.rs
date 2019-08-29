@@ -146,7 +146,7 @@ impl Subsystem {
         gen_doc!(reads; net_cls, "the class ID of network packets from this cgroup,", classid),
         gen_doc!(see; classid),
         gen_doc!(err_read; net_cls, classid),
-        gen_doc!(eg_read; net_cls, NetCls, classid)),
+        gen_doc!(eg_read; net_cls, classid)),
         pub fn classid(&self) -> Result<ClassId> {
             let raw: u32 = self.open_file_read(CLASSID).and_then(parse)?;
             Ok(raw.into())
@@ -157,7 +157,7 @@ impl Subsystem {
         gen_doc!(sets; net_cls, "a class ID to network packets from this cgroup,", classid),
         gen_doc!(see; classid),
         gen_doc!(err_write; net_cls, classid),
-        gen_doc!(eg_write; net_cls, NetCls, set_classid, [0x10, 0x1].into())),
+        gen_doc!(eg_write; net_cls, set_classid, [0x10, 0x1].into())),
         pub fn set_classid(&mut self, id: ClassId) -> Result<()> {
             let raw: u32 = id.into();
             std::fs::write(self.path().join(CLASSID), format!("{:#08X}", raw)).map_err(Into::into)
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(NetCls, net_cls, ["classid"])
+        gen_subsystem_test!(NetCls, ["classid"])
     }
 
     #[test]

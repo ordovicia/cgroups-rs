@@ -211,7 +211,6 @@ cgroup.", stringify!($field), "(&access)?;
 impl Subsystem {
     gen_getter!(
         devices,
-        Devices,
         "allowed device access of this cgroup",
         list,
         Vec<Access>,
@@ -362,7 +361,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Devices, devices, ["allow", "deny", "list"])
+        gen_subsystem_test!(Devices, ["allow", "deny", "list"])
     }
 
     #[test]

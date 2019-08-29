@@ -167,16 +167,16 @@ impl_cgroup! {
 
 macro_rules! _gen_getter {
     ($desc: literal, $field: ident : link, $ty: ty, $parser: ident) => {
-        gen_getter!(blkio, BlkIo, $desc, $field : link, $ty, $parser);
+        gen_getter!(blkio, $desc, $field : link, $ty, $parser);
     };
 
     (map; $desc: literal, $field: ident $( : $link: ident )?, $ty: ty $(, $recursive: ident )?) => {
-        gen_getter!(blkio, BlkIo, $desc, $field $( : $link )?, HashMap<Device, $ty>, parse_map);
+        gen_getter!(blkio, $desc, $field $( : $link )?, HashMap<Device, $ty>, parse_map);
         $( _gen_getter!(_rec; $recursive, $field, HashMap<Device, $ty>, parse_map); )?
     };
 
     (io_service; $desc: literal, $field: ident, $recursive: ident) => {
-        gen_getter!(blkio, BlkIo, $desc, $field, IoService, parse_io_service);
+        gen_getter!(blkio, $desc, $field, IoService, parse_io_service);
         _gen_getter!(_rec; $recursive, $field, IoService, parse_io_service);
     };
 
@@ -187,7 +187,7 @@ macro_rules! _gen_getter {
         "# Errors\n\n",
         "Returns an error if failed to read and parse `blkio.throttle.", stringify!($field),
         "`file of this cgroup.\n\n",
-        gen_doc!(eg_read; blkio, BlkIo, $field)),
+        gen_doc!(eg_read; blkio, $field)),
         pub fn $field(&self) -> Result<HashMap<Device, u64>> {
             self.open_file_read(concat!("blkio.throttle.", stringify!($field))).and_then(parse_map)
         }
@@ -210,7 +210,7 @@ const WEIGHT_MAX: u16 = 1000;
 macro_rules! _gen_setter {
     (weight; $desc: literal, $field: ident : link, $setter: ident) => { with_doc! { concat!(
         _gen_setter!(_sets_see_err_weight; $desc, $field),
-        gen_doc!(eg_write; blkio, BlkIo, $setter, 1000)),
+        gen_doc!(eg_write; blkio, $setter, 1000)),
         pub fn $setter(&mut self, weight: u16) -> Result<()> {
             if weight < WEIGHT_MIN || weight > WEIGHT_MAX {
                 return Err(Error::new(ErrorKind::InvalidArgument));
@@ -222,7 +222,7 @@ macro_rules! _gen_setter {
 
     (weight_map; $desc: literal, $field: ident : link, $setter: ident) => { with_doc!{ concat!(
         _gen_setter!(_sets_see_err_weight; $desc, $field),
-        gen_doc!(eg_write; blkio, BlkIo, $setter, [8, 0].into(), 1000)),
+        gen_doc!(eg_write; blkio, $setter, [8, 0].into(), 1000)),
         pub fn $setter(&mut self, device: Device, weight: u16) -> Result<()> {
             use io::Write;
 
@@ -243,7 +243,7 @@ macro_rules! _gen_setter {
             "# Errors\n\n",
             "Returns an error if failed to write to `blkio.throttle.", stringify!($field),
             "`file of this cgroup.\n\n",
-            gen_doc!(eg_write; blkio, BlkIo, $setter, [8, 0].into(), 100),
+            gen_doc!(eg_write; blkio, $setter, [8, 0].into(), 100),
         ),
         pub fn $setter(&mut self, device: Device, $arg: $ty) -> Result<()> {
             use io::Write;
@@ -384,7 +384,7 @@ impl Subsystem {
         " by writing to `blkio.reset_stats` file.\n\n",
         gen_doc!(see),
         gen_doc!(err_write; blkio, reset_stats),
-        gen_doc!(eg_write; blkio, BlkIo, reset_stats)),
+        gen_doc!(eg_write; blkio, reset_stats)),
         pub fn reset_stats(&mut self) -> Result<()> {
             self.write_file("blkio.reset_stats", 0)
         }
@@ -494,7 +494,7 @@ mod tests {
     #[rustfmt::skip]
     fn test_subsystem_create_file_exists() -> Result<()> {
         gen_subsystem_test!(
-            BlkIo, blkio,
+            BlkIo, 
             [
                 "weight", "weight_device", "leaf_weight", "leaf_weight_device",
                 "throttle.io_service_bytes", "throttle.io_serviced",

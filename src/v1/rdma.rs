@@ -118,14 +118,12 @@ impl_cgroup! {
 
 impl Subsystem {
     gen_getter!(
-        rdma, Rdma,
-        "the current usage of RDMA/IB devices",
+        rdma, "the current usage of RDMA/IB devices",
         current, HashMap<String, Limit>, parse_limits
     );
 
     gen_getter!(
-        rdma, Rdma,
-        "the usage limits on RDMA/IB devices",
+        rdma, "the usage limits on RDMA/IB devices",
         max : link, HashMap<String, Limit>, parse_limits
     );
 
@@ -255,7 +253,7 @@ mod tests {
     #[test]
     #[ignore] // some systems have no RDMA/IB devices
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Rdma, rdma, ["current", "max"])
+        gen_subsystem_test!(Rdma, ["current", "max"])
     }
 
     #[test]

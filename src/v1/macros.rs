@@ -28,7 +28,7 @@ macro_rules! gen_doc {
         subsystem_file!($subsystem, $field), "` file of this cgroup.\n\n"
     ) };
 
-    (eg_read; $subsystem: ident, $kind: ident, $field: ident $(, $val: expr )*) => { concat!(
+    (eg_read; $subsystem: ident, $field: ident $(, $val: expr )*) => { concat!(
 "# Examples
 
 ```no_run
@@ -37,14 +37,14 @@ use std::path::PathBuf;
 use cgroups::v1::{", stringify!($subsystem), ", Cgroup, CgroupPath, SubsystemKind};
 
 let cgroup = ", stringify!($subsystem), "::Subsystem::new(
-    CgroupPath::new(SubsystemKind::", stringify!($kind), ", PathBuf::from(\"students/charlie\")));
+    CgroupPath::new(SubsystemKind::", _kind!($subsystem), ", PathBuf::from(\"students/charlie\")));
 
 let ", stringify!($field), " = cgroup.", stringify!($field), "(", stringify!($( $val ),* ), ")?;
 # Ok(())
 # }
 ```") };
 
-    (eg_write; $subsystem: ident, $kind: ident, $setter: ident $(, $val: expr )*) => { concat!(
+    (eg_write; $subsystem: ident, $setter: ident $(, $val: expr )*) => { concat!(
 "# Examples
 
 ```no_run
@@ -53,7 +53,7 @@ use std::path::PathBuf;
 use cgroups::v1::{", stringify!($subsystem), ", Cgroup, CgroupPath, SubsystemKind};
 
 let mut cgroup = ", stringify!($subsystem), "::Subsystem::new(
-    CgroupPath::new(SubsystemKind::", stringify!($kind), ", PathBuf::from(\"students/charlie\")));
+    CgroupPath::new(SubsystemKind::", _kind!($subsystem), ", PathBuf::from(\"students/charlie\")));
 
 cgroup.", stringify!($setter), "(", stringify!($( $val ),* ), ")?;
 # Ok(())
@@ -64,7 +64,6 @@ cgroup.", stringify!($setter), "(", stringify!($( $val ),* ), ")?;
 macro_rules! gen_getter {
     (
         $subsystem: ident,
-        $kind: ident,
         $desc: literal $( : $detail: literal )?,
         $field: ident $( : $link : ident )?,
         $ty: ty,
@@ -73,7 +72,7 @@ macro_rules! gen_getter {
         gen_doc!(reads; $subsystem, $desc $( : $detail )?, $field),
         _link!($field $( : $link )?),
         gen_doc!(err_read; $subsystem, $field),
-        gen_doc!(eg_read; $subsystem, $kind, $field)),
+        gen_doc!(eg_read; $subsystem, $field)),
         pub fn $field(&self) -> Result<$ty> {
             self.open_file_read(subsystem_file!($subsystem, $field)).and_then($parser)
         }
@@ -83,7 +82,6 @@ macro_rules! gen_getter {
 macro_rules! gen_setter {
     (
         $subsystem: ident,
-        $kind: ident,
         $desc: literal $( : $detail: literal )?,
         $field: ident $( : $link: ident )?,
         $setter: ident,
@@ -93,7 +91,7 @@ macro_rules! gen_setter {
         gen_doc!(sets; $subsystem, $desc $( : $detail )?, $field),
         _link!($field $( : $link )?),
         gen_doc!(err_write; $subsystem, $field),
-        gen_doc!(eg_write; $subsystem, $kind, $setter, $( $val ),*)),
+        gen_doc!(eg_write; $subsystem, $setter, $( $val ),*)),
         pub fn $setter(&mut self, $field: $ty) -> Result<()> {
             self.write_file(subsystem_file!($subsystem, $field), $field)
         }
@@ -101,7 +99,6 @@ macro_rules! gen_setter {
 
     (
         $subsystem: ident,
-        $kind: ident,
         $desc: literal $( : $detail: literal )?,
         $field: ident $( : $link : ident )?,
         $setter: ident,
@@ -111,7 +108,7 @@ macro_rules! gen_setter {
         gen_doc!(sets; $subsystem, $desc $( : $detail )?, $field),
         _link!($field $( : $link )?),
         gen_doc!(err_write; $subsystem, $field),
-        gen_doc!(eg_write; $subsystem, $kind, $setter, $( $val ),*)),
+        gen_doc!(eg_write; $subsystem, $setter, $( $val ),*)),
         pub fn $setter(&mut self, $arg: $ty) -> Result<()> {
             self.write_file(subsystem_file!($subsystem, $field), $arg $( as $as )?)
         }
@@ -121,13 +118,15 @@ macro_rules! gen_setter {
 #[cfg(test)]
 macro_rules! gen_subsystem_test {
     // Test create, file_exists, and delete
-    ($kind: ident, $subsystem: ident, [ $( $file: literal ),* ]) => { {
+    ($kind: ident, [ $( $file: literal ),* ]) => { {
+        use crate::v1::SubsystemKind;
+
         let files = vec![$(
-            format!("{}.{}", stringify!($subsystem), $file)
-        ),+];
+            format!("{}.{}", SubsystemKind::$kind.as_str(), $file)
+        ),*];
 
         let mut cgroup = Subsystem::new(
-            CgroupPath::new(crate::v1::SubsystemKind::$kind, gen_cgroup_name!()));
+            CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
         cgroup.create()?;
 
         assert!(files.iter().all(|f| cgroup.file_exists(f)));
@@ -162,6 +161,45 @@ macro_rules! gen_subsystem_test {
 
         cgroup.delete()
     } };
+}
+
+macro_rules! _kind {
+    (cpu) => {
+        "Cpu"
+    };
+    (cpuset) => {
+        "Cpuset"
+    };
+    (cpuacct) => {
+        "Cpuacct"
+    };
+    (memory) => {
+        "Memory"
+    };
+    (hugetlb) => {
+        "HugeTlb"
+    };
+    (devices) => {
+        "Devices"
+    };
+    (blkio) => {
+        "BlkIo"
+    };
+    (rdma) => {
+        "Rdma"
+    };
+    (net_prio) => {
+        "NetPrio"
+    };
+    (net_cls) => {
+        "NetCls"
+    };
+    (pids) => {
+        "Pids"
+    };
+    (freezer) => {
+        "Freezer"
+    }; // (perf_event) => { "PerfEvent" };
 }
 
 macro_rules! _link {
