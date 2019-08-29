@@ -61,7 +61,7 @@ const RELEASE_AGENT: &str = "release_agent";
 pub trait Cgroup {
     /// Defines a new cgroup with a path.
     ///
-    /// Note that this method does not create a new cgroup. `create` method creates the new
+    /// Note that this method does not create a new cgroup. [`create`] method creates the new
     /// directory for the defined cgroup.
     ///
     /// # Examples
@@ -73,9 +73,11 @@ pub trait Cgroup {
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
     /// ```
+    ///
+    /// [`create`]: #method.create
     fn new(path: CgroupPath) -> Self;
 
-    /// Returns the subsystem kind of this cgroup.
+    /// Returns the subsystem to which this cgroup belongs.
     ///
     /// # Examples
     ///
@@ -84,11 +86,11 @@ pub trait Cgroup {
     /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let cgroup = cpu::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///     CgroupPath::with_subsystem_name("cpu_memory", PathBuf::from("students/charlie")));
     ///
-    /// assert_eq!(cgroup.subsystem_kind(), SubsystemKind::Cpu);
+    /// assert_eq!(cgroup.subsystem(), SubsystemKind::Cpu);
     /// ```
-    fn subsystem_kind(&self) -> SubsystemKind;
+    fn subsystem(&self) -> SubsystemKind;
 
     /// Returns the absolute path to this cgroup.
     ///
@@ -138,18 +140,21 @@ pub trait Cgroup {
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
     ///
     /// let root = cgroup.root_cgroup();
+    ///
+    /// assert!(root.is_root());
     /// assert_eq!(root.path(), PathBuf::from("/sys/fs/cgroup/cpu"));
     /// ```
     fn root_cgroup(&self) -> Box<Self>;
 
     /// Creates a new directory for this cgroup.
     ///
-    /// This method does not create directories recursively; If a parent of the path does not
-    /// exist, an error will be returned. All parent directories must be created before you call
+    /// Note that this method does not create directories recursively; If a parent of the path does
+    /// not exist, an error will be returned. All parent directories must be created before you call
     /// this method.
     ///
-    /// This method does not verify that the subsystem directory (e.g. `/sys/fs/cgroup/cpu`) is a
-    /// mount point of a cgroup file system. No error is returned in this case.
+    /// Also note that this method does not verify that the subsystem directory (e.g.
+    /// `/sys/fs/cgroup/cpu`) is a mount point of a cgroup file system. No error is returned in
+    /// this case.
     ///
     /// # Errors
     ///
@@ -201,16 +206,16 @@ pub trait Cgroup {
     ///         },
     ///         ..Resources::default()
     ///     };
-    /// cgroup.apply(&resources)?;
     ///
+    /// cgroup.apply(&resources)?;
     /// # Ok(())
     /// # }
     /// ```
     fn apply(&mut self, resources: &Resources) -> Result<()>;
 
-    /// Deletes a directory of this cgroup.
+    /// Deletes the directory of this cgroup.
     ///
-    /// Deleting the directory will fail if this cgroup is in use (e.g. a task is still attached).
+    /// Deleting the directory will fail if this cgroup is in use, i.e. a task is still attached.
     ///
     /// # Errors
     ///
@@ -283,22 +288,22 @@ pub trait Cgroup {
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
     ///
-    /// cgroup.add_task(std::process::id().into());
+    /// cgroup.add_task(std::process::id());
     /// # Ok(())
     /// # }
     /// ```
-    fn add_task(&mut self, pid: Pid) -> Result<()> {
-        fs::write(self.path().join(TASKS), format!("{}", pid)).map_err(Into::into)
+    fn add_task(&mut self, pid: impl Into<Pid>) -> Result<()> {
+        fs::write(self.path().join(TASKS), format!("{}", pid.into())).map_err(Into::into)
     }
 
-    /// Removes a task from this cgroup. The task is represented by its thread ID.
-    /// The removed task is moved to the root cgroup of the same subsystem.
+    /// Removes a task from this cgroup by writing a thread ID to `tasks` file of the root cgroup.
     ///
     /// See the kernel's documentation for more information about this field.
     ///
     /// # Errors
     ///
-    /// Returns an error if failed to write to `tasks` file of the root cgroup.
+    /// Returns an error if failed to write to `tasks` file of the root cgroup of the same
+    /// subsystem.
     ///
     /// # Examples
     ///
@@ -317,7 +322,7 @@ pub trait Cgroup {
     /// # Ok(())
     /// # }
     /// ```
-    fn remove_task(&mut self, pid: Pid) -> Result<()> {
+    fn remove_task(&mut self, pid: impl Into<Pid>) -> Result<()> {
         self.root_cgroup().add_task(pid)
     }
 
@@ -348,7 +353,8 @@ pub trait Cgroup {
         self.open_file_read(PROCS).and_then(parse_tasks_procs)
     }
 
-    /// Attaches a process to this cgroup by writing a PID to `cgroup.procs` file.
+    /// Attaches a process to this cgroup, with all threads in the same thread group at once, by
+    /// writing a PID to `cgroup.procs` file.
     ///
     /// See the kernel's documentation for more information about this field.
     ///
@@ -366,23 +372,23 @@ pub trait Cgroup {
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
     ///
-    /// cgroup.add_proc(std::process::id().into());
+    /// cgroup.add_proc(std::process::id());
     /// # Ok(())
     /// # }
     /// ```
-    fn add_proc(&mut self, pid: Pid) -> Result<()> {
-        fs::write(self.path().join(PROCS), format!("{}", pid)).map_err(Into::into)
+    fn add_proc(&mut self, pid: impl Into<Pid>) -> Result<()> {
+        fs::write(self.path().join(PROCS), format!("{}", pid.into())).map_err(Into::into)
     }
 
-    /// Removes a process from this cgroup, with all threads in the same thread group at once. The
-    /// process is represented by its PID.
-    /// The removed process is moved to the root cgroup of the same subsystem.
+    /// Removes a process from this cgroup, with all threads in the same thread group at once, by
+    /// writing a PID to `tasks` file of the root cgroup.
     ///
     /// See the kernel's documentation for more information about this field.
     ///
     /// # Errors
     ///
-    /// Returns an error if failed to write to `cgroup.procs` file of the root cgroup.
+    /// Returns an error if failed to write to `cgroup.procs` file of the root cgroup of the same
+    /// subsytem.
     ///
     /// # Examples
     ///
@@ -401,7 +407,7 @@ pub trait Cgroup {
     /// # Ok(())
     /// # }
     /// ```
-    fn remove_proc(&mut self, pid: Pid) -> Result<()> {
+    fn remove_proc(&mut self, pid: impl Into<Pid>) -> Result<()> {
         self.root_cgroup().add_proc(pid)
     }
 
@@ -641,7 +647,7 @@ impl CgroupPath {
     /// let path = CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie"));
     /// ```
     pub fn new(kind: SubsystemKind, name: PathBuf) -> Self {
-        Self::with_subsystem_name(kind.to_string(), name)
+        Self::with_subsystem_name(kind, name)
     }
 
     /// Create a new `CgroupPath` with a custom subsystem directory name and a cgroup name.
@@ -651,6 +657,10 @@ impl CgroupPath {
     ///
     /// If the name is empty, the resulting path points to the root cgroup of the subsystem.
     ///
+    /// # Panics
+    ///
+    /// Panics if `subsystem_name` is empty.
+    ///
     /// # Examples
     ///
     /// ```
@@ -658,11 +668,16 @@ impl CgroupPath {
     /// use cgroups::v1::CgroupPath;
     ///
     /// let path = CgroupPath::with_subsystem_name(
-    ///     String::from("cpu_memory"),
+    ///     "cpu_memory",
     ///     PathBuf::from("students/charlie"),
     /// );
     /// ```
-    pub fn with_subsystem_name(subsystem_name: String, name: PathBuf) -> Self {
+    pub fn with_subsystem_name(subsystem_name: impl AsRef<Path>, name: PathBuf) -> Self {
+        assert!(
+            !subsystem_name.as_ref().as_os_str().is_empty(),
+            "Subsystem name must not be empty"
+        );
+
         Self {
             subsystem_root: Path::new(v1::CGROUPFS_MOUNT_POINT).join(subsystem_name),
             name: if name.as_os_str().is_empty() {
@@ -694,14 +709,14 @@ impl CgroupPath {
 }
 
 macro_rules! impl_cgroup {
-    ($kind: ident, $( $tt: tt )*) => {
-        impl Cgroup for Subsystem {
+    ($subsystem: ident, $kind: ident, $( $tt: tt )*) => {
+        impl Cgroup for $subsystem {
             fn new(path: CgroupPath) -> Self {
                 Self { path }
             }
 
-            fn subsystem_kind(&self) -> SubsystemKind {
-                SubsystemKind::$kind
+            fn subsystem(&self) -> crate::v1::SubsystemKind {
+                crate::v1::SubsystemKind::$kind
             }
 
             fn path(&self) -> PathBuf {
@@ -747,31 +762,12 @@ mod tests {
     use v1::cpu;
 
     #[test]
-    fn test_cgroup_path() {
-        let name = gen_cgroup_name!();
-        let cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name.clone()));
-        assert_eq!(
-            cgroup.path(),
-            PathBuf::from("/sys/fs/cgroup/cpu").join(name)
-        );
-    }
-
-    #[test]
-    fn test_cgroup_root_cgroup() {
-        let cgroup = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
-        assert_eq!(
-            cgroup.root_cgroup().path(),
-            PathBuf::from("/sys/fs/cgroup/cpu")
-        );
-    }
-
-    #[test]
-    fn test_cgroup_subsystem_kind() {
+    fn test_cgroup_subsystem() {
         macro_rules! t {
             ( $( ($subsystem: ident, $kind: ident) ),* $(, )? ) => {{ $(
                 let cgroup = v1::$subsystem::Subsystem::new(
                     CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
-                assert_eq!(cgroup.subsystem_kind(), SubsystemKind::$kind);
+                assert_eq!(cgroup.subsystem(), SubsystemKind::$kind);
             )* }};
         }
 
@@ -780,13 +776,13 @@ mod tests {
             (cpuset, Cpuset),
             (cpuacct, Cpuacct),
             (memory, Memory),
-            (pids, Pids),
-            (devices, Devices),
             (hugetlb, HugeTlb),
-            (net_cls, NetCls),
-            (net_prio, NetPrio),
+            (devices, Devices),
             (blkio, BlkIo),
             (rdma, Rdma),
+            (net_prio, NetPrio),
+            (net_cls, NetCls),
+            (pids, Pids),
             (freezer, Freezer),
             (perf_event, PerfEvent),
         }
@@ -808,7 +804,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // `cargo test` must not be executed in parallel for this test
+    #[ignore] // must not be executed in parallel
     fn test_cgroup_add_get_remove_tasks() -> Result<()> {
         use std::process::{self, Command};
 
@@ -826,6 +822,7 @@ mod tests {
         assert!(cgroup.tasks()? == vec![pid, child_pid] || cgroup.tasks()? == vec![child_pid, pid]);
 
         child.wait()?;
+        assert!(cgroup.tasks()? == vec![pid]);
 
         cgroup.remove_task(pid)?;
         assert!(cgroup.tasks()?.is_empty());
@@ -845,13 +842,13 @@ mod tests {
         cgroup.add_proc(pid)?;
         assert_eq!(cgroup.procs()?, vec![pid]);
 
-        // child processes are automatically added to the cgroup
+        // automatically added to the cgroup
         let mut child = Command::new("sleep").arg("1").spawn().unwrap();
         let child_pid = Pid::from(&child);
-
         assert!(cgroup.procs()? == vec![pid, child_pid] || cgroup.procs()? == vec![child_pid, pid]);
 
         child.wait()?;
+        assert!(cgroup.procs()? == vec![pid]);
 
         cgroup.remove_proc(pid)?;
         assert!(cgroup.procs()?.is_empty());
@@ -907,14 +904,26 @@ mod tests {
 
     #[test]
     fn test_cgroup_file_exists() -> Result<()> {
+        // root
+        let root = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, PathBuf::new()));
+        assert!([TASKS, PROCS, NOTIFY_ON_RELEASE, RELEASE_AGENT]
+            .iter()
+            .all(|f| root.file_exists(f)));
+        assert!(!root.file_exists("does_not_exist"));
+
+        // non-root
+        let files = [TASKS, PROCS, NOTIFY_ON_RELEASE];
         let mut cgroup =
             cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;
 
-        assert!(cgroup.file_exists("tasks"));
+        assert!(files.iter().all(|f| cgroup.file_exists(f)));
         assert!(!cgroup.file_exists("does_not_exist"));
 
-        cgroup.delete()
+        cgroup.delete()?;
+        assert!(files.iter().all(|f| !cgroup.file_exists(f)));
+
+        Ok(())
     }
 
     #[test]
@@ -959,10 +968,7 @@ mod tests {
 
     #[test]
     fn test_cgroup_path_with_subsystem_name() {
-        let path = CgroupPath::with_subsystem_name(
-            String::from("cpu_memory"),
-            PathBuf::from("students/charlie"),
-        );
+        let path = CgroupPath::with_subsystem_name("cpu_memory", PathBuf::from("students/charlie"));
         assert_eq!(
             path.to_path_buf(),
             PathBuf::from("/sys/fs/cgroup/cpu_memory/students/charlie")
@@ -970,10 +976,18 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn panic_cgroup_path_with_subsystem_name() {
+        CgroupPath::with_subsystem_name("", PathBuf::from("students/charlie"));
+    }
+
+    #[test]
     fn test_cgroup_path_subsystem_root() {
         let path = CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie"));
-        let root = path.subsystem_root();
+        assert!(!path.is_subsystem_root());
 
+        let root = path.subsystem_root();
+        assert!(root.is_subsystem_root());
         assert_eq!(root.to_path_buf(), PathBuf::from("/sys/fs/cgroup/cpu"),);
     }
 }

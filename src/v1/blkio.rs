@@ -165,19 +165,19 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_reader {
+macro_rules! _gen_getter {
     ($desc: literal, $field: ident : link, $ty: ty, $parser: ident) => {
-        gen_reader!(blkio, BlkIo, $desc, $field : link, $ty, $parser);
+        gen_getter!(blkio, BlkIo, $desc, $field : link, $ty, $parser);
     };
 
     (map; $desc: literal, $field: ident $( : $link: ident )?, $ty: ty $(, $recursive: ident )?) => {
-        gen_reader!(blkio, BlkIo, $desc, $field $( : $link )?, HashMap<Device, $ty>, parse_map);
-        $( _gen_reader!(_rec; $recursive, $field, HashMap<Device, $ty>, parse_map); )?
+        gen_getter!(blkio, BlkIo, $desc, $field $( : $link )?, HashMap<Device, $ty>, parse_map);
+        $( _gen_getter!(_rec; $recursive, $field, HashMap<Device, $ty>, parse_map); )?
     };
 
     (io_service; $desc: literal, $field: ident, $recursive: ident) => {
-        gen_reader!(blkio, BlkIo, $desc, $field, IoService, parse_io_service);
-        _gen_reader!(_rec; $recursive, $field, IoService, parse_io_service);
+        gen_getter!(blkio, BlkIo, $desc, $field, IoService, parse_io_service);
+        _gen_getter!(_rec; $recursive, $field, IoService, parse_io_service);
     };
 
     (throttle; $desc: literal, $field: ident : link) => { with_doc! { concat!(
@@ -207,9 +207,9 @@ macro_rules! _gen_reader {
 const WEIGHT_MIN: u16 = 10;
 const WEIGHT_MAX: u16 = 1000;
 
-macro_rules! _gen_writer {
+macro_rules! _gen_setter {
     (weight; $desc: literal, $field: ident : link, $setter: ident) => { with_doc! { concat!(
-        _gen_writer!(_sets_see_err_weight; $desc, $field),
+        _gen_setter!(_sets_see_err_weight; $desc, $field),
         gen_doc!(eg_write; blkio, BlkIo, $setter, 1000)),
         pub fn $setter(&mut self, weight: u16) -> Result<()> {
             if weight < WEIGHT_MIN || weight > WEIGHT_MAX {
@@ -221,7 +221,7 @@ macro_rules! _gen_writer {
     } };
 
     (weight_map; $desc: literal, $field: ident : link, $setter: ident) => { with_doc!{ concat!(
-        _gen_writer!(_sets_see_err_weight; $desc, $field),
+        _gen_setter!(_sets_see_err_weight; $desc, $field),
         gen_doc!(eg_write; blkio, BlkIo, $setter, [8, 0].into(), 1000)),
         pub fn $setter(&mut self, device: Device, weight: u16) -> Result<()> {
             use io::Write;
@@ -269,112 +269,112 @@ error if failed to write to `", subsystem_file!(blkio, $field), "` file of this 
 }
 
 impl Subsystem {
-    _gen_reader!(
+    _gen_getter!(
         "the relative weight of block I/O performed by this cgroup,",
         weight: link,
         u16,
         parse
     );
-    _gen_writer!(
+    _gen_setter!(
         weight; "a relative weight of block I/O performed by this cgroup,",
         weight : link, set_weight
     );
 
-    _gen_reader!(map; "the overriding weight for devices", weight_device : link, u16);
-    _gen_writer!(
+    _gen_getter!(map; "the overriding weight for devices", weight_device : link, u16);
+    _gen_setter!(
         weight_map; "the overriding weight for a device",
         weight_device : link, set_weight_device
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the weight this cgroup has while competing against descendant cgroups,",
         leaf_weight: link,
         u16,
         parse
     );
-    _gen_writer!(
+    _gen_setter!(
         weight; "a weight this cgroup has while competing against descendant cgroups,",
         leaf_weight : link, set_leaf_weight
     );
 
-    _gen_reader!(
+    _gen_getter!(
         map; "the overriding leaf weight for devices",
         leaf_weight_device : link, u16
     );
-    _gen_writer!(
+    _gen_setter!(
         weight_map; "the overriding leaf weight for a device",
         leaf_weight_device : link, set_leaf_weight_device
     );
 
-    _gen_reader!(
+    _gen_getter!(
         map; "the I/O time allocated to this cgroup per device (in milliseconds)",
         time, u64, time_recursive
     );
 
-    _gen_reader!(
+    _gen_getter!(
         map; "the number of sectors transferred by this cgroup,",
         sectors, u64, sectors_recursive
     );
 
-    _gen_reader!(
+    _gen_getter!(
         io_service; "the I/O service transferred by this cgroup (in bytes)",
         io_service_bytes, io_service_bytes_recursive
     );
-    _gen_reader!(
+    _gen_getter!(
         io_service; "the I/O service transferred by this cgroup (in operation count)",
         io_serviced, io_serviced_recursive
     );
-    _gen_reader!(
+    _gen_getter!(
         io_service; "the I/O service transferred by this cgroup (in nanoseconds)",
         io_service_time, io_service_time_recursive
     );
 
-    _gen_reader!(
+    _gen_getter!(
         io_service; "the total time the I/O for this cgroup spent waiting for service,",
         io_wait_time, io_wait_time_recursive
     );
 
-    _gen_reader!(
+    _gen_getter!(
         io_service; "the number of BIOS requests merged into I/O requests belonging to this cgroup,",
         io_merged, io_merged_recursive
     );
 
-    _gen_reader!(
+    _gen_getter!(
         io_service; "the number of I/O operations queued by this cgroup,",
         io_queued, io_queued_recursive
     );
 
-    _gen_reader!(
+    _gen_getter!(
         throttle; "bandwidth of read access in terms of bytes/s",
         read_bps_device : link
     );
-    _gen_reader!(
+    _gen_getter!(
         throttle; "bandwidth of write access in terms of bytes/s",
         write_bps_device : link
     );
-    _gen_reader!(
+    _gen_getter!(
         throttle; "bandwidth of read access in terms of ops/s",
         read_iops_device : link
     );
-    _gen_reader!(
+    _gen_getter!(
         throttle; "bandwidth of write access in terms of ops/s",
         write_iops_device : link
     );
 
-    _gen_writer!(
+    _gen_setter!(
         throttle; "bandwidth of read access in terms of bytes/s",
         read_bps_device : link, throttle_read_bps_device, bps, u64
     );
-    _gen_writer!(
+    _gen_setter!(
         throttle; "bandwidth of write access in terms of bytes/s",
         write_bps_device : link, throttle_write_bps_device, bps, u64
     );
 
-    _gen_writer!(
+    _gen_setter!(
         throttle; "bandwidth of read access in terms of ops/s",
         read_iops_device : link, throttle_read_iops_device, iops, u64
     );
-    _gen_writer!(
+    _gen_setter!(
         throttle; "bandwidth of write access in terms of ops/s",
         write_iops_device : link, throttle_write_iops_device, iops, u64
     );
@@ -653,7 +653,7 @@ mod tests {
             hashmap![([7, 26].into(), 256), ([259, 0].into(), 65536),]
         );
 
-        assert_eq!(parse_map(&b""[..])?, HashMap::<Device, u32>::new());
+        assert_eq!(parse_map("".as_bytes())?, HashMap::<Device, u32>::new());
 
         Ok(())
     }

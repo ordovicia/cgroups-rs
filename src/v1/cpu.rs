@@ -117,15 +117,15 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_reader {
+macro_rules! _gen_getter {
     ($desc: literal, $field: ident $( : $link: ident )?, $ty: ty, $parser: ident) => {
-        gen_reader!(cpu, Cpu, $desc, $field $( : $link )?, $ty, $parser);
+        gen_getter!(cpu, Cpu, $desc, $field $( : $link )?, $ty, $parser);
     };
 }
 
-macro_rules! _gen_writer {
+macro_rules! _gen_setter {
     ($desc: literal, $field: ident : link, $setter: ident, $ty: ty, $val: expr) => {
-        gen_writer!(cpu, Cpu, $desc, $field : link, $setter, $ty, $val);
+        gen_setter!(cpu, Cpu, $desc, $field : link, $setter, $ty, $val);
     };
 
     (
@@ -135,40 +135,40 @@ macro_rules! _gen_writer {
         $arg: ident : $ty: ty,
         $val: expr
     ) => {
-        gen_writer!(cpu, Cpu, $desc $( : $detail )?, $field : link, $setter, $arg : $ty, $val);
+        gen_setter!(cpu, Cpu, $desc $( : $detail )?, $field : link, $setter, $arg : $ty, $val);
     };
 }
 
 impl Subsystem {
-    _gen_reader!(
+    _gen_getter!(
         "the throttling statistics of this cgroup",
         stat,
         Stat,
         parse_stat
     );
 
-    _gen_reader!("the CPU time shares", shares: link, u64, parse);
-    _gen_writer!("CPU time shares", shares: link, set_shares, u64, 2048);
+    _gen_getter!("the CPU time shares", shares: link, u64, parse);
+    _gen_setter!("CPU time shares", shares: link, set_shares, u64, 2048);
 
-    _gen_reader!(
+    _gen_getter!(
         "the total available CPU time within a period (in microseconds)",
         cfs_quota_us: link,
         i64,
         parse
     );
-    _gen_writer!(
+    _gen_setter!(
         "total available CPU time within a period (in microseconds)"
         : "Setting -1 removes the current limit.",
         cfs_quota_us : link, set_cfs_quota_us, quota: i64, 500 * 1000
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the length of period (in microseconds)",
         cfs_period_us: link,
         u64,
         parse
     );
-    _gen_writer!(
+    _gen_setter!(
         "length of period (in microseconds)",
         cfs_period_us: link,
         set_cfs_period_us,
@@ -266,7 +266,10 @@ throttled_time 32
             }
         );
 
-        assert_eq!(parse_stat(&b""[..]).unwrap_err().kind(), ErrorKind::Parse);
+        assert_eq!(
+            parse_stat("".as_bytes()).unwrap_err().kind(),
+            ErrorKind::Parse
+        );
 
         Ok(())
     }

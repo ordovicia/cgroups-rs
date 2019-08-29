@@ -105,7 +105,7 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_reader {
+macro_rules! _gen_getter {
     ($desc: literal, $in_bytes: ident, $in_pages: ident) => {
         with_doc! { concat!(
             "Reads ", $desc, " in bytes from",
@@ -164,7 +164,7 @@ impl Subsystem {
             && self.file_exists(&format!("hugetlb.{}.{}", size, FAILCNT))
     }
 
-    _gen_reader!(
+    _gen_getter!(
         "the limit of hugepage TLB usage",
         limit_in_bytes,
         limit_in_pages
@@ -203,13 +203,13 @@ impl Subsystem {
         self.set_limit_in_bytes(size, pages_to_bytes(pages, size))
     }
 
-    _gen_reader!(
+    _gen_getter!(
         "the current usage of hugepage TLB",
         usage_in_bytes,
         usage_in_pages
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the maximum recorded usage of hugepage TLB",
         max_usage_in_bytes,
         max_usage_in_pages

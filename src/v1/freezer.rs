@@ -134,13 +134,13 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_reader {
+macro_rules! _gen_getter {
     ($desc: literal, $field: ident $( : $link: ident )?, $ty: ty, $parser: ident) => {
-        gen_reader!(freezer, Freezer, $desc, $field $( : $link )?, $ty, $parser);
+        gen_getter!(freezer, Freezer, $desc, $field $( : $link )?, $ty, $parser);
     };
 }
 
-macro_rules! _gen_writer {
+macro_rules! _gen_setter {
     ($desc: literal, $setter: ident, $val: expr) => {
         with_doc! { concat!(
             $desc, " tasks in this cgroup by writing to `freezer.state` file.\n\n",
@@ -155,29 +155,29 @@ macro_rules! _gen_writer {
 }
 
 impl Subsystem {
-    _gen_reader!(
+    _gen_getter!(
         "the current state of this cgroup",
         state: link,
         State,
         parse
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "whether this cgroup itself is frozen or in processes of being frozen,",
         self_freezing,
         bool,
         parse_01_bool
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "whether any parent cgroups of this cgroup is frozen or in processes of being frozen,",
         parent_freezing,
         bool,
         parse_01_bool
     );
 
-    _gen_writer!("Freezes", freeze, State::Frozen);
-    _gen_writer!("Thaws, i.e. un-freezes", thaw, State::Thawed);
+    _gen_setter!("Freezes", freeze, State::Frozen);
+    _gen_setter!("Thaws, i.e. un-freezes", thaw, State::Thawed);
 }
 
 impl Into<v1::Resources> for Resources {

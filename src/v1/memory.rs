@@ -54,7 +54,7 @@ use std::{
 };
 
 use crate::{
-    parse::{parse, parse_01_bool, parse_option},
+    parse::{parse, parse_01_bool, parse_01_bool_option, parse_option},
     v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
     Error, ErrorKind, Result,
 };
@@ -200,9 +200,9 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_reader {
+macro_rules! _gen_getter {
     ($desc: literal, $field: ident $( : $link: ident )?, $ty: ty, $parser: ident) => {
-        gen_reader!(memory, Memory, $desc, $field $( : $link )?, $ty, $parser);
+        gen_getter!(memory, Memory, $desc, $field $( : $link )?, $ty, $parser);
     };
 
     (
@@ -213,8 +213,8 @@ macro_rules! _gen_reader {
         $tcp: ident,
         $ty: ty
     ) => {
-        _gen_reader!($desc, $field $( : $link )?, $ty, parse);
-        _gen_reader!(_variants; $field, $memsw, $kmem, $tcp, $ty);
+        _gen_getter!($desc, $field $( : $link )?, $ty, parse);
+        _gen_getter!(_variants; $field, $memsw, $kmem, $tcp, $ty);
     };
 
     // `memsw`, `kmem`, `kmem.tcp` variants
@@ -245,9 +245,9 @@ macro_rules! _gen_reader {
     };
 }
 
-macro_rules! _gen_writer {
+macro_rules! _gen_setter {
     ($desc: literal, $field: ident : link, $setter: ident, $ty: ty, $val: expr) => {
-        gen_writer!(memory, Memory, $desc, $field : link, $setter, $ty, $val);
+        gen_setter!(memory, Memory, $desc, $field : link, $setter, $ty, $val);
     };
 
     (
@@ -257,7 +257,7 @@ macro_rules! _gen_writer {
         $arg: ident : $ty: ty as $as: ty,
         $val: expr
     ) => {
-        gen_writer!(memory, Memory, $desc, $field $( : $link )?, $setter, $arg : $ty as $as, $val);
+        gen_setter!(memory, Memory, $desc, $field $( : $link )?, $setter, $arg : $ty as $as, $val);
     };
 
     (err_invalid; $field: ident) => { concat!(
@@ -272,21 +272,21 @@ if failed to write to `memory.", stringify!($field), "` file of this cgroup.
 }
 
 impl Subsystem {
-    _gen_reader!(
+    _gen_getter!(
         "statistics of memory usage of this cgroup",
         stat,
         Stat,
         parse_stat
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "statistics of memory usage per NUMA node of this cgroup",
         numa_stat,
         NumaStat,
         parse_numa_stat
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the memory usage of this cgroup",
         usage_in_bytes,
         memsw_usage_in_bytes,
@@ -295,7 +295,7 @@ impl Subsystem {
         u64
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the maximum memory usage of this cgroup",
         max_usage_in_bytes,
         memsw_max_usage_in_bytes,
@@ -304,7 +304,7 @@ impl Subsystem {
         u64
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the limit on memory usage (including file cache) of this cgroup",
         limit_in_bytes: link,
         memsw_limit_in_bytes,
@@ -313,7 +313,7 @@ impl Subsystem {
         u64
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the soft limit on memory usage of this cgroup",
         soft_limit_in_bytes: link,
         u64,
@@ -327,7 +327,7 @@ impl Subsystem {
             limit_in_bytes
         ),
         gen_doc!(see; limit_in_bytes),
-        _gen_writer!(err_invalid; limit_in_bytes),
+        _gen_setter!(err_invalid; limit_in_bytes),
         gen_doc!(eg_write; memory, Memory, set_limit_in_bytes, 4 * (1 << 30))),
         pub fn set_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
             if self.is_root() {
@@ -381,7 +381,7 @@ impl Subsystem {
             soft_limit_in_bytes
         ),
         gen_doc!(see; soft_limit_in_bytes),
-        _gen_writer!(err_invalid; soft_limit_in_bytes),
+        _gen_setter!(err_invalid; soft_limit_in_bytes),
         gen_doc!(eg_write; memory, Memory, set_soft_limit_in_bytes, 4 * (1 << 30))),
         pub fn set_soft_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
             if self.is_root() {
@@ -392,7 +392,7 @@ impl Subsystem {
         }
     }
 
-    _gen_reader!(
+    _gen_getter!(
         "the number of memory allocation failure due to the limit",
         failcnt,
         memsw_failcnt,
@@ -401,14 +401,14 @@ impl Subsystem {
         u64
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the tendency of the kernel to swap out pages consumed by this cgroup,",
         swappiness: link,
         u64,
         parse
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "a tendency of the kernel to swap out pages consumed by this cgroup,",
         swappiness: link,
         set_swappiness,
@@ -416,14 +416,14 @@ impl Subsystem {
         60
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the status of OOM killer on this cgroup",
         oom_control,
         OomControl,
         parse_oom_control
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "whether the OOM killer is disabled for this cgroup,",
         oom_control,
         disable_oom_killer,
@@ -431,14 +431,14 @@ impl Subsystem {
         true
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "whether pages may be recharged to the new cgroup when a task is moved,",
         move_charge_at_immigrate: link,
         bool,
         parse_01_bool
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "whether pages may be recharged to the new cgroup when a task is moved,",
         move_charge_at_immigrate: link,
         set_move_charge_at_immigrate,
@@ -446,14 +446,14 @@ impl Subsystem {
         true
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "whether the OOM killer tries to reclaim memory from the self and descendant cgroups,",
         use_hierarchy: link,
         bool,
         parse_01_bool
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "whether the OOM killer tries to reclaim memory from the self and descendant cgroups,",
         use_hierarchy: link,
         set_use_hierarchy,
@@ -652,17 +652,6 @@ fn parse_oom_control(reader: impl io::Read) -> Result<OomControl> {
     }
 
     Err(p())
-}
-
-fn parse_01_bool_option(s: Option<&str>) -> Result<bool> {
-    match s {
-        Some(s) => match s.parse::<i32>() {
-            Ok(0) => Ok(false),
-            Ok(1) => Ok(true),
-            _ => Err(p()),
-        },
-        None => Err(p()),
-    }
 }
 
 #[cfg(test)]
@@ -955,7 +944,10 @@ total_unevictable 14004224
             }
         );
 
-        assert_eq!(parse_stat(&b""[..]).unwrap_err().kind(), ErrorKind::Parse);
+        assert_eq!(
+            parse_stat("".as_bytes()).unwrap_err().kind(),
+            ErrorKind::Parse
+        );
 
         Ok(())
     }
@@ -990,7 +982,7 @@ hierarchical_unevictable=3419 N0=3419 N1=7
         );
 
         assert_eq!(
-            parse_numa_stat(&b""[..]).unwrap_err().kind(),
+            parse_numa_stat("".as_bytes()).unwrap_err().kind(),
             ErrorKind::Parse
         );
 
@@ -1017,7 +1009,7 @@ oom_kill 42
         );
 
         assert_eq!(
-            parse_oom_control(&b""[..]).unwrap_err().kind(),
+            parse_oom_control("".as_bytes()).unwrap_err().kind(),
             ErrorKind::Parse
         );
 

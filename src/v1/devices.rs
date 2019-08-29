@@ -173,13 +173,13 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_writer {
+macro_rules! _gen_setter {
     ($desc: literal, $field: ident) => { with_doc! { concat!(
         $desc, " this cgroup to perform a type of access to devices with specific type and number,",
         " by writing to `devices.", stringify!($field), "` file.\n\n",
         gen_doc!(see; $field),
         gen_doc!(err_write; devices, $field),
-        _gen_writer!(_eg; $field)),
+        _gen_setter!(_eg; $field)),
         pub fn $field(&mut self, access: &Access) -> Result<()> {
             self.write_file(subsystem_file!(devices, $field), access)
         }
@@ -209,7 +209,7 @@ cgroup.", stringify!($field), "(&access)?;
 }
 
 impl Subsystem {
-    gen_reader!(
+    gen_getter!(
         devices,
         Devices,
         "allowed device access of this cgroup",
@@ -218,8 +218,8 @@ impl Subsystem {
         parse_list
     );
 
-    _gen_writer!("Denies", deny);
-    _gen_writer!("Allows", allow);
+    _gen_setter!("Denies", deny);
+    _gen_setter!("Allows", allow);
 }
 
 fn parse_list(reader: impl std::io::Read) -> Result<Vec<Access>> {
@@ -457,7 +457,7 @@ b 8:0 rw
             ]
         );
 
-        assert_eq!(parse_list(&b""[..])?, vec![]);
+        assert_eq!(parse_list("".as_bytes())?, vec![]);
 
         Ok(())
     }

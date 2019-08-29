@@ -79,59 +79,59 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_reader {
+macro_rules! _gen_getter {
     ($desc: literal $( : $detail: literal )?, $field: ident, $ty: ty, $parser: ident) => {
-        gen_reader!(cpuacct, Cpuacct, $desc $( : $detail )?, $field, $ty, $parser);
+        gen_getter!(cpuacct, Cpuacct, $desc $( : $detail )?, $field, $ty, $parser);
     };
 }
 
 impl Subsystem {
-    _gen_reader!(
+    _gen_getter!(
         "statistics about how much CPU time is consumed by this cgroup (in `USER_HZ` unit)" :
         "The CPU time is further divided into user and system times.",
         stat, Stat, parse_stat
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the total CPU time consumed by this cgroup (in nanoseconds)",
         usage,
         u64,
         parse
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the per-CPU total CPU time consumed by this cgroup (in nanoseconds)" :
         "The CPU time is further divided into user and system times.",
         usage_all, Vec<Stat>, parse_usage_all
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the per-CPU total CPU times consumed by this cgroup (in nanoseconds)",
         usage_percpu,
         Vec<u64>,
         parse_vec
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the per-CPU total CPU times consumed by this cgroup in the system (kernel) mode (in nanoseconds)",
         usage_percpu_sys, Vec<u64>, parse_vec
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the per-CPU total CPU times consumed by this cgroup in the user mode (in nanoseconds)",
         usage_percpu_user,
         Vec<u64>,
         parse_vec
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the total CPU time consumed by this cgroup in the system (kernel) mode (in nanoseconds)",
         usage_sys,
         u64,
         parse
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the total CPU time consumed by this cgroup in the user mode (in nanoseconds)",
         usage_user,
         u64,

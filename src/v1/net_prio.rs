@@ -82,7 +82,7 @@ impl_cgroup! {
 }
 
 impl Subsystem {
-    gen_reader!(
+    gen_getter!(
         net_prio,
         NetPrio,
         "the system-internal representation of this cgroup",
@@ -91,7 +91,7 @@ impl Subsystem {
         parse
     );
 
-    gen_reader!(
+    gen_getter!(
         net_prio, NetPrio,
         "the map of priorities assigned to traffic originating from this cgroup,",
         ifpriomap : link, HashMap<String, u32>, parse_ifpriomap
@@ -220,7 +220,7 @@ wlp1s0 1
             hashmap![("lo".to_string(), 0), ("wlp1s0".to_string(), 1),]
         );
 
-        assert_eq!(parse_ifpriomap(&b""[..])?, HashMap::new(),);
+        assert_eq!(parse_ifpriomap("".as_bytes())?, HashMap::new(),);
 
         Ok(())
     }

@@ -229,15 +229,15 @@ impl_cgroup! {
 const MEMORY_PRESSURE_ENABLED: &str = "cpuset.memory_pressure_enabled";
 const CLONE_CHILDREN: &str = "cgroup.clone_children";
 
-macro_rules! _gen_reader {
+macro_rules! _gen_getter {
     ($desc: literal, $field: ident $( : $link : ident )?, $ty: ty, $parser: ident) => {
-        gen_reader!(cpuset, Cpuset, $desc, $field $( : $link )?, $ty, $parser);
+        gen_getter!(cpuset, Cpuset, $desc, $field $( : $link )?, $ty, $parser);
     };
 }
 
-macro_rules! _gen_writer {
+macro_rules! _gen_setter {
     ($desc: literal, $field: ident : link, $setter: ident, $ty: ty, $val: expr) => {
-        gen_writer!(cpuset, Cpuset, $desc, $field: link, $setter, $ty, $val);
+        gen_setter!(cpuset, Cpuset, $desc, $field: link, $setter, $ty, $val);
     };
 
     (
@@ -247,7 +247,7 @@ macro_rules! _gen_writer {
         $arg: ident : $ty: ty as $as: ty,
         $val: expr
     ) => {
-        gen_writer!(
+        gen_setter!(
             cpuset,
             Cpuset,
             $desc,
@@ -260,14 +260,14 @@ macro_rules! _gen_writer {
 }
 
 impl Subsystem {
-    _gen_reader!(
+    _gen_getter!(
         "the set of CPUs this cgroup can use",
         cpus: link,
         IdSet,
         parse
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "a set of CPUs this cgroup can use",
         cpus: link,
         set_cpus,
@@ -275,14 +275,14 @@ impl Subsystem {
         &"0,1".parse::<cpuset::IdSet>()?
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the set of memory nodes this cgroup can use",
         mems: link,
         IdSet,
         parse
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "a set of memory nodes this cgroup can use",
         mems: link,
         set_mems,
@@ -290,24 +290,24 @@ impl Subsystem {
         &"0,1".parse::<cpuset::IdSet>()?
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "whether the memory used by this cgroup should be migrated when memory selection is updated,",
         memory_migrate : link, bool, parse_01_bool
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "whether the memory used by this cgroup should be migrated when memory selection is updated,",
         memory_migrate : link, set_memory_migrate, enable : bool as i32, true
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "whether the selected CPUs should be exclusive to this cgroup,",
         cpu_exclusive: link,
         bool,
         parse_01_bool
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "whether the selected CPUs should be exclusive to this cgroup,",
         cpu_exclusive: link,
         set_cpu_exclusive,
@@ -315,14 +315,14 @@ impl Subsystem {
         true
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "whether the selected memory nodes should be exclusive to this cgroup,",
         mem_exclusive: link,
         bool,
         parse_01_bool
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "whether the selected memory nodes should be exclusive to this cgroup,",
         mem_exclusive: link,
         set_mem_exclusive,
@@ -330,14 +330,14 @@ impl Subsystem {
         true
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "whether this cgroup is \"hardwalled\"",
         mem_hardwall: link,
         bool,
         parse_01_bool
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "whether this cgroup is \"hardwalled\"",
         mem_hardwall: link,
         set_mem_hardwall,
@@ -345,7 +345,7 @@ impl Subsystem {
         true
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the running average of the memory pressure faced by this cgroup,",
         memory_pressure,
         u64,
@@ -401,14 +401,14 @@ failed to write to `cpuset.memory_pressure_enabled` file.
         }
     }
 
-    _gen_reader!(
+    _gen_getter!(
         "whether file system buffers are spread across the selected memory nodes,",
         memory_spread_page: link,
         bool,
         parse_01_bool
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "whether file system buffers are spread across the selected memory nodes,",
         memory_spread_page: link,
         set_memory_spread_page,
@@ -416,14 +416,14 @@ failed to write to `cpuset.memory_pressure_enabled` file.
         true
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "whether the kernel slab caches for file I/O are spread across the selected memory nodes,",
         memory_spread_slab: link,
         bool,
         parse_01_bool
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "whether the kernel slab caches for file I/O are spread across the selected memory nodes,",
         memory_spread_slab: link,
         set_memory_spread_slab,
@@ -431,14 +431,14 @@ failed to write to `cpuset.memory_pressure_enabled` file.
         true
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "whether the kernel balances the load across the selected CPUs,",
         sched_load_balance: link,
         bool,
         parse_01_bool
     );
 
-    _gen_writer!(
+    _gen_setter!(
         "whether the kernel balances the load across the selected CPUs,",
         sched_load_balance: link,
         set_sched_load_balance,
@@ -446,7 +446,7 @@ failed to write to `cpuset.memory_pressure_enabled` file.
         true
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "how much work the kernel do to balance the load on this cgroup,",
         sched_relax_domain_level: link,
         i32,

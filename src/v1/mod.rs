@@ -1,8 +1,9 @@
 //! Operations on cgroups in a v1 hierarchy.
 //!
 //! Operations for each subsystem are implemented in each module. See [`cpu::Subsystem`] for
-//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [memory], [pids], [devices],
-//! [hugetlb], [net_cls], [net_prio], [blkio], [RDMA], [freezer], and [perf_event] subsystems.
+//! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [memory], [hugetlb],
+//! [device], [blkio], [RDMA], [net_prio], [net_cls], [pids], [freezer], and [perf_event]
+//! subsystems.
 //!
 //! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
 //! this trait and subsystem-specific operations.
@@ -20,13 +21,13 @@
 //! [cpuset]: cpuset/index.html
 //! [cpuacct]: cpuacct/index.html
 //! [memory]: memory/index.html
-//! [pids]: pids/index.html
-//! [devices]: devices/index.html
 //! [hugetlb]: hugetlb/index.html
-//! [net_cls]: net_cls/index.html
-//! [net_prio]: net_prio/index.html
+//! [devices]: devices/index.html
 //! [blkio]: blkio/index.html
 //! [RDMA]: rdma/index.html
+//! [net_prio]: net_prio/index.html
+//! [net_cls]: net_cls/index.html
+//! [pids]: pids/index.html
 //! [freezer]: freezer/index.html
 //! [perf_event]: perf_event/index.html
 //!
@@ -36,7 +37,7 @@
 //!
 //! [Documentation/cgroup-v1/cgroups.txt]: https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 
-use std::fmt;
+use std::{fmt, path::Path};
 
 #[macro_use]
 mod cgroup;
@@ -64,16 +65,22 @@ const CGROUPFS_MOUNT_POINT: &str = "/sys/fs/cgroup";
 
 /// Kinds of subsystems that are now available in this crate.
 ///
-/// `SubsystemKind` implements [`Display`]. The resulting string is a standard directory name for
-/// the subsystem (e.g. `SubsystemKind::Cpu` => `cpu`).
+/// `SubsystemKind` implements [`AsRef`]`<`[`Path`]`>` and [`Display`]. The resulting path or string
+/// is a standard directory name for the subsystem (e.g. `SubsystemKind::Cpu` => `cpu`).
 ///
 /// ```
+/// use std::path::Path;
 /// use cgroups::v1::SubsystemKind;
 ///
-/// assert_eq!(SubsystemKind::Cpu.to_string(), "cpu");
+/// assert_eq!(SubsystemKind::Cpu.as_ref(), Path::new("cpu"));
+/// assert_eq!(SubsystemKind::Memory.as_ref(), Path::new("memory"));
+///
+/// assert_eq!(SubsystemKind::Devices.to_string(), "devices");
 /// assert_eq!(SubsystemKind::PerfEvent.to_string(), "perf_event");
 /// ```
 ///
+/// [`AsRef`]: https://doc.rust-lang.org/std/convert/trait.AsRef.html
+/// [`Path`]: https://doc.rust-lang.org/std/path/struct.Path.html
 /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SubsystemKind {
@@ -85,31 +92,25 @@ pub enum SubsystemKind {
     Cpuacct,
     /// memory subsystem.
     Memory,
-    /// pids subsystem.
-    Pids,
-    /// devices subsystem.
-    Devices,
     /// hugetlb subsystem.
     HugeTlb,
-    /// net_cls subsystem.
-    NetCls,
-    /// net_prio subsystem.
-    NetPrio,
+    /// devices subsystem.
+    Devices,
     /// blkio subsystem.
     BlkIo,
     /// RDMA subsystem.
     Rdma,
+    /// net_prio subsystem.
+    NetPrio,
+    /// net_cls subsystem.
+    NetCls,
+    /// pids subsystem.
+    Pids,
     /// freezer subsystem.
     Freezer,
     /// perf_event subsystem.
     PerfEvent,
 }
-
-// NOTE: What to do when adding a subsystem (and compiler doesn't tell you):
-// - Implement builder if necessary
-//   - Add to `builder::gen_subsystem_builder_call` arg`
-// - Add to `cgroup::tests::test_cgroup_subsystem_kind`
-// - Add to `mod.rs` doc
 
 /// Compound of resource limits and constraints for each subsystem.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -121,40 +122,52 @@ pub struct Resources {
     pub cpuset: cpuset::Resources,
     /// Resource limit on what amount and how this cgroup can use memory.
     pub memory: memory::Resources,
-    /// Resource limit on how many processes this cgroup can have.
-    pub pids: pids::Resources,
-    /// Allow or deny this cgroup to perform specific accesses to devices.
-    pub devices: devices::Resources,
     /// Resource limit no how many hugepage TLBs this cgroup can use.
     pub hugetlb: hugetlb::Resources,
-    /// Tag network packets from this cgroup with a class ID.
-    pub net_cls: net_cls::Resources,
-    /// Priority map of traffic originating from this cgroup.
-    pub net_prio: net_prio::Resources,
+    /// Allow or deny this cgroup to perform specific accesses to devices.
+    pub devices: devices::Resources,
     /// Throttle bandwidth of block I/O by this cgroup.
     pub blkio: blkio::Resources,
     /// Resource limit on how much this cgroup can use RDMA/IB devices.
     pub rdma: rdma::Resources,
+    /// Priority map of traffic originating from this cgroup.
+    pub net_prio: net_prio::Resources,
+    /// Tag network packets from this cgroup with a class ID.
+    pub net_cls: net_cls::Resources,
+    /// Resource limit on how many processes this cgroup can have.
+    pub pids: pids::Resources,
     /// Freeze tasks in this cgroup.
     pub freezer: freezer::Resources,
 }
 
+impl AsRef<Path> for SubsystemKind {
+    fn as_ref(&self) -> &Path {
+        Path::new(self.as_str())
+    }
+}
+
 impl fmt::Display for SubsystemKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
+        f.write_str(self.as_str())
+    }
+}
+
+impl SubsystemKind {
+    fn as_str(&self) -> &'static str {
+        match self {
             Self::Cpu => "cpu",
             Self::Cpuset => "cpuset",
             Self::Cpuacct => "cpuacct",
             Self::Memory => "memory",
-            Self::Pids => "pids",
-            Self::Devices => "devices",
             Self::HugeTlb => "hugetlb",
-            Self::NetCls => "net_cls",
-            Self::NetPrio => "net_prio",
+            Self::Devices => "devices",
             Self::BlkIo => "blkio",
             Self::Rdma => "rdma",
+            Self::NetPrio => "net_prio",
+            Self::NetCls => "net_cls",
+            Self::Pids => "pids",
             Self::Freezer => "freezer",
             Self::PerfEvent => "perf_event",
-        })
+        }
     }
 }

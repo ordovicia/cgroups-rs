@@ -117,13 +117,13 @@ impl_cgroup! {
 }
 
 impl Subsystem {
-    gen_reader!(
+    gen_getter!(
         rdma, Rdma,
         "the current usage of RDMA/IB devices",
         current, HashMap<String, Limit>, parse_limits
     );
 
-    gen_reader!(
+    gen_getter!(
         rdma, Rdma,
         "the usage limits on RDMA/IB devices",
         max : link, HashMap<String, Limit>, parse_limits
@@ -325,7 +325,7 @@ ocrdma1 hca_handle=3 hca_object=max
         assert_eq!(expected, parse_limits(CONTENT_0.as_bytes())?);
         assert_eq!(expected, parse_limits(CONTENT_1.as_bytes())?);
 
-        assert!(parse_limits(&b""[..])?.is_empty());
+        assert!(parse_limits("".as_bytes())?.is_empty());
 
         Ok(())
     }

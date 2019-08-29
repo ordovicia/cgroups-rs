@@ -161,7 +161,7 @@ pub use error::{Error, ErrorKind, Result};
 
 /// PID or thread ID for attaching a task to a cgroup.
 ///
-/// `Pid` can be converted from [`u32`] and [`std::process::Child`].
+/// `Pid` can be converted from [`u32`] and [`&std::process::Child`].
 ///
 /// ```
 /// use cgroups::Pid;
@@ -173,7 +173,7 @@ pub use error::{Error, ErrorKind, Result};
 /// ```
 ///
 /// [`u32`]: https://doc.rust-lang.org/std/primitive.u32.html
-/// [`std::process::Child`]: https://doc.rust-lang.org/std/process/struct.Child.html
+/// [`&std::process::Child`]: https://doc.rust-lang.org/std/process/struct.Child.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Pid(u32); // Max PID is 2^15 on 32-bit systems, 2^22 on 64-bit systems
                      // FIXME: ^ also true for thread IDs?
@@ -211,7 +211,7 @@ impl fmt::Display for Pid {
     }
 }
 
-/// Limit a number or amount of resources, or not limit.
+/// Limit the maximum number or amount of a resource, or not limit.
 ///
 /// `Max` implements [`FromStr`] and [`Display`]. You can convert a string into a `Max` and vice
 /// versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if failed.
@@ -229,7 +229,7 @@ impl fmt::Display for Pid {
 /// assert_eq!(Max::<u32>::Limit(42).to_string(), "42");
 /// ```
 ///
-/// `Max` implements [`Default`]. The default value is `Max::Max`.
+/// `Max` also implements [`Default`], which yields `Max::Max`.
 ///
 /// ```
 /// use cgroups::Max;
@@ -245,9 +245,9 @@ impl fmt::Display for Pid {
 /// [`Default`]: https://doc.rust-lang.org/std/default/trait.Default.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Max<T> {
-    /// Not limit the number or amount of resource.
+    /// Not limit the maximum number or amount of a resource.
     Max,
-    /// Limits the number or amount of resource to this value.
+    /// Limits the maximum number or amount of a resource to this value.
     Limit(T),
 }
 
@@ -333,6 +333,7 @@ impl<T: fmt::Display> fmt::Display for Max<T> {
 /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 /// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
 /// [`ErrorKind::Parse`]: enum.ErrorKind.html#variant.Parse
+///
 /// [`From`]: https://doc.rust-lang.org/std/convert/trait.From.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Device {
@@ -340,6 +341,42 @@ pub struct Device {
     pub major: DeviceNumber,
     /// Minor number.
     pub minor: DeviceNumber,
+}
+
+impl From<[u16; 2]> for Device {
+    fn from(n: [u16; 2]) -> Self {
+        Self {
+            major: n[0].into(),
+            minor: n[1].into(),
+        }
+    }
+}
+
+impl From<[DeviceNumber; 2]> for Device {
+    fn from(n: [DeviceNumber; 2]) -> Self {
+        Self {
+            major: n[0],
+            minor: n[1],
+        }
+    }
+}
+
+impl FromStr for Device {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let mut parts = s.split(':');
+        let major = parse::parse_option(parts.next())?;
+        let minor = parse::parse_option(parts.next())?;
+
+        Ok(Device { major, minor })
+    }
+}
+
+impl fmt::Display for Device {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.major, self.minor)
+    }
 }
 
 /// Device major/minor number.
@@ -377,6 +414,7 @@ pub struct Device {
 /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 /// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
 /// [`ErrorKind::Parse`]: enum.ErrorKind.html#variant.Parse
+///
 /// [`From`]: https://doc.rust-lang.org/std/convert/trait.From.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DeviceNumber {
@@ -384,42 +422,6 @@ pub enum DeviceNumber {
     Any,
     /// Specific number.
     Number(u16),
-}
-
-impl From<[u16; 2]> for Device {
-    fn from(n: [u16; 2]) -> Self {
-        Self {
-            major: n[0].into(),
-            minor: n[1].into(),
-        }
-    }
-}
-
-impl From<[DeviceNumber; 2]> for Device {
-    fn from(n: [DeviceNumber; 2]) -> Self {
-        Self {
-            major: n[0],
-            minor: n[1],
-        }
-    }
-}
-
-impl FromStr for Device {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        let mut comma_sp = s.split(':');
-        let major = parse::parse_option(comma_sp.next())?;
-        let minor = parse::parse_option(comma_sp.next())?;
-
-        Ok(Device { major, minor })
-    }
-}
-
-impl fmt::Display for Device {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.major, self.minor)
-    }
 }
 
 impl From<u16> for DeviceNumber {
@@ -435,7 +437,8 @@ impl FromStr for DeviceNumber {
         if s == "*" {
             Ok(Self::Any)
         } else {
-            Ok(Self::Number(s.parse::<u16>()?))
+            let n = s.parse::<u16>()?;
+            Ok(Self::Number(n))
         }
     }
 }
@@ -443,6 +446,7 @@ impl FromStr for DeviceNumber {
 impl fmt::Display for DeviceNumber {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use fmt::Write;
+
         match self {
             Self::Any => f.write_char('*'),
             Self::Number(n) => write!(f, "{}", n),

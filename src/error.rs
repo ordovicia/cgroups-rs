@@ -4,9 +4,13 @@ use std::{error::Error as StdError, fmt};
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Error type that can be returned from this crate, in the [`Result::Err`] variant. The kind and
-/// lower-level source of this error can be obtained via `kind` and `source` methods, respectively.
+/// lower-level source of this error can be obtained via [`kind`] and [`source`] methods,
+/// respectively.
 ///
 /// [`Result::Err`]: https://doc.rust-lang.org/std/result/enum.Result.html#variant.Err
+///
+/// [`kind`]: #method.kind
+/// [`source`]: https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.source
 #[derive(Debug)]
 pub struct Error {
     kind: ErrorKind,
@@ -30,9 +34,12 @@ pub enum ErrorKind {
     /// more fine-grained variants.
     ///
     /// Note that this crate catches not all errors caused by an invalid argument. In some cases,
-    /// the system (kernel) raises an lower-level error, and this crate returns an `Error` with
+    /// the system (kernel) raises an lower-level error, and this crate returns an [`Error`] with
     /// other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
-    /// `Error::source` method.
+    /// [`Error::source`] method.
+    ///
+    /// [`Error`]: struct.Error.html
+    /// [`Error::source`]: https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.source
     InvalidArgument,
 
     /// You tried to do something invalid.
@@ -41,9 +48,12 @@ pub enum ErrorKind {
     /// more fine-grained variants.
     ///
     /// Note that this crate catches not all errors caused by an invalid operation. In some cases,
-    /// the system (kernel) raises an lower-level error, and this crate returns an `Error` with
+    /// the system (kernel) raises an lower-level error, and this crate returns an [`Error`] with
     /// other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
-    /// `Error::source` method.
+    /// [`Error::source`] method.
+    ///
+    /// [`Error`]: struct.Error.html
+    /// [`Error::source`]: https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.source
     InvalidOperation,
 }
 

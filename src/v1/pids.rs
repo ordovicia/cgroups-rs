@@ -80,21 +80,21 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_reader {
+macro_rules! _gen_getter {
     ($desc: literal, $field: ident $( : $link : ident )?, $ty: ty, $parser: ident) => {
-        gen_reader!(pids, Pids, $desc, $field $( : $link )?, $ty, $parser);
+        gen_getter!(pids, Pids, $desc, $field $( : $link )?, $ty, $parser);
     };
 }
 
 impl Subsystem {
-    _gen_reader!(
+    _gen_getter!(
         "the maximum number of processes this cgroup can have",
         max: link,
         Max<u32>,
         parse
     );
 
-    gen_writer!(
+    gen_setter!(
         pids,
         Pids,
         "a maximum number of processes this cgroup can have,",
@@ -104,14 +104,14 @@ impl Subsystem {
         cgroups::Max::<u32>::Limit(2)
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the number of processes this cgroup currently has",
         current,
         u32,
         parse
     );
 
-    _gen_reader!(
+    _gen_getter!(
         "the event counter, i.e. a pair of the maximum number of processes, and the number of times fork failed due to the limit",
         events, (Max<u32>, u64), parse_events
     );

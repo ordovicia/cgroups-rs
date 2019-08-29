@@ -5,77 +5,10 @@ macro_rules! with_doc {
     };
 }
 
-#[cfg(test)]
-macro_rules! gen_cgroup_name {
-    () => {
-        std::path::PathBuf::from(format!(
-            "cgroups_rs-{}-{}",
-            std::path::Path::new(file!())
-                .file_stem()
-                .and_then(std::ffi::OsStr::to_str)
-                .unwrap(),
-            line!()
-        ))
-    };
-}
-
-#[cfg(test)]
-macro_rules! hashmap {
-    ( $( ( $k: expr, $v: expr $(, )? ) ),* $(, )? ) => { {
-        #[allow(unused_mut)]
-        let mut hashmap = HashMap::new();
-        $( hashmap.insert($k, $v); )*
-        hashmap
-    } };
-}
-
 macro_rules! subsystem_file {
     ($subsystem: ident, $field: ident) => {
         concat!(stringify!($subsystem), ".", stringify!($field))
     };
-}
-
-#[cfg(test)]
-macro_rules! gen_subsystem_test {
-    // Test create, file_exists, and delete
-    ($kind: ident; $subsystem: ident, [ $( $file: literal ),* ]) => { {
-        let files = vec![$(
-            format!("{}.{}", stringify!($subsystem), $file)
-        ),+];
-
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
-        cgroup.create()?;
-
-        assert!(files.iter().all(|f| cgroup.file_exists(f)));
-        assert!(!cgroup.file_exists("does_not_exist"));
-
-        cgroup.delete()?;
-        assert!(files.iter().all(|f| !cgroup.file_exists(f)));
-
-        let ok: Result<()> = Ok(());
-        ok
-    } };
-
-    // Test a read-only field
-    ($kind: ident; $field: ident, $default: expr) => { {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
-        cgroup.create()?;
-        assert_eq!(cgroup.$field()?, $default);
-
-        cgroup.delete()
-    } };
-
-    // Test a read-write field
-    ($kind: ident; $field: ident, $default: expr, $setter: ident, $val: expr) => { {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
-        cgroup.create()?;
-        assert_eq!(cgroup.$field()?, $default);
-
-        cgroup.$setter($val)?;
-        assert_eq!(cgroup.$field()?, $val);
-
-        cgroup.delete()
-    } };
 }
 
 macro_rules! gen_doc {
@@ -141,7 +74,7 @@ cgroup.", stringify!($setter), "(", stringify!($( $val ),* ), ")?;
 ```") };
 }
 
-macro_rules! gen_reader {
+macro_rules! gen_getter {
     (
         $subsystem: ident,
         $kind: ident,
@@ -160,7 +93,7 @@ macro_rules! gen_reader {
     } };
 }
 
-macro_rules! gen_writer {
+macro_rules! gen_setter {
     (
         $subsystem: ident,
         $kind: ident,
@@ -205,6 +138,73 @@ macro_rules! _link {
     ($field: ident) => {
         gen_doc!(see);
     }
+}
+
+#[cfg(test)]
+macro_rules! gen_cgroup_name {
+    () => {
+        std::path::PathBuf::from(format!(
+            "cgroups_rs-{}-{}",
+            std::path::Path::new(file!())
+                .file_stem()
+                .and_then(std::ffi::OsStr::to_str)
+                .unwrap(),
+            line!()
+        ))
+    };
+}
+
+#[cfg(test)]
+macro_rules! hashmap {
+    ( $( ( $k: expr, $v: expr $(, )? ) ),* $(, )? ) => { {
+        #[allow(unused_mut)]
+        let mut hashmap = HashMap::new();
+        $( hashmap.insert($k, $v); )*
+        hashmap
+    } };
+}
+
+#[cfg(test)]
+macro_rules! gen_subsystem_test {
+    // Test create, file_exists, and delete
+    ($kind: ident; $subsystem: ident, [ $( $file: literal ),* ]) => { {
+        let files = vec![$(
+            format!("{}.{}", stringify!($subsystem), $file)
+        ),+];
+
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
+        cgroup.create()?;
+
+        assert!(files.iter().all(|f| cgroup.file_exists(f)));
+        assert!(!cgroup.file_exists("does_not_exist"));
+
+        cgroup.delete()?;
+        assert!(files.iter().all(|f| !cgroup.file_exists(f)));
+
+        let ok: Result<()> = Ok(());
+        ok
+    } };
+
+    // Test a read-only field
+    ($kind: ident; $field: ident, $default: expr) => { {
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
+        cgroup.create()?;
+        assert_eq!(cgroup.$field()?, $default);
+
+        cgroup.delete()
+    } };
+
+    // Test a read-write field
+    ($kind: ident; $field: ident, $default: expr, $setter: ident, $val: expr) => { {
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
+        cgroup.create()?;
+        assert_eq!(cgroup.$field()?, $default);
+
+        cgroup.$setter($val)?;
+        assert_eq!(cgroup.$field()?, $val);
+
+        cgroup.delete()
+    } };
 }
 
 #[cfg(test)]
