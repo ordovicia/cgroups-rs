@@ -403,15 +403,34 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // must not be executed in parallel
     fn test_unified_repr_add_get_remove_procs() -> Result<()> {
+        use std::process::{self, Command};
+
         let mut cgroups = UnifiedRepr::with_subsystems(gen_cgroup_name!(), &[SubsystemKind::Cpu]);
         cgroups.create()?;
 
-        let pid = Pid::from(std::process::id());
+        let pid = Pid::from(process::id());
 
         cgroups.add_proc(pid)?;
         assert_eq!(cgroups.cpu().unwrap().procs()?, vec![pid]);
         assert_eq!(cgroups.procs()?, hashmap![(SubsystemKind::Cpu, vec![pid])]);
+
+        // automatically added to the cgroup
+        let mut child = Command::new("sleep").arg("1").spawn().unwrap();
+        let child_pid = Pid::from(&child);
+        assert!(
+            cgroups.cpu().unwrap().procs()? == vec![pid, child_pid]
+                || cgroups.cpu().unwrap().procs()? == vec![child_pid, pid]
+        );
+        assert!(
+            cgroups.procs()? == hashmap![(SubsystemKind::Cpu, vec![pid, child_pid])]
+                || cgroups.procs()? == hashmap![(SubsystemKind::Cpu, vec![child_pid, pid])]
+        );
+
+        child.wait()?;
+        assert!(cgroups.cpu().unwrap().procs()? == vec![pid]);
+        assert!(cgroups.procs()? == hashmap![(SubsystemKind::Cpu, vec![pid])]);
 
         cgroups.remove_proc(pid)?;
         assert!(cgroups.cpu().unwrap().procs()?.is_empty());

@@ -831,6 +831,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // must not be executed in parallel
     fn test_cgroup_add_get_remove_procs() -> Result<()> {
         use std::process::{self, Command};
 
