@@ -52,7 +52,7 @@ use std::path::PathBuf;
 
 use crate::{
     parse::{parse, parse_option},
-    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
     Error, ErrorKind, Result,
 };
 
@@ -91,7 +91,7 @@ pub struct Stat {
 }
 
 impl_cgroup! {
-    Cpu,
+    Subsystem, Cpu,
 
     /// Applies the `Some` fields in `resources.cpu`.
     ///

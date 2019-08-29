@@ -55,7 +55,7 @@ use std::{
 
 use crate::{
     parse::{parse, parse_01_bool, parse_01_bool_option, parse_option},
-    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
     Error, ErrorKind, Result,
 };
 
@@ -170,7 +170,7 @@ pub struct OomControl {
 }
 
 impl_cgroup! {
-    Memory,
+    Subsystem, Memory,
 
     /// Applies the `Some` fields in `resources.memory`. `limit_in_bytes` field is set before
     /// `memsw_limit_in_bytes` is.
@@ -658,6 +658,7 @@ fn parse_oom_control(reader: impl io::Read) -> Result<OomControl> {
 mod tests {
     use super::*;
     const LIMIT_DEFAULT: u64 = 0x7FFF_FFFF_FFFF_F000;
+    use v1::SubsystemKind;
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {

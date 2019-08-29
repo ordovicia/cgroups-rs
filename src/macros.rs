@@ -158,7 +158,7 @@ macro_rules! gen_cgroup_name {
 macro_rules! hashmap {
     ( $( ( $k: expr, $v: expr $(, )? ) ),* $(, )? ) => { {
         #[allow(unused_mut)]
-        let mut hashmap = HashMap::new();
+        let mut hashmap = std::collections::HashMap::new();
         $( hashmap.insert($k, $v); )*
         hashmap
     } };
@@ -172,7 +172,8 @@ macro_rules! gen_subsystem_test {
             format!("{}.{}", stringify!($subsystem), $file)
         ),+];
 
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
+        let mut cgroup = Subsystem::new(
+            CgroupPath::new(crate::v1::SubsystemKind::$kind, gen_cgroup_name!()));
         cgroup.create()?;
 
         assert!(files.iter().all(|f| cgroup.file_exists(f)));
@@ -187,7 +188,8 @@ macro_rules! gen_subsystem_test {
 
     // Test a read-only field
     ($kind: ident; $field: ident, $default: expr) => { {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
+        let mut cgroup = Subsystem::new(
+            CgroupPath::new(crate::v1::SubsystemKind::$kind, gen_cgroup_name!()));
         cgroup.create()?;
         assert_eq!(cgroup.$field()?, $default);
 
@@ -196,7 +198,8 @@ macro_rules! gen_subsystem_test {
 
     // Test a read-write field
     ($kind: ident; $field: ident, $default: expr, $setter: ident, $val: expr) => { {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
+        let mut cgroup = Subsystem::new(
+            CgroupPath::new(crate::v1::SubsystemKind::$kind, gen_cgroup_name!()));
         cgroup.create()?;
         assert_eq!(cgroup.$field()?, $default);
 
@@ -213,7 +216,7 @@ mod tests {
     fn test_gen_cgroup_name() {
         assert_eq!(
             gen_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-macros-215")
+            std::path::PathBuf::from("cgroups_rs-macros-218")
         );
     }
 }

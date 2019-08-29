@@ -40,7 +40,7 @@ use std::{fmt, path::PathBuf, str::FromStr};
 
 use crate::{
     parse::parse,
-    v1::{self, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, Cgroup, CgroupPath},
     Error, ErrorKind, Result,
 };
 
@@ -123,7 +123,7 @@ pub struct ClassId {
 }
 
 impl_cgroup! {
-    NetCls,
+    Subsystem, NetCls,
 
     /// Applies the `Some` fields in `resources.net_cls`.
     ///

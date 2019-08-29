@@ -54,7 +54,7 @@ use std::{collections::HashSet, fmt, iter::FromIterator, path::PathBuf};
 
 use crate::{
     parse::{parse, parse_01_bool},
-    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
     Error, ErrorKind, Result,
 };
 
@@ -187,7 +187,7 @@ pub struct Resources {
 pub struct IdSet(HashSet<usize>);
 
 impl_cgroup! {
-    Cpuset,
+    Subsystem, Cpuset,
 
     /// Applies the `Some` fields in `resources.cpuset`.
     ///
@@ -698,6 +698,7 @@ impl IdSet {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use v1::SubsystemKind;
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {

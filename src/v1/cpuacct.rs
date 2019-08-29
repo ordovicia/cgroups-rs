@@ -47,7 +47,7 @@ use std::{
 
 use crate::{
     parse::{parse, parse_option, parse_vec},
-    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
     Error, ErrorKind, Result,
 };
 
@@ -67,7 +67,7 @@ pub struct Stat {
 }
 
 impl_cgroup! {
-    Cpuacct,
+    Subsystem, Cpuacct,
 
     /// Does nothing as a cpuacct subsystem is basically read-only.
     ///
@@ -275,8 +275,10 @@ mod tests {
 
     #[test]
     fn test_subsystem_reset() -> Result<()> {
-        let mut cgroup =
-            Subsystem::new(CgroupPath::new(SubsystemKind::Cpuacct, gen_cgroup_name!()));
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            v1::SubsystemKind::Cpuacct,
+            gen_cgroup_name!(),
+        ));
         cgroup.create()?;
 
         cgroup.reset()?;

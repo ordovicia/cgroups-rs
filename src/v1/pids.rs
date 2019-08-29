@@ -43,7 +43,7 @@ use std::path::PathBuf;
 
 use crate::{
     parse::{parse, parse_option},
-    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
     Max, Result,
 };
 
@@ -64,7 +64,7 @@ pub struct Resources {
 }
 
 impl_cgroup! {
-    Pids,
+    Subsystem, Pids,
 
     /// Applies the `Some` fields in `resources.pids`.
     ///
@@ -152,11 +152,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // `cargo test` must not be executed in parallel for this test
+    #[ignore] // must not be executed in parallel
     fn test_subsystem_current() -> Result<()> {
         use crate::Pid;
 
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Pids, gen_cgroup_name!()));
+        let mut cgroup =
+            Subsystem::new(CgroupPath::new(v1::SubsystemKind::Pids, gen_cgroup_name!()));
         cgroup.create()?;
         assert_eq!(cgroup.current()?, 0);
 

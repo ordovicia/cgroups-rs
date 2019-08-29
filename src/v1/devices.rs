@@ -49,7 +49,7 @@ use std::{fmt, path::PathBuf, str::FromStr};
 
 use crate::{
     parse::parse_option,
-    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
     Error, ErrorKind, Result,
 };
 
@@ -153,7 +153,7 @@ pub struct AccessType {
 }
 
 impl_cgroup! {
-    Devices,
+    Subsystem, Devices,
 
     /// Applies `resources.devices`. `deny` list is applied first, and then `allow` list is.
     ///
@@ -389,8 +389,10 @@ mod tests {
 
     #[test]
     fn test_subsystem_deny_allow() -> Result<()> {
-        let mut cgroup =
-            Subsystem::new(CgroupPath::new(SubsystemKind::Devices, gen_cgroup_name!()));
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            v1::SubsystemKind::Devices,
+            gen_cgroup_name!(),
+        ));
         cgroup.create()?;
 
         let all = "a *:* rwm".parse::<Access>().unwrap();

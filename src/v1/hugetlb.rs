@@ -46,7 +46,7 @@ use std::{fmt, path::PathBuf};
 
 use crate::{
     parse::parse,
-    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
     Result,
 };
 
@@ -86,7 +86,7 @@ pub enum HugepageSize {
 }
 
 impl_cgroup! {
-    HugeTlb,
+    Subsystem, HugeTlb,
 
     /// Applies the `Some` fields in `resources.hugetlb`.
     ///
@@ -268,6 +268,7 @@ impl fmt::Display for HugepageSize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use v1::SubsystemKind;
     use HugepageSize::*;
 
     const LIMIT_2MB_BYTES_DEFAULT: u64 = 0x7FFF_FFFF_FFE0_0000;

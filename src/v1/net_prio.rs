@@ -41,7 +41,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
     parse::{parse, parse_option},
-    v1::{self, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, Cgroup, CgroupPath},
     Error, ErrorKind, Result,
 };
 
@@ -63,7 +63,7 @@ pub struct Resources {
 }
 
 impl_cgroup! {
-    NetPrio,
+    Subsystem, NetPrio,
 
     /// Applies `resources.net_prio.ifpriomap`.
     ///
@@ -170,6 +170,7 @@ fn parse_ifpriomap(reader: impl std::io::Read) -> Result<HashMap<String, u32>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use v1::SubsystemKind;
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {

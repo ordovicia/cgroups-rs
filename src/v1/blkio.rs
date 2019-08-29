@@ -56,7 +56,7 @@ use std::{
 
 use crate::{
     parse::{parse, parse_option},
-    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
     Device, Error, ErrorKind, Result,
 };
 
@@ -128,7 +128,7 @@ pub struct Operations {
 }
 
 impl_cgroup! {
-    BlkIo,
+    Subsystem, BlkIo,
 
     /// Applies `resources.blkio`.
     ///
@@ -488,6 +488,7 @@ fn parse_io_service(reader: impl io::Read) -> Result<IoService> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use v1::SubsystemKind;
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {

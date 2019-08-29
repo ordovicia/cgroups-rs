@@ -47,7 +47,7 @@ use std::{fmt, path::PathBuf};
 
 use crate::{
     parse::{parse, parse_01_bool},
-    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
     Error, ErrorKind, Result,
 };
 
@@ -113,7 +113,7 @@ pub enum State {
 }
 
 impl_cgroup! {
-    Freezer,
+    Subsystem, Freezer,
 
     /// Freezes or thaws tasks in this cgroup according to `resources.freezer.state`.
     ///
@@ -215,6 +215,7 @@ impl fmt::Display for State {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use v1::SubsystemKind;
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {

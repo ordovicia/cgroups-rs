@@ -40,7 +40,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    v1::{self, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, Cgroup, CgroupPath},
     Result,
 };
 
@@ -51,7 +51,7 @@ pub struct Subsystem {
 }
 
 impl_cgroup! {
-    PerfEvent,
+    Subsystem, PerfEvent,
 
     /// Does nothing as a perf_event cgroup has no parameters.
     ///

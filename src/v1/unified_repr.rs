@@ -384,7 +384,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // `cargo test` must not be executed in parallel for this test
+    #[ignore] // must not be executed in parallel
     fn test_unified_repr_add_get_remove_tasks() -> Result<()> {
         let mut cgroups = UnifiedRepr::with_subsystems(gen_cgroup_name!(), &[SubsystemKind::Cpu]);
         cgroups.create()?;

@@ -65,7 +65,7 @@ use std::{collections::HashMap, fmt, path::PathBuf};
 
 use crate::{
     parse::parse_option,
-    v1::{self, Cgroup, CgroupPath, SubsystemKind},
+    v1::{self, Cgroup, CgroupPath},
     Error, ErrorKind, Max, Result,
 };
 
@@ -97,7 +97,7 @@ pub struct Limit {
 }
 
 impl_cgroup! {
-    Rdma,
+    Subsystem, Rdma,
 
     /// Applies `resources.rdma`.
     ///
@@ -248,6 +248,7 @@ impl fmt::Display for Limit {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use v1::SubsystemKind;
 
     // TODO: test on systems with RDMA/IB devices
 
