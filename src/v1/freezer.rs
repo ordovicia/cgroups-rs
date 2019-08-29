@@ -219,7 +219,11 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Freezer; freezer, ["state", "self_freezing", "parent_freezing"])
+        gen_subsystem_test!(
+            Freezer,
+            freezer,
+            ["state", "self_freezing", "parent_freezing"]
+        )
     }
 
     #[test]

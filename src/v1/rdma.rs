@@ -255,7 +255,7 @@ mod tests {
     #[test]
     #[ignore] // some systems have no RDMA/IB devices
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Rdma; rdma, ["current", "max"])
+        gen_subsystem_test!(Rdma, rdma, ["current", "max"])
     }
 
     #[test]

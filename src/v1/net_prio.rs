@@ -101,7 +101,7 @@ impl Subsystem {
         gen_doc!(
             sets; net_prio,
             "a map of priorities assigned to traffic originating from this cgroup,"
-            : "The first element of the iterator item is trafic name, and the second is its priority.",
+            : "The first element of the iterator item is traffic name, and the second is its priority.",
             ifpriomap
         ),
         gen_doc!(see; ifpriomap),
@@ -174,7 +174,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(NetPrio; net_prio, ["prioidx", "ifpriomap"])
+        gen_subsystem_test!(NetPrio, net_prio, ["prioidx", "ifpriomap"])
     }
 
     #[test]

@@ -226,27 +226,45 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Cpu; cpu, ["stat", "shares", "cfs_quota_us", "cfs_period_us"])
+        gen_subsystem_test!(
+            Cpu,
+            cpu,
+            ["stat", "shares", "cfs_quota_us", "cfs_period_us"]
+        )
     }
 
     #[test]
     fn test_subsystem_stat() -> Result<()> {
-        gen_subsystem_test!(Cpu; stat, Stat { nr_periods: 0, nr_throttled: 0, throttled_time: 0 })
+        gen_subsystem_test!(
+            Cpu,
+            stat,
+            Stat {
+                nr_periods: 0,
+                nr_throttled: 0,
+                throttled_time: 0
+            }
+        )
     }
 
     #[test]
     fn test_subsystem_shares() -> Result<()> {
-        gen_subsystem_test!(Cpu; shares, 1024, set_shares, 2048)
+        gen_subsystem_test!(Cpu, shares, 1024, set_shares, 2048)
     }
 
     #[test]
     fn test_subsystem_cfs_quota_us() -> Result<()> {
-        gen_subsystem_test!(Cpu; cfs_quota_us, -1, set_cfs_quota_us, 100 * 1000)
+        gen_subsystem_test!(Cpu, cfs_quota_us, -1, set_cfs_quota_us, 100 * 1000)
     }
 
     #[test]
     fn test_subsystem_cfs_period_us() -> Result<()> {
-        gen_subsystem_test!(Cpu; cfs_period_us, 100 * 1000, set_cfs_period_us, 1000 * 1000)
+        gen_subsystem_test!(
+            Cpu,
+            cfs_period_us,
+            100 * 1000,
+            set_cfs_period_us,
+            1000 * 1000
+        )
     }
 
     #[test]

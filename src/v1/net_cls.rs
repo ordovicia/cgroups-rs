@@ -232,17 +232,20 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(NetCls; net_cls, ["classid"])
+        gen_subsystem_test!(NetCls, net_cls, ["classid"])
     }
 
     #[test]
     fn test_subsystem_classid() -> Result<()> {
         gen_subsystem_test!(
-            NetCls;
+            NetCls,
             classid,
             ClassId { major: 0, minor: 0 },
             set_classid,
-            ClassId { major: 0x10, minor: 0x1 }
+            ClassId {
+                major: 0x10,
+                minor: 0x1
+            }
         )
     }
 

@@ -661,8 +661,9 @@ mod tests {
     use v1::SubsystemKind;
 
     #[test]
+    #[rustfmt::skip]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Memory; memory, [
+        gen_subsystem_test!(Memory, memory, [
             "stat", "numa_stat", "swappiness", "oom_control", "move_charge_at_immigrate",
             "use_hierarchy", "force_empty", "soft_limit_in_bytes",
 
@@ -740,17 +741,21 @@ mod tests {
     fn test_subsystem_numa_stat() -> Result<()> {
         // tested on a non-NUMA system
 
-        gen_subsystem_test!(Memory; numa_stat, NumaStat {
-            total: (0, vec![0]),
-            file: (0, vec![0]),
-            anon: (0, vec![0]),
-            unevictable: (0, vec![0]),
+        gen_subsystem_test!(
+            Memory,
+            numa_stat,
+            NumaStat {
+                total: (0, vec![0]),
+                file: (0, vec![0]),
+                anon: (0, vec![0]),
+                unevictable: (0, vec![0]),
 
-            hierarchical_total: (0, vec![0]),
-            hierarchical_file: (0, vec![0]),
-            hierarchical_anon: (0, vec![0]),
-            hierarchical_unevictable: (0, vec![0]),
-        })
+                hierarchical_total: (0, vec![0]),
+                hierarchical_file: (0, vec![0]),
+                hierarchical_anon: (0, vec![0]),
+                hierarchical_unevictable: (0, vec![0]),
+            }
+        )
 
         // TODO: test on NUMA systems
     }
@@ -812,7 +817,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_swappiness() -> Result<()> {
-        gen_subsystem_test!(Memory; swappiness, 60, set_swappiness, 100)
+        gen_subsystem_test!(Memory, swappiness, 60, set_swappiness, 100)
     }
 
     #[test]
@@ -843,14 +848,20 @@ mod tests {
 
     #[test]
     fn test_subsystem_move_charge_at_immigrate() -> Result<()> {
-        gen_subsystem_test!(Memory; move_charge_at_immigrate, false, set_move_charge_at_immigrate, true)
+        gen_subsystem_test!(
+            Memory,
+            move_charge_at_immigrate,
+            false,
+            set_move_charge_at_immigrate,
+            true
+        )
     }
 
     #[test]
     fn test_subsystem_use_hierarchy() -> Result<()> {
         // TODO: `set_use_hierarchy(false)` raises `io::Error` with kind `InvalidInput` on some
         // systems?
-        gen_subsystem_test!(Memory; use_hierarchy, true)
+        gen_subsystem_test!(Memory, use_hierarchy, true)
     }
 
     #[test]

@@ -362,7 +362,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Devices; devices, ["allow", "deny", "list"])
+        gen_subsystem_test!(Devices, devices, ["allow", "deny", "list"])
     }
 
     #[test]
@@ -380,11 +380,7 @@ mod tests {
             },
         };
 
-        gen_subsystem_test!(
-            Devices;
-            list,
-            vec![allowed_all]
-        )
+        gen_subsystem_test!(Devices, list, vec![allowed_all])
     }
 
     #[test]

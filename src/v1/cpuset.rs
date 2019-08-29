@@ -701,6 +701,7 @@ mod tests {
     use v1::SubsystemKind;
 
     #[test]
+    #[rustfmt::skip]
     fn test_subsystem_create_file_exists() -> Result<()> {
         // root
         let root = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::new()));
@@ -708,7 +709,7 @@ mod tests {
 
         // non-root
         gen_subsystem_test!(
-            Cpuset; cpuset,
+            Cpuset, cpuset,
             [
                 "cpus", "mems", "memory_migrate", "cpu_exclusive", "mem_exclusive", "mem_hardwall",
                 "memory_pressure", // "memory_pressure_enabled",
@@ -755,27 +756,27 @@ mod tests {
 
     #[test]
     fn test_subsystem_memory_migrate() -> Result<()> {
-        gen_subsystem_test!(Cpuset; memory_migrate, false, set_memory_migrate, true)
+        gen_subsystem_test!(Cpuset, memory_migrate, false, set_memory_migrate, true)
     }
 
     #[test]
     fn test_subsystem_cpu_exclusive() -> Result<()> {
-        gen_subsystem_test!(Cpuset; cpu_exclusive, false, set_cpu_exclusive, true)
+        gen_subsystem_test!(Cpuset, cpu_exclusive, false, set_cpu_exclusive, true)
     }
 
     #[test]
     fn test_subsystem_mem_exclusive() -> Result<()> {
-        gen_subsystem_test!(Cpuset; mem_exclusive, false, set_mem_exclusive, true)
+        gen_subsystem_test!(Cpuset, mem_exclusive, false, set_mem_exclusive, true)
     }
 
     #[test]
     fn test_subsystem_mem_hardwall() -> Result<()> {
-        gen_subsystem_test!(Cpuset; mem_hardwall, false, set_mem_hardwall, true)
+        gen_subsystem_test!(Cpuset, mem_hardwall, false, set_mem_hardwall, true)
     }
 
     #[test]
     fn test_subsystem_memory_pressure() -> Result<()> {
-        gen_subsystem_test!(Cpuset; memory_pressure, 0)
+        gen_subsystem_test!(Cpuset, memory_pressure, 0)
     }
 
     #[test]
@@ -808,24 +809,42 @@ mod tests {
 
     #[test]
     fn test_subsystem_memory_spread_page() -> Result<()> {
-        gen_subsystem_test!(Cpuset; memory_spread_page, false, set_memory_spread_page, true)
+        gen_subsystem_test!(
+            Cpuset,
+            memory_spread_page,
+            false,
+            set_memory_spread_page,
+            true
+        )
     }
 
     #[test]
     fn test_subsystem_memory_spread_slab() -> Result<()> {
-        gen_subsystem_test!(Cpuset; memory_spread_slab, false, set_memory_spread_slab, true)
+        gen_subsystem_test!(
+            Cpuset,
+            memory_spread_slab,
+            false,
+            set_memory_spread_slab,
+            true
+        )
     }
 
     #[test]
     fn test_subsystem_sched_load_balance() -> Result<()> {
-        gen_subsystem_test!(Cpuset; sched_load_balance, true, set_sched_load_balance, false)
+        gen_subsystem_test!(
+            Cpuset,
+            sched_load_balance,
+            true,
+            set_sched_load_balance,
+            false
+        )
     }
 
     #[test]
     fn test_subsystem_sched_relax_domain_level() -> Result<()> {
         // TODO: `set_sched_relax_domain_level()` raises `io::Error` with kind `InvalidInput` on
         // some systems?
-        gen_subsystem_test!(Cpuset; sched_relax_domain_level, -1)
+        gen_subsystem_test!(Cpuset, sched_relax_domain_level, -1)
     }
 
     #[test]
@@ -847,7 +866,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_clone_children() -> Result<()> {
-        gen_subsystem_test!(Cpuset; clone_children, false, set_clone_children, true)
+        gen_subsystem_test!(Cpuset, clone_children, false, set_clone_children, true)
     }
 
     #[test]

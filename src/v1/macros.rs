@@ -121,7 +121,7 @@ macro_rules! gen_setter {
 #[cfg(test)]
 macro_rules! gen_subsystem_test {
     // Test create, file_exists, and delete
-    ($kind: ident; $subsystem: ident, [ $( $file: literal ),* ]) => { {
+    ($kind: ident, $subsystem: ident, [ $( $file: literal ),* ]) => { {
         let files = vec![$(
             format!("{}.{}", stringify!($subsystem), $file)
         ),+];
@@ -141,7 +141,7 @@ macro_rules! gen_subsystem_test {
     } };
 
     // Test a read-only field
-    ($kind: ident; $field: ident, $default: expr) => { {
+    ($kind: ident, $field: ident, $default: expr) => { {
         let mut cgroup = Subsystem::new(
             CgroupPath::new(crate::v1::SubsystemKind::$kind, gen_cgroup_name!()));
         cgroup.create()?;
@@ -151,7 +151,7 @@ macro_rules! gen_subsystem_test {
     } };
 
     // Test a read-write field
-    ($kind: ident; $field: ident, $default: expr, $setter: ident, $val: expr) => { {
+    ($kind: ident, $field: ident, $default: expr, $setter: ident, $val: expr) => { {
         let mut cgroup = Subsystem::new(
             CgroupPath::new(crate::v1::SubsystemKind::$kind, gen_cgroup_name!()));
         cgroup.create()?;

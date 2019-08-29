@@ -143,12 +143,12 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Pids; pids, ["max", "current", "events"])
+        gen_subsystem_test!(Pids, pids, ["max", "current", "events"])
     }
 
     #[test]
     fn test_subsystem_max() -> Result<()> {
-        gen_subsystem_test!(Pids; max, Max::<u32>::Max, set_max, Max::<u32>::Limit(42))
+        gen_subsystem_test!(Pids, max, Max::<u32>::Max, set_max, Max::<u32>::Limit(42))
     }
 
     #[test]
@@ -173,6 +173,6 @@ mod tests {
 
     #[test]
     fn test_subsystem_events() -> Result<()> {
-        gen_subsystem_test!(Pids; events, (Max::<u32>::Max, 0))
+        gen_subsystem_test!(Pids, events, (Max::<u32>::Max, 0))
     }
 }

@@ -491,8 +491,10 @@ mod tests {
     use v1::SubsystemKind;
 
     #[test]
+    #[rustfmt::skip]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(BlkIo; blkio,
+        gen_subsystem_test!(
+            BlkIo, blkio,
             [
                 "weight", "weight_device", "leaf_weight", "leaf_weight_device",
                 "throttle.io_service_bytes", "throttle.io_serviced",
@@ -514,8 +516,14 @@ mod tests {
     #[test]
     fn test_subsystem_weight() -> Result<()> {
         const WEIGHT_DEFAULT: u16 = 500;
-        gen_subsystem_test!(BlkIo; weight, WEIGHT_DEFAULT, set_weight, WEIGHT_MAX)?;
-        gen_subsystem_test!(BlkIo; leaf_weight, WEIGHT_DEFAULT, set_leaf_weight, WEIGHT_MAX)
+        gen_subsystem_test!(BlkIo, weight, WEIGHT_DEFAULT, set_weight, WEIGHT_MAX)?;
+        gen_subsystem_test!(
+            BlkIo,
+            leaf_weight,
+            WEIGHT_DEFAULT,
+            set_leaf_weight,
+            WEIGHT_MAX
+        )
     }
 
     #[test]
@@ -538,22 +546,22 @@ mod tests {
     #[test]
     fn test_subsystem_weight_device() -> Result<()> {
         // TODO: test setting weights
-        gen_subsystem_test!(BlkIo; weight_device, hashmap![])?;
-        gen_subsystem_test!(BlkIo; leaf_weight_device, hashmap![])
+        gen_subsystem_test!(BlkIo, weight_device, hashmap![])?;
+        gen_subsystem_test!(BlkIo, leaf_weight_device, hashmap![])
     }
 
     // TODO: test adding tasks
 
     #[test]
     fn test_subsystem_time() -> Result<()> {
-        gen_subsystem_test!(BlkIo; time, hashmap![])?;
-        gen_subsystem_test!(BlkIo; time_recursive, hashmap![])
+        gen_subsystem_test!(BlkIo, time, hashmap![])?;
+        gen_subsystem_test!(BlkIo, time_recursive, hashmap![])
     }
 
     #[test]
     fn test_subsystem_sectors() -> Result<()> {
-        gen_subsystem_test!(BlkIo; sectors, hashmap![])?;
-        gen_subsystem_test!(BlkIo; sectors_recursive, hashmap![])
+        gen_subsystem_test!(BlkIo, sectors, hashmap![])?;
+        gen_subsystem_test!(BlkIo, sectors_recursive, hashmap![])
     }
 
     #[test]
@@ -563,14 +571,14 @@ mod tests {
             total: 0,
         };
 
-        gen_subsystem_test!(BlkIo; io_serviced, io_service)?;
-        gen_subsystem_test!(BlkIo; io_serviced_recursive, io_service)?;
+        gen_subsystem_test!(BlkIo, io_serviced, io_service)?;
+        gen_subsystem_test!(BlkIo, io_serviced_recursive, io_service)?;
 
-        gen_subsystem_test!(BlkIo; io_service_bytes, io_service)?;
-        gen_subsystem_test!(BlkIo; io_service_bytes_recursive, io_service)?;
+        gen_subsystem_test!(BlkIo, io_service_bytes, io_service)?;
+        gen_subsystem_test!(BlkIo, io_service_bytes_recursive, io_service)?;
 
-        gen_subsystem_test!(BlkIo; io_service_time, io_service)?;
-        gen_subsystem_test!(BlkIo; io_service_time_recursive, io_service)
+        gen_subsystem_test!(BlkIo, io_service_time, io_service)?;
+        gen_subsystem_test!(BlkIo, io_service_time_recursive, io_service)
     }
 
     #[test]
@@ -580,8 +588,8 @@ mod tests {
             total: 0,
         };
 
-        gen_subsystem_test!(BlkIo; io_wait_time, io_service)?;
-        gen_subsystem_test!(BlkIo; io_wait_time_recursive, io_service)
+        gen_subsystem_test!(BlkIo, io_wait_time, io_service)?;
+        gen_subsystem_test!(BlkIo, io_wait_time_recursive, io_service)
     }
 
     #[test]
@@ -591,8 +599,8 @@ mod tests {
             total: 0,
         };
 
-        gen_subsystem_test!(BlkIo; io_merged, io_service)?;
-        gen_subsystem_test!(BlkIo; io_merged_recursive, io_service)
+        gen_subsystem_test!(BlkIo, io_merged, io_service)?;
+        gen_subsystem_test!(BlkIo, io_merged_recursive, io_service)
     }
 
     #[test]
@@ -602,8 +610,8 @@ mod tests {
             total: 0,
         };
 
-        gen_subsystem_test!(BlkIo; io_queued, io_service)?;
-        gen_subsystem_test!(BlkIo; io_queued_recursive, io_service)
+        gen_subsystem_test!(BlkIo, io_queued, io_service)?;
+        gen_subsystem_test!(BlkIo, io_queued_recursive, io_service)
     }
 
     #[test]
