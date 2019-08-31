@@ -155,7 +155,10 @@ mod error;
 mod parse;
 pub mod v1;
 
-use std::{fmt, str::FromStr};
+use std::{
+    fmt::{self, Display},
+    str::FromStr,
+};
 
 pub use error::{Error, ErrorKind, Result};
 
@@ -205,7 +208,7 @@ impl FromStr for Pid {
     }
 }
 
-impl fmt::Display for Pid {
+impl Display for Pid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -279,7 +282,7 @@ where
     }
 }
 
-impl<T: fmt::Display> fmt::Display for Max<T> {
+impl<T: Display> Display for Max<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Max => write!(f, "max"),
@@ -373,7 +376,7 @@ impl FromStr for Device {
     }
 }
 
-impl fmt::Display for Device {
+impl Display for Device {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}:{}", self.major, self.minor)
     }
@@ -443,7 +446,7 @@ impl FromStr for DeviceNumber {
     }
 }
 
-impl fmt::Display for DeviceNumber {
+impl Display for DeviceNumber {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use fmt::Write;
 
@@ -451,6 +454,27 @@ impl fmt::Display for DeviceNumber {
             Self::Any => f.write_char('*'),
             Self::Number(n) => write!(f, "{}", n),
         }
+    }
+}
+
+/// Yields a pair of a references, each of which points to a key and a value.
+///
+/// This trait is used to convert a reference to a pair `&(K, V)` into a pair of references
+/// `(&K, &V)`.
+pub trait RefKv<K, V> {
+    /// Yields a pair of a references, each of which points to a key and a value.
+    fn ref_kv(&self) -> (&K, &V);
+}
+
+impl<K, V> RefKv<K, V> for (&K, &V) {
+    fn ref_kv(&self) -> (&K, &V) {
+        *self
+    }
+}
+
+impl<K, V> RefKv<K, V> for &(K, V) {
+    fn ref_kv(&self) -> (&K, &V) {
+        (&self.0, &self.1)
     }
 }
 

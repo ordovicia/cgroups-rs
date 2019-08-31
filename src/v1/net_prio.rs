@@ -17,8 +17,7 @@
 //! net_prio_cgroup.create()?;
 //!
 //! // Set a map of priorities assigned to traffic originating from this cgroup.
-//! let priorities = [("lo", 0), ("wlp1s0", 1)].iter().copied().collect::<HashMap<_, u32>>();
-//! net_prio_cgroup.set_ifpriomap(priorities)?;
+//! net_prio_cgroup.set_ifpriomap([("lo", 0), ("wlp1s0", 1)].iter())?;
 //!
 //! // Add a task to this cgroup.
 //! let pid = Pid::from(std::process::id());
@@ -76,7 +75,7 @@ impl_cgroup! {
         if prio_map.is_empty() {
             Ok(())
         } else {
-            self.set_ifpriomap(prio_map.iter().map(|(i, prio)| (i, *prio)))
+            self.set_ifpriomap(prio_map.iter())
         }
     }
 }
@@ -105,30 +104,19 @@ impl Subsystem {
         ),
         gen_doc!(see; ifpriomap),
         gen_doc!(err_write; net_prio, ifpriomap),
-"# Examples
-
-```no_run
-# fn main() -> cgroups::Result<()> {
-use std::{collections::HashMap, path::PathBuf};
-use cgroups::v1::{net_prio, Cgroup, CgroupPath, SubsystemKind};
-
-let mut cgroup = net_prio::Subsystem::new(
-    CgroupPath::new(SubsystemKind::NetPrio, PathBuf::from(\"students/charlie\")));
-
-let prio_map = [(\"lo\", 0), (\"wlp1s\", 1)].iter().copied().collect::<HashMap<_, _>>();
-cgroup.set_ifpriomap(prio_map)?;
-# Ok(())
-# }
-```"),
-        pub fn set_ifpriomap<I, T>(&mut self, prio_map: I) -> Result<()>
+        gen_doc!(eg_write; net_prio, set_ifpriomap, [("lo", 0), ("wlp1s", 1)].iter())),
+        pub fn set_ifpriomap<I, T, K>(&mut self, prio_map: I) -> Result<()>
         where
-            I: IntoIterator<Item = (T, u32)>,
-            T: AsRef<str> + std::fmt::Display,
+            I: Iterator<Item = T>,
+            T: crate::RefKv<K, u32>,
+            K: std::fmt::Display,
         {
             use std::io::Write;
 
             let mut file = self.open_file_write("net_prio.ifpriomap")?;
-            for (interface, prio) in prio_map.into_iter() {
+            for if_prio in prio_map {
+                let (interface, prio) = if_prio.ref_kv();
+
                 // write!(file, "{} {}", interface, prio)?; // not work
                 file.write_all(format!("{} {}", interface, prio).as_bytes())?;
             }
@@ -202,7 +190,7 @@ mod tests {
             *prio += 1;
         }
 
-        cgroup.set_ifpriomap(priorities.iter().map(|(if_, prio)| (if_, *prio)))?;
+        cgroup.set_ifpriomap(priorities.iter())?;
         assert_eq!(cgroup.ifpriomap()?, priorities);
 
         cgroup.delete()

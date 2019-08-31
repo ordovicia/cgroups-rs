@@ -32,12 +32,9 @@
 //!                 hca_object: Max::<u32>::Max,
 //!             },
 //!         ),
-//!     ]
-//!     .iter()
-//!     .copied()
-//!     .collect::<HashMap<_, _>>();
+//!     ];
 //!
-//! rdma_cgroup.set_max(rdma_limits)?;
+//! rdma_cgroup.set_max(rdma_limits.iter())?;
 //!
 //! // Add tasks to this cgroup.
 //! let pid = Pid::from(std::process::id());
@@ -110,7 +107,7 @@ impl_cgroup! {
         if max.is_empty() {
             Ok(())
         } else {
-            self.set_max(max.iter().map(|(d, lim)| (d, *lim)))
+            self.set_max(max.iter())
         }
     }
 }
@@ -136,42 +133,27 @@ impl Subsystem {
         ),
         gen_doc!(see; max),
         gen_doc!(err_write; rdma, max),
-"# Examples
-
-```no_run
-# fn main() -> cgroups::Result<()> {
-use std::{collections::HashMap, path::PathBuf};
-use cgroups::{Max, v1::{rdma, Cgroup, CgroupPath, SubsystemKind}};
-
-let mut cgroup = rdma::Subsystem::new(
-    CgroupPath::new(SubsystemKind::Rdma, PathBuf::from(\"students/charlie\")));
-
-let max = [
-        (
-            \"mlx4_0\",
-            rdma::Limit {
-                hca_handle: 3.into(),
-                hca_object: Max::<u32>::Max,
-            },
-        ),
-    ]
-    .iter()
-    .copied()
-    .collect::<HashMap<_, _>>();
-
-cgroup.set_max(max)?;
-# Ok(())
-# }
-```"),
-        pub fn set_max<I, T>(&mut self, limits: I) -> Result<()>
+        gen_doc!(
+            eg_write;
+            rdma,
+            set_max,
+            [(
+                "mlx4_0",
+                rdma::Limit { hca_handle: 3.into(), hca_object: cgroups::Max::<u32>::Max }
+            )].iter()
+        )),
+        pub fn set_max<I, T, K>(&mut self, limits: I) -> Result<()>
         where
-            I: IntoIterator<Item = (T, Limit)>,
-            T: AsRef<str> + fmt::Display,
+            I: Iterator<Item = T>,
+            T: crate::RefKv<K, Limit>,
+            K: fmt::Display,
         {
             use std::io::Write;
 
             let mut file = self.open_file_write("rdma.max")?;
-            for (device, limit) in limits.into_iter() {
+            for lim in limits {
+                let (device, limit) = lim.ref_kv();
+
                 // write!(file, "{} {}", interface, prio)?; // not work
                 file.write_all(format!("{} {}", device, limit).as_bytes())?;
             }
@@ -298,7 +280,7 @@ mod tests {
             };
         }
 
-        cgroup.set_max(limits.clone())?;
+        cgroup.set_max(limits.iter())?;
         assert_eq!(cgroup.max()?, limits);
 
         cgroup.delete()
