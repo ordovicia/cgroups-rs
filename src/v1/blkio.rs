@@ -404,8 +404,8 @@ where
         let line = line?;
         let mut entry = line.split_whitespace();
 
-        let device = parse_next(entry.by_ref())?;
-        let val = parse_next(entry.by_ref())?;
+        let device = parse_next(&mut entry)?;
+        let val = parse_next(&mut entry)?;
 
         if entry.next().is_some() {
             bail_parse!();
@@ -432,7 +432,7 @@ fn parse_io_service(reader: impl io::Read) -> Result<IoService> {
             // FIXME: 5 lines of the same device are guaranteed to be contiguous?
             [read, write, sync, async_, total] => {
                 let mut e = read.split_whitespace();
-                let device = parse_next(e.by_ref())?;
+                let device = parse_next(&mut e)?;
 
                 let read = parse_next(e.skip(1))?;
                 let write = parse_next({
@@ -469,7 +469,7 @@ fn parse_io_service(reader: impl io::Read) -> Result<IoService> {
                     bail_parse!();
                 }
 
-                total = Some(parse_next(entry.by_ref())?);
+                total = Some(parse_next(&mut entry)?);
 
                 if entry.next().is_some() {
                     bail_parse!();

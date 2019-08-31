@@ -366,8 +366,8 @@ impl FromStr for Device {
 
     fn from_str(s: &str) -> Result<Self> {
         let mut parts = s.split(':');
-        let major = parse::parse_next(parts.by_ref())?;
-        let minor = parse::parse_next(parts)?;
+        let major = parse::parse_next(&mut parts)?;
+        let minor = parse::parse_next(&mut parts)?;
 
         Ok(Device { major, minor })
     }

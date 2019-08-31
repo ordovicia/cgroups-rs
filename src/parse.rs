@@ -13,14 +13,14 @@ where
     buf.trim().parse::<T>().map_err(Error::parse)
 }
 
-pub fn parse_next<T, I, S>(iter: I) -> Result<T>
+pub fn parse_next<T, I, S>(mut iter: I) -> Result<T>
 where
     T: FromStr,
     <T as FromStr>::Err: StdErr + Sync + Send + 'static,
-    I: IntoIterator<Item = S>,
+    I: Iterator<Item = S>,
     S: AsRef<str>,
 {
-    match iter.into_iter().next() {
+    match iter.next() {
         Some(s) => s.as_ref().parse::<T>().map_err(Error::parse),
         None => {
             bail_parse!();
@@ -72,17 +72,22 @@ mod tests {
     fn test_parse_next() {
         use std::iter;
 
-        assert_eq!(parse_next::<i32, _, _>(Some("42")).unwrap(), 42);
+        assert_eq!(parse_next::<i32, _, _>(Some("42").iter()).unwrap(), 42);
         assert_eq!(parse_next::<bool, _, _>(iter::once("true")).unwrap(), true);
 
         assert_eq!(
-            parse_next::<i32, _, _>(Some("invalid")).unwrap_err().kind(),
+            parse_next::<i32, _, _>(Some("invalid").iter())
+                .unwrap_err()
+                .kind(),
             ErrorKind::Parse
         );
+
+        let none: Option<&str> = None;
         assert_eq!(
-            parse_next::<i32, _, &str>(None).unwrap_err().kind(),
+            parse_next::<i32, _, _>(none.iter()).unwrap_err().kind(),
             ErrorKind::Parse
         );
+
         assert_eq!(
             parse_next::<i32, _, &str>(iter::empty())
                 .unwrap_err()

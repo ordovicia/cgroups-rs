@@ -164,13 +164,13 @@ fn parse_stat(reader: impl io::Read) -> Result<Stat> {
                 if system.is_some() {
                     bail_parse!();
                 }
-                system = Some(parse_next(entry.by_ref())?);
+                system = Some(parse_next(&mut entry)?);
             }
             Some("user") => {
                 if user.is_some() {
                     bail_parse!();
                 }
-                user = Some(parse_next(entry.by_ref())?);
+                user = Some(parse_next(&mut entry)?);
             }
             _ => {
                 bail_parse!();
@@ -217,17 +217,17 @@ fn parse_usage_all(reader: impl io::Read) -> Result<Vec<Stat>> {
         let mut entry = line.split_whitespace();
 
         // FIXME: IDs are guaranteed to be sorted ?
-        let _id: u32 = parse_next(entry.by_ref())?;
+        let _id: u32 = parse_next(&mut entry)?;
 
         if system_column == 0 {
             stats.push(Stat {
-                system: parse_next(entry.by_ref())?,
-                user: parse_next(entry.by_ref())?,
+                system: parse_next(&mut entry)?,
+                user: parse_next(&mut entry)?,
             });
         } else {
             stats.push(Stat {
-                user: parse_next(entry.by_ref())?,
-                system: parse_next(entry.by_ref())?,
+                user: parse_next(&mut entry)?,
+                system: parse_next(&mut entry)?,
             });
         }
 

@@ -133,8 +133,8 @@ fn parse_events(mut reader: impl std::io::Read) -> Result<(Max<u32>, u64)> {
     reader.read_to_string(&mut buf)?;
 
     let mut entry = buf.split_whitespace();
-    let max = parse_next(entry.by_ref())?;
-    let cnt = parse_next(entry.by_ref())?;
+    let max = parse_next(&mut entry)?;
+    let cnt = parse_next(&mut entry)?;
 
     if entry.next().is_some() {
         bail_parse!();

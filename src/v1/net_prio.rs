@@ -158,7 +158,7 @@ fn parse_ifpriomap(reader: impl std::io::Read) -> Result<HashMap<String, u32>> {
         let mut entry = line.split_whitespace();
 
         let interface = entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))?;
-        let prio = parse_next(entry.by_ref())?;
+        let prio = parse_next(&mut entry)?;
 
         if entry.next().is_some() {
             bail_parse!();

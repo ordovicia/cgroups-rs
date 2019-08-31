@@ -237,11 +237,11 @@ impl FromStr for Access {
     fn from_str(s: &str) -> Result<Self> {
         let mut entry = s.split_whitespace();
 
-        let device_type = parse_next(entry.by_ref())?;
+        let device_type = parse_next(&mut entry)?;
 
         if let Some(device_number) = entry.next() {
             let device_number = device_number.parse()?;
-            let access_type = parse_next(entry.by_ref())?;
+            let access_type = parse_next(&mut entry)?;
 
             if entry.next().is_some() {
                 bail_parse!();

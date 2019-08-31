@@ -176,19 +176,19 @@ fn parse_stat(reader: impl std::io::Read) -> Result<Stat> {
                 if nr_periods.is_some() {
                     bail_parse!();
                 }
-                nr_periods = Some(parse_next(entry.by_ref())?);
+                nr_periods = Some(parse_next(&mut entry)?);
             }
             Some("nr_throttled") => {
                 if nr_throttled.is_some() {
                     bail_parse!();
                 }
-                nr_throttled = Some(parse_next(entry.by_ref())?);
+                nr_throttled = Some(parse_next(&mut entry)?);
             }
             Some("throttled_time") => {
                 if throttled_time.is_some() {
                     bail_parse!();
                 }
-                throttled_time = Some(parse_next(entry.by_ref())?);
+                throttled_time = Some(parse_next(&mut entry)?);
             }
             _ => bail_parse!(),
         };

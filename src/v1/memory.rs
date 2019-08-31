@@ -490,13 +490,13 @@ fn parse_stat(reader: impl io::Read) -> Result<Stat> {
                     $(
                         Some(stringify!($key)) => {
                             if $key.is_some() { bail_parse!(); }
-                            $key = Some(parse_next(entry.by_ref())?);
+                            $key = Some(parse_next(&mut entry)?);
                         }
                     )*
                     $(
                         Some(stringify!($key_opt)) => {
                             if $key_opt.is_some() { bail_parse!(); }
-                            $key_opt = Some(parse_next(entry.by_ref())?);
+                            $key_opt = Some(parse_next(&mut entry)?);
                         }
                     )*
                     _ => { bail_parse!(); }
@@ -617,7 +617,7 @@ fn parse_oom_control(reader: impl io::Read) -> Result<OomControl> {
                 if oom_kill.is_some() {
                     bail_parse!();
                 }
-                oom_kill = Some(parse_next(entry.by_ref())?);
+                oom_kill = Some(parse_next(&mut entry)?);
             }
             _ => {
                 bail_parse!();
