@@ -17,7 +17,7 @@
 //! net_cls_cgroup.create()?;
 //!
 //! // Tag network packets from this cgroup with a class ID.
-//! net_cls_cgroup.set_classid(net_cls::ClassId { major: 0x10, minor: 0x1 })?;
+//! net_cls_cgroup.set_classid([0x10, 0x1].into())?;
 //!
 //! // Add a task to this cgroup.
 //! let pid = Pid::from(std::process::id());
@@ -82,7 +82,7 @@ pub struct Resources {
 /// assert_eq!(ClassId { major: 0x0123, minor: 0xABCD}.to_string(), "0x123ABCD");
 /// ```
 ///
-/// `ClassId` also supports conversion from/into `u32` and from/into `[u16; 2]`.
+/// `ClassId` also supports conversion from/into [`u32`] and from/into `[`[`u16`]`; 2]`.
 ///
 /// ```
 /// use cgroups::v1::net_cls::ClassId;
@@ -114,6 +114,9 @@ pub struct Resources {
 /// [`ErrorKind::Parse`]: ../../enum.ErrorKind.html#variant.Parse
 ///
 /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
+///
+/// [`u32`]: https://doc.rust-lang.org/std/primitive.u32.html
+/// [`u16`]: https://doc.rust-lang.org/std/primitive.u16.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ClassId {
     /// Major number.
@@ -251,7 +254,15 @@ mod tests {
 
     #[test]
     fn err_class_id_from_str() {
-        for case in &["", "01234567", "0xffff", "0x012345678"] {
+        for case in &[
+            "",
+            "invalid",
+            "0xinvalid",
+            "0x0123invalid",
+            "01234567",
+            "0xffff",
+            "0x012345678",
+        ] {
             assert_eq!(
                 case.parse::<ClassId>().unwrap_err().kind(),
                 ErrorKind::Parse

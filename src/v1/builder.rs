@@ -57,7 +57,7 @@ use crate::{
 ///         .limit_1gb(hugetlb::Limit::Pages(2))
 ///         .done()
 ///     .net_cls()
-///         .classid(net_cls::ClassId { major: 0x10, minor: 0x1 })
+///         .classid([0x10, 0x1].into())
 ///         .done()
 ///     .net_prio()
 ///         .ifpriomap(
