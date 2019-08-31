@@ -846,28 +846,30 @@ mod tests {
     #[ignore] // must not be executed in parallel
     fn test_subsystem_stat_throttled() -> Result<()> {
         const LIMIT: usize = 1 * (1 << 20);
-        const USAGE: usize = 2 * LIMIT;
 
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Memory, gen_cgroup_name!()));
         cgroup.create()?;
 
         cgroup.set_limit_in_bytes(LIMIT as i64)?;
 
-        let pid = crate::Pid::from(std::process::id());
-        cgroup.add_proc(pid)?;
+        let mut child = std::process::Command::new("bash")
+            .arg("tests/consume_memory.sh")
+            .arg((LIMIT / 64).to_string())
+            .spawn()
+            .unwrap();
 
-        let _v = crate::consume_memory(USAGE);
+        let child_pid = crate::Pid::from(&child);
+        cgroup.add_proc(child_pid)?;
+
+        child.wait().unwrap();
         // dbg!(cgroup.stat()?);
 
         let stat = cgroup.stat()?;
-        assert!(stat.rss > 0);
         assert!(stat.pgpgin > 0 && stat.pgpgout > 0 && stat.pgfault > 0);
-        assert!(cgroup.numa_stat()?.total.0 > 0);
         assert!(cgroup.usage_in_bytes()? > 0);
         assert_eq!(cgroup.max_usage_in_bytes()?, LIMIT as u64);
         assert!(cgroup.failcnt()? > 0);
 
-        cgroup.remove_proc(pid)?;
         cgroup.delete()
     }
 

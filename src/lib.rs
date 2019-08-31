@@ -454,8 +454,6 @@ impl fmt::Display for DeviceNumber {
     }
 }
 
-// Testing utilitied
-
 // Consume CPU time on the all logical cores until a condition holds. Panics if the condition does
 // not hold in the given timeout.
 // FIXME: consume system time
@@ -491,17 +489,4 @@ pub fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
     }
 
     panic!("consume_cpu_until timeout")
-}
-
-#[cfg(test)]
-pub fn consume_memory(bytes: usize) -> Vec<u64> {
-    let n = bytes / 8;
-
-    let mut v = Vec::with_capacity(n);
-    v.push(0);
-    for _ in 1..n {
-        v.push(v.last().unwrap() + 1); // actually touch the memory
-    }
-
-    v
 }
