@@ -49,7 +49,7 @@ cgroup.delete()?;
 
 ```rust
 use std::{collections::HashMap, path::PathBuf};
-use cgroups::{Device, Max, v1::{devices, hugetlb, net_cls, rdma, Builder}};
+use cgroups::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder}};
 
 let mut cgroups =
     // Start building a (set of) cgroup(s).
@@ -73,7 +73,7 @@ let mut cgroups =
         .use_hierarchy(true)
         .done()
     .pids()
-        .max(Max::<u32>::Limit(42))
+        .max(42.into())
         .done()
     .devices()
         .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
@@ -105,7 +105,7 @@ let mut cgroups =
             [(
                 "mlx4_0".to_string(),
                 rdma::Limit {
-                    hca_handle: Max::<u32>::Limit(2),
+                    hca_handle: 2.into(),
                     hca_object: Max::<u32>::Max,
                 },
             )]

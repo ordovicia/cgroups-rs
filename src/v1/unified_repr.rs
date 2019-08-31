@@ -70,7 +70,7 @@ impl UnifiedRepr {
     /// Creates a new unified representation of a set of cgroups with all subsystems available in
     /// this crate.
     ///
-    /// See [`SubsystemKind`](enum.SubsystemKind.html) for the available subsystems.
+    /// See [`SubsystemKind`] for the available subsystems.
     ///
     /// # Examples
     ///
@@ -80,6 +80,8 @@ impl UnifiedRepr {
     ///
     /// let cgroups = UnifiedRepr::new(PathBuf::from("students/charlie"));
     /// ```
+    ///
+    /// [`SubsystemKind`]: enum.SubsystemKind.html
     pub fn new(name: PathBuf) -> Self {
         Self::with_subsystems(name, &[$(SubsystemKind::$kind),*])
     }
@@ -327,58 +329,68 @@ mod tests {
 
     #[test]
     fn test_unified_repr_create_delete() -> Result<()> {
-        // with CPU and cpuset subsystems
-        //
-        // we don't enable all SubsystemKind because CPU and cpuacct subsystems, and net_cls
-        // and net_prio subsystems are aliased in some systems
-        let mut cgroups = UnifiedRepr::with_subsystems(
-            gen_cgroup_name!(),
-            &[SubsystemKind::Cpu, SubsystemKind::Cpuset],
-        );
-        cgroups.create()?;
+        {
+            // with CPU and cpuset subsystems
+            // we don't enable all SubsystemKind because CPU and cpuacct subsystems, and net_cls
+            // and net_prio subsystems are aliased in some systems
 
-        assert!(cgroups.cpu().unwrap().path().exists());
-        assert!(cgroups.cpuset().unwrap().path().exists());
+            let mut cgroups = UnifiedRepr::with_subsystems(
+                gen_cgroup_name!(),
+                &[SubsystemKind::Cpu, SubsystemKind::Cpuset],
+            );
+            cgroups.create()?;
 
-        cgroups.delete()?;
+            assert!(cgroups.cpu().unwrap().path().exists());
+            assert!(cgroups.cpuset().unwrap().path().exists());
 
-        assert!(!cgroups.cpu().unwrap().path().exists());
-        assert!(!cgroups.cpuset().unwrap().path().exists());
+            cgroups.delete()?;
 
-        // without any subsystems
-        let name = gen_cgroup_name!();
-        let mut cgroups = UnifiedRepr::with_subsystems(name.clone(), &[]);
-        cgroups.create()?;
+            assert!(!cgroups.cpu().unwrap().path().exists());
+            assert!(!cgroups.cpuset().unwrap().path().exists());
+        }
 
-        let cpu = cpu::Subsystem::new(CgroupPath::new(
-            SubsystemKind::Cpu,
-            PathBuf::from(name.clone()),
-        ));
-        assert!(!cpu.path().exists());
-        let cpuset =
-            cpuset::Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(name)));
-        assert!(!cpuset.path().exists());
+        {
+            // without any subsystems
 
-        cgroups.delete()?;
+            let name = gen_cgroup_name!();
+            let mut cgroups = UnifiedRepr::with_subsystems(name.clone(), &[]);
+            cgroups.create()?;
 
-        // with only CPU subsystems
-        let name = gen_cgroup_name!();
-        let mut cgroups = UnifiedRepr::with_subsystems(name.clone(), &[SubsystemKind::Cpu]);
-        cgroups.create()?;
+            let cpu = cpu::Subsystem::new(CgroupPath::new(
+                SubsystemKind::Cpu,
+                PathBuf::from(name.clone()),
+            ));
+            assert!(!cpu.path().exists());
 
-        let cpu = cpu::Subsystem::new(CgroupPath::new(
-            SubsystemKind::Cpu,
-            PathBuf::from(name.clone()),
-        ));
-        assert!(cpu.path().exists());
-        let cpuset =
-            cpuset::Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(name)));
-        assert!(!cpuset.path().exists());
+            let cpuset =
+                cpuset::Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(name)));
+            assert!(!cpuset.path().exists());
 
-        cgroups.delete()?;
+            cgroups.delete()?;
+        }
 
-        assert!(!cpu.path().exists());
-        assert!(!cpuset.path().exists());
+        {
+            // with only CPU subsystem
+
+            let name = gen_cgroup_name!();
+            let mut cgroups = UnifiedRepr::with_subsystems(name.clone(), &[SubsystemKind::Cpu]);
+            cgroups.create()?;
+
+            let cpu = cpu::Subsystem::new(CgroupPath::new(
+                SubsystemKind::Cpu,
+                PathBuf::from(name.clone()),
+            ));
+            assert!(cpu.path().exists());
+
+            let cpuset =
+                cpuset::Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(name)));
+            assert!(!cpuset.path().exists());
+
+            cgroups.delete()?;
+
+            assert!(!cpu.path().exists());
+            assert!(!cpuset.path().exists());
+        }
 
         Ok(())
     }
@@ -444,4 +456,6 @@ mod tests {
 
         cgroups.delete()
     }
+
+    // TODO: test apply
 }

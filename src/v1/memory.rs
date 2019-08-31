@@ -54,7 +54,7 @@ use std::{
 };
 
 use crate::{
-    parse::{parse, parse_01_bool, parse_01_bool_option, parse_option},
+    parse::{parse, parse_01_bool, parse_next},
     v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
     Error, ErrorKind, Result,
 };
@@ -367,7 +367,8 @@ impl Subsystem {
     with_doc! { concat!(
         gen_doc!(
             sets; memory,
-            "a soft limit on memory usage of this cgroup," : "Setting -1 removes the current limit.",
+            "a soft limit on memory usage of this cgroup,"
+            : "Setting -1 removes the current limit.",
             soft_limit_in_bytes
         ),
         gen_doc!(see; soft_limit_in_bytes),
@@ -473,12 +474,6 @@ impl Into<v1::Resources> for Resources {
     }
 }
 
-macro_rules! ret_err_parse {
-    () => {
-        return Err(Error::new(ErrorKind::Parse));
-    };
-}
-
 fn parse_stat(reader: impl io::Read) -> Result<Stat> {
     let buf = io::BufReader::new(reader);
 
@@ -494,18 +489,20 @@ fn parse_stat(reader: impl io::Read) -> Result<Stat> {
                 match entry.next() {
                     $(
                         Some(stringify!($key)) => {
-                            if $key.is_some() { ret_err_parse!(); }
-                            $key = Some(parse_option(entry.next())?);
+                            if $key.is_some() { bail_parse!(); }
+                            $key = Some(parse_next(entry.by_ref())?);
                         }
                     )*
                     $(
                         Some(stringify!($key_opt)) => {
-                            if $key_opt.is_some() { ret_err_parse!(); }
-                            $key_opt = Some(parse_option(entry.next())?);
+                            if $key_opt.is_some() { bail_parse!(); }
+                            $key_opt = Some(parse_next(entry.by_ref())?);
                         }
                     )*
-                    _ => { ret_err_parse!(); }
+                    _ => { bail_parse!(); }
                 }
+
+                if entry.next().is_some() { bail_parse!(); }
             }
 
             if $( $key.is_some() &&)* true {
@@ -514,7 +511,7 @@ fn parse_stat(reader: impl io::Read) -> Result<Stat> {
                     $( $key_opt, )*
                 })
             } else {
-                ret_err_parse!();
+                bail_parse!();
             }
         }
     }
@@ -549,14 +546,14 @@ fn parse_numa_stat(reader: impl io::Read) -> Result<NumaStat> {
                 $( let $key = $key.unwrap(); )*
 
                 let len = $key0.1.len();
-                $( if $key.1.len() != len { ret_err_parse!(); } )*
+                $( if $key.1.len() != len { bail_parse!(); } )*
 
                 Ok(NumaStat {
                     $key0,
                     $( $key, )*
                 })
             } else {
-                ret_err_parse!();
+                bail_parse!();
             }
         };
 
@@ -568,7 +565,8 @@ fn parse_numa_stat(reader: impl io::Read) -> Result<NumaStat> {
                         Some(stringify!($key)) => {
                             let mut entry = line.split(|c| c == ' ' || c == '=');
 
-                            let total = parse_option(entry.nth(1))?;
+                            let total = parse_next(entry.by_ref().skip(1))?;
+                            // FIXME: validate keys
                             let nodes = entry
                                 .skip(1)
                                 .step_by(2)
@@ -578,7 +576,7 @@ fn parse_numa_stat(reader: impl io::Read) -> Result<NumaStat> {
                             $key = Some((total, nodes));
                         }
                     )*
-                    _ => { ret_err_parse!(); }
+                    _ => { bail_parse!(); }
                 }
             }
 
@@ -605,25 +603,29 @@ fn parse_oom_control(reader: impl io::Read) -> Result<OomControl> {
         match entry.next() {
             Some("oom_kill_disable") => {
                 if oom_kill_disable.is_some() {
-                    ret_err_parse!();
+                    bail_parse!();
                 }
                 oom_kill_disable = Some(parse_01_bool_option(entry.next())?);
             }
             Some("under_oom") => {
                 if under_oom.is_some() {
-                    ret_err_parse!();
+                    bail_parse!();
                 }
                 under_oom = Some(parse_01_bool_option(entry.next())?);
             }
             Some("oom_kill") => {
                 if oom_kill.is_some() {
-                    ret_err_parse!();
+                    bail_parse!();
                 }
-                oom_kill = Some(parse_option(entry.next())?);
+                oom_kill = Some(parse_next(entry.by_ref())?);
             }
             _ => {
-                ret_err_parse!();
+                bail_parse!();
             }
+        }
+
+        if entry.next().is_some() {
+            bail_parse!();
         }
     }
 
@@ -634,16 +636,24 @@ fn parse_oom_control(reader: impl io::Read) -> Result<OomControl> {
             oom_kill,
         }),
         _ => {
-            ret_err_parse!();
+            bail_parse!();
         }
+    }
+}
+
+fn parse_01_bool_option(s: Option<&str>) -> Result<bool> {
+    match s {
+        Some(s) => parse_01_bool(s.as_bytes()),
+        None => bail_parse!(),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    const LIMIT_DEFAULT: u64 = 0x7FFF_FFFF_FFFF_F000;
     use v1::SubsystemKind;
+
+    const LIMIT_DEFAULT: u64 = 0x7FFF_FFFF_FFFF_F000;
 
     #[test]
     #[rustfmt::skip]
@@ -657,14 +667,13 @@ mod tests {
                 "usage_in_bytes", "max_usage_in_bytes", "limit_in_bytes", "failcnt",
                 // "memsw.usage_in_bytes", "memsw.max_usage_in_bytes", "memsw.limit_in_bytes",
                 // "memsw.failcnt",
-                "kmem.usage_in_bytes", "kmem.max_usage_in_bytes", "kmem.limit_in_bytes", "kmem.failcnt",
+                "kmem.usage_in_bytes", "kmem.max_usage_in_bytes", "kmem.limit_in_bytes", 
+                "kmem.failcnt",
                 "kmem.tcp.usage_in_bytes", "kmem.tcp.max_usage_in_bytes", "kmem.tcp.limit_in_bytes",
                 "kmem.tcp.failcnt"
             ]
         )
     }
-
-    // TODO: test adding tasks
 
     #[test]
     #[rustfmt::skip]
@@ -834,8 +843,37 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // must not be executed in parallel
+    fn test_subsystem_stat_throttled() -> Result<()> {
+        const LIMIT: usize = 1 * (1 << 20);
+        const USAGE: usize = 2 * LIMIT;
+
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Memory, gen_cgroup_name!()));
+        cgroup.create()?;
+
+        cgroup.set_limit_in_bytes(LIMIT as i64)?;
+
+        let pid = crate::Pid::from(std::process::id());
+        cgroup.add_proc(pid)?;
+
+        let _v = crate::consume_memory(USAGE);
+        // dbg!(cgroup.stat()?);
+
+        let stat = cgroup.stat()?;
+        assert!(stat.rss > 0);
+        assert!(stat.pgpgin > 0 && stat.pgpgout > 0 && stat.pgfault > 0);
+        assert!(cgroup.numa_stat()?.total.0 > 0);
+        assert!(cgroup.usage_in_bytes()? > 0);
+        assert_eq!(cgroup.max_usage_in_bytes()?, LIMIT as u64);
+        assert!(cgroup.failcnt()? > 0);
+
+        cgroup.remove_proc(pid)?;
+        cgroup.delete()
+    }
+
+    #[test]
     fn test_parse_stat() -> Result<()> {
-        const CONTENT: &str = "\
+        const CONTENT_OK: &str = "\
 cache 806506496
 rss 6950912
 rss_huge 0
@@ -871,7 +909,7 @@ total_active_file 4166680576
 total_unevictable 14004224
 ";
 
-        let stat = parse_stat(CONTENT.as_bytes())?;
+        let stat = parse_stat(CONTENT_OK.as_bytes())?;
 
         assert_eq!(
             stat,
@@ -925,7 +963,7 @@ total_unevictable 14004224
 
     #[test]
     fn test_parse_numa_stat() -> Result<()> {
-        const CONTENT: &str = "\
+        const CONTENT_OK: &str = "\
 total=200910 N0=200910 N1=0
 file=199107 N0=199107 N1=1
 anon=1803 N0=1803 N1=2
@@ -936,7 +974,7 @@ hierarchical_anon=2209488 N0=2209492 N1=6
 hierarchical_unevictable=3419 N0=3419 N1=7
 ";
 
-        let numa_stat = parse_numa_stat(CONTENT.as_bytes())?;
+        let numa_stat = parse_numa_stat(CONTENT_OK.as_bytes())?;
 
         assert_eq!(
             numa_stat,
@@ -962,16 +1000,14 @@ hierarchical_unevictable=3419 N0=3419 N1=7
 
     #[test]
     fn test_parse_oom_control() -> Result<()> {
-        const CONTENT: &str = "\
+        const CONTENT_OK_WITH_OOM_KILL: &str = "\
 oom_kill_disable 1
 under_oom 1
 oom_kill 42
 ";
 
-        let oom_control = parse_oom_control(CONTENT.as_bytes())?;
-
         assert_eq!(
-            oom_control,
+            parse_oom_control(CONTENT_OK_WITH_OOM_KILL.as_bytes())?,
             OomControl {
                 oom_kill_disable: true,
                 under_oom: true,
@@ -979,11 +1015,71 @@ oom_kill 42
             }
         );
 
+        const CONTENT_OK_WITHOUT_OOM_KILL: &str = "\
+oom_kill_disable 1
+under_oom 1
+";
+
         assert_eq!(
-            parse_oom_control("".as_bytes()).unwrap_err().kind(),
-            ErrorKind::Parse
+            parse_oom_control(CONTENT_OK_WITHOUT_OOM_KILL.as_bytes())?,
+            OomControl {
+                oom_kill_disable: true,
+                under_oom: true,
+                oom_kill: None,
+            }
         );
 
+        const CONTENT_NG_NOT_INT: &str = "\
+oom_kill_disable 1
+under_oom invalid
+";
+
+        const CONTENT_NG_MISSING_DATA: &str = "\
+oom_kill_disable 1
+under_oom invalid
+oom_kill 
+";
+
+        const CONTENT_NG_EXTRA_DATA: &str = "\
+oom_kill_disable 1 invalid
+under_oom invalid
+oom_kill 0
+";
+
+        const CONTENT_NG_EXTRA_ROW: &str = "\
+oom_kill_disable 1 invalid
+under_oom invalid
+oom_kill 0
+invalid 0
+";
+
+        for case in &[
+            CONTENT_NG_NOT_INT,
+            CONTENT_NG_MISSING_DATA,
+            CONTENT_NG_EXTRA_DATA,
+            CONTENT_NG_EXTRA_ROW,
+        ] {
+            assert_eq!(
+                parse_oom_control(case.as_bytes()).unwrap_err().kind(),
+                ErrorKind::Parse
+            );
+        }
+
         Ok(())
+    }
+
+    #[test]
+    fn test_parse_01_bool_option() {
+        assert_eq!(parse_01_bool_option(Some("0")).unwrap(), false);
+        assert_eq!(parse_01_bool_option(Some("1")).unwrap(), true);
+
+        assert_eq!(
+            parse_01_bool_option(Some("invalid")).unwrap_err().kind(),
+            ErrorKind::Parse
+        );
+        assert_eq!(
+            parse_01_bool_option(None).unwrap_err().kind(),
+            ErrorKind::Parse
+        );
     }
 }

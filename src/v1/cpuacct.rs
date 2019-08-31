@@ -46,9 +46,9 @@ use std::{
 };
 
 use crate::{
-    parse::{parse, parse_option, parse_vec},
+    parse::{parse, parse_next, parse_vec},
     v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
-    Error, ErrorKind, Result,
+    Error, Result,
 };
 
 /// Handler of a cpuacct subsystem.
@@ -113,8 +113,11 @@ impl Subsystem {
     );
 
     _gen_getter!(
-        "the per-CPU total CPU times consumed by this cgroup in the system (kernel) mode (in nanoseconds)",
-        usage_percpu_sys, Vec<u64>, parse_vec
+        "the per-CPU total CPU times consumed by this cgroup 
+        in the system (kernel) mode (in nanoseconds)",
+        usage_percpu_sys,
+        Vec<u64>,
+        parse_vec
     );
 
     _gen_getter!(
@@ -158,18 +161,32 @@ fn parse_stat(reader: impl io::Read) -> Result<Stat> {
 
         match entry.next() {
             Some("system") => {
-                system = Some(parse_option(entry.next())?);
+                if system.is_some() {
+                    bail_parse!();
+                }
+                system = Some(parse_next(entry.by_ref())?);
             }
             Some("user") => {
-                user = Some(parse_option(entry.next())?);
+                if user.is_some() {
+                    bail_parse!();
+                }
+                user = Some(parse_next(entry.by_ref())?);
             }
-            _ => return Err(Error::new(ErrorKind::Parse)),
+            _ => {
+                bail_parse!();
+            }
+        }
+
+        if entry.next().is_some() {
+            bail_parse!();
         }
     }
 
     match (system, user) {
         (Some(system), Some(user)) => Ok(Stat { system, user }),
-        _ => Err(Error::new(ErrorKind::Parse)),
+        _ => {
+            bail_parse!();
+        }
     }
 }
 
@@ -181,15 +198,15 @@ fn parse_usage_all(reader: impl io::Read) -> Result<Vec<Stat>> {
     let mut header = header.split_whitespace();
 
     if header.next() != Some("cpu") {
-        return Err(Error::new(ErrorKind::Parse));
+        bail_parse!();
     }
 
-    // FIXME: not need to detect column order?
+    // FIXME: column order is guaranteed?
     let system_column = match (header.next(), header.next()) {
         (Some("system"), Some("user")) => 0,
         (Some("user"), Some("system")) => 1,
         _ => {
-            return Err(Error::new(ErrorKind::Parse));
+            bail_parse!();
         }
     };
 
@@ -197,20 +214,25 @@ fn parse_usage_all(reader: impl io::Read) -> Result<Vec<Stat>> {
     for line in buf.lines() {
         let line = line?;
 
-        // skip CPU ID
+        let mut entry = line.split_whitespace();
+
         // FIXME: IDs are guaranteed to be sorted ?
-        let mut entry = line.split_whitespace().skip(1);
+        let _id: u32 = parse_next(entry.by_ref())?;
 
         if system_column == 0 {
             stats.push(Stat {
-                system: parse_option(entry.next())?,
-                user: parse_option(entry.next())?,
+                system: parse_next(entry.by_ref())?,
+                user: parse_next(entry.by_ref())?,
             });
         } else {
             stats.push(Stat {
-                user: parse_option(entry.next())?,
-                system: parse_option(entry.next())?,
+                user: parse_next(entry.by_ref())?,
+                system: parse_next(entry.by_ref())?,
             });
+        }
+
+        if entry.next().is_some() {
+            bail_parse!();
         }
     }
 
@@ -220,6 +242,7 @@ fn parse_usage_all(reader: impl io::Read) -> Result<Vec<Stat>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ErrorKind;
 
     #[test]
     #[rustfmt::skip]
@@ -293,7 +316,7 @@ mod tests {
 
     #[test]
     #[ignore] // must not be executed in parallel
-    fn test_subsystem_update() -> Result<()> {
+    fn test_subsystem_stat_updated() -> Result<()> {
         let mut cgroup = Subsystem::new(CgroupPath::new(
             v1::SubsystemKind::Cpuacct,
             gen_cgroup_name!(),
@@ -372,7 +395,23 @@ system invalid
 user 9434783
 ";
 
-        for case in &[CONTENT_NG_NOT_INT, CONTENT_NG_MISSING_DATA] {
+        const CONTENT_NG_EXTRA_DATA: &str = "\
+user 9434783 256
+system 2059970
+";
+
+        const CONTENT_NG_EXTRA_ROW: &str = "\
+user 9434783 256
+system 2059970
+user 9434783 256
+";
+
+        for case in &[
+            CONTENT_NG_NOT_INT,
+            CONTENT_NG_MISSING_DATA,
+            CONTENT_NG_EXTRA_DATA,
+            CONTENT_NG_EXTRA_ROW,
+        ] {
             assert_eq!(
                 parse_stat(case.as_bytes()).unwrap_err().kind(),
                 ErrorKind::Parse
@@ -414,11 +453,19 @@ cpu user system
             ]
         );
 
-        const CONTENT_NG_NOT_INT: &str = "\
+        const CONTENT_NG_NOT_INT_0: &str = "\
 cpu user system
 0 29308474949876 365961153038
 1 29360907385495 300617395557
 2 29097088553941 invalid
+3 28649065680082 311282670956
+";
+
+        const CONTENT_NG_NOT_INT_1: &str = "\
+cpu user system
+invalid 29308474949876 365961153038
+1 29360907385495 300617395557
+2 29097088553941 333686385015
 3 28649065680082 311282670956
 ";
 
@@ -430,7 +477,20 @@ cpu user system
 3 28649065680082 311282670956
 ";
 
-        for case in &[CONTENT_NG_NOT_INT, CONTENT_NG_MISSING_DATA] {
+        const CONTENT_NG_EXTRA_DATA: &str = "\
+cpu user system
+0 29308474949876 365961153038
+1 29360907385495 300617395557 256
+2 29097088553941 333686385015
+3 28649065680082 311282670956
+";
+
+        for case in &[
+            CONTENT_NG_NOT_INT_0,
+            CONTENT_NG_NOT_INT_1,
+            CONTENT_NG_MISSING_DATA,
+            CONTENT_NG_EXTRA_DATA,
+        ] {
             assert_eq!(
                 parse_usage_all(case.as_bytes()).unwrap_err().kind(),
                 ErrorKind::Parse

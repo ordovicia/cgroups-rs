@@ -22,7 +22,7 @@ use crate::{
 /// ```no_run
 /// # fn main() -> cgroups::Result<()> {
 /// use std::{collections::HashMap, path::PathBuf};
-/// use cgroups::{Device, Max, v1::{devices, hugetlb, net_cls, rdma, Builder}};
+/// use cgroups::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder}};
 ///
 /// let mut cgroups =
 ///     // Start building a (set of) cgroup(s).
@@ -46,7 +46,7 @@ use crate::{
 ///         .use_hierarchy(true)
 ///         .done()
 ///     .pids()
-///         .max(Max::<u32>::Limit(42))
+///         .max(42.into())
 ///         .done()
 ///     .devices()
 ///         .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
@@ -78,7 +78,7 @@ use crate::{
 ///             [(
 ///                 "mlx4_0".to_string(),
 ///                 rdma::Limit {
-///                     hca_handle: Max::<u32>::Limit(2),
+///                     hca_handle: 2.into(),
 ///                     hca_object: Max::<u32>::Max,
 ///                 },
 ///             )]
@@ -306,7 +306,8 @@ gen_subsystem_builder! {
 
     gen_getter!(
         some; cpuset,
-        "whether the memory used by this cgroup should be migrated when memory selection is updated",
+        "whether the memory used by this cgroup
+        should be migrated when memory selection is updated",
         memory_migrate,
         enable,
         bool
@@ -590,11 +591,13 @@ gen_subsystem_builder! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        v1::{cpuset, pids, Cgroup, CgroupPath},
+        ErrorKind,
+    };
 
     #[test]
     fn test_builder() -> Result<()> {
-        use crate::v1::Cgroup;
-
         let id_set = [0].iter().copied().collect::<cpuset::IdSet>();
 
         #[rustfmt::skip]
@@ -628,11 +631,6 @@ mod tests {
 
     #[test]
     fn err_builder() -> Result<()> {
-        use crate::{
-            v1::{cpuset, Cgroup, CgroupPath},
-            ErrorKind,
-        };
-
         let name = gen_cgroup_name!();
 
         #[rustfmt::skip]
@@ -651,9 +649,8 @@ mod tests {
 
     #[test]
     fn test_builder_not_create_unused_subsystem_directory() -> Result<()> {
-        use crate::v1::{pids, Cgroup, CgroupPath};
-
         let name = gen_cgroup_name!();
+
         #[rustfmt::skip]
         let mut cgroups = Builder::new(name.clone())
             .cpu()
@@ -719,4 +716,6 @@ mod tests {
 
         cgroup.delete()
     }
+
+    // TODO: test apply
 }

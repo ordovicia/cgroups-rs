@@ -21,14 +21,14 @@
 //!         (
 //!             "mlx4_0",
 //!             rdma::Limit {
-//!                 hca_handle: Max::<u32>::Limit(2),
-//!                 hca_object: Max::<u32>::Limit(2000),
+//!                 hca_handle: 2.into(),
+//!                 hca_object: 2000.into(),
 //!             },
 //!         ),
 //!         (
 //!             "ocrdma1",
 //!             rdma::Limit {
-//!                 hca_handle: Max::<u32>::Limit(3),
+//!                 hca_handle: 3.into(),
 //!                 hca_object: Max::<u32>::Max,
 //!             },
 //!         ),
@@ -64,7 +64,7 @@
 use std::{collections::HashMap, fmt, path::PathBuf};
 
 use crate::{
-    parse::parse_option,
+    parse::parse_next,
     v1::{self, Cgroup, CgroupPath},
     Error, ErrorKind, Max, Result,
 };
@@ -99,7 +99,7 @@ pub struct Limit {
 impl_cgroup! {
     Subsystem, Rdma,
 
-    /// Applies `resources.rdma`.
+    /// Applies `resources.rdma.max` if it is not empty.
     ///
     /// See [`Cgroup::apply`] for general information.
     ///
@@ -110,7 +110,6 @@ impl_cgroup! {
         if max.is_empty() {
             Ok(())
         } else {
-            // FIXME: avoid clone
             self.set_max(max.iter().map(|(d, lim)| (d, *lim)))
         }
     }
@@ -131,7 +130,8 @@ impl Subsystem {
         gen_doc!(
             sets; rdma,
             "usage limits on RDMA/IB devices"
-             : "The first element of the iterator item is device name, and the second is limit for the device.",
+             : "The first element of the iterator item is device name,
+                and the second is limit for the device.",
              max
         ),
         gen_doc!(see; max),
@@ -150,7 +150,7 @@ let max = [
         (
             \"mlx4_0\",
             rdma::Limit {
-                hca_handle: Max::<u32>::Limit(3),
+                hca_handle: 3.into(),
                 hca_object: Max::<u32>::Max,
             },
         ),
@@ -196,17 +196,29 @@ fn parse_limits(reader: impl std::io::Read) -> Result<HashMap<String, Limit>> {
         let (mut hca_handle, mut hca_object) = (None, None);
         for e in entry.by_ref().take(2) {
             let mut kv = e.split('=');
+
             match kv.next() {
-                Some("hca_handle") => hca_handle = Some(parse_option(kv.next())?),
-                Some("hca_object") => hca_object = Some(parse_option(kv.next())?),
+                // FIXME: column order is guaranteed?
+                Some("hca_handle") => {
+                    if hca_handle.is_some() {
+                        bail_parse!();
+                    }
+                    hca_handle = Some(parse_next(kv)?);
+                }
+                Some("hca_object") => {
+                    if hca_object.is_some() {
+                        bail_parse!();
+                    }
+                    hca_object = Some(parse_next(kv)?);
+                }
                 _ => {
-                    return Err(Error::new(ErrorKind::Parse));
+                    bail_parse!();
                 }
             }
         }
 
-        match (entry.next(), hca_handle, hca_object) {
-            (None, Some(hca_handle), Some(hca_object)) => {
+        match (hca_handle, hca_object, entry.next()) {
+            (Some(hca_handle), Some(hca_object), None) => {
                 result.insert(
                     device.to_string(),
                     Limit {
@@ -216,7 +228,7 @@ fn parse_limits(reader: impl std::io::Read) -> Result<HashMap<String, Limit>> {
                 );
             }
             _ => {
-                return Err(Error::new(ErrorKind::Parse));
+                bail_parse!();
             }
         }
     }
@@ -294,14 +306,14 @@ mod tests {
 
     #[test]
     fn test_parse_limits() -> Result<()> {
-        const CONTENT_0: &str = "\
+        const CONTENT_OK_0: &str = "\
 mlx4_0 hca_handle=2 hca_object=2000
 ocrdma1 hca_handle=3 hca_object=max
 ";
 
-        const CONTENT_1: &str = "\
-mlx4_0 hca_handle=2 hca_object=2000
-ocrdma1 hca_handle=3 hca_object=max
+        const CONTENT_OK_1: &str = "\
+mlx4_0 hca_object=2000 hca_handle=2
+ocrdma1 hca_object=max hca_handle=3
 ";
 
         let expected = hashmap! {
@@ -321,10 +333,38 @@ ocrdma1 hca_handle=3 hca_object=max
             ),
         };
 
-        assert_eq!(expected, parse_limits(CONTENT_0.as_bytes())?);
-        assert_eq!(expected, parse_limits(CONTENT_1.as_bytes())?);
+        assert_eq!(parse_limits(CONTENT_OK_0.as_bytes())?, expected);
+        assert_eq!(parse_limits(CONTENT_OK_1.as_bytes())?, expected);
 
         assert!(parse_limits("".as_bytes())?.is_empty());
+
+        const CONTENT_NG_NOT_INT: &str = "\
+mlx4_0 hca_object=invalid hca_handle=2000
+";
+
+        const CONTENT_NG_INVALID_KEY: &str = "\
+mlx4_0 invalid=2
+";
+
+        const CONTENT_NG_MISSING_DATA: &str = "\
+mlx4_0 hca_object=2
+";
+
+        const CONTENT_NG_EXTRA_DATA: &str = "\
+mlx4_0 hca_object=2 hca_handle=2000 invalid
+";
+
+        for case in &[
+            CONTENT_NG_NOT_INT,
+            CONTENT_NG_INVALID_KEY,
+            CONTENT_NG_MISSING_DATA,
+            CONTENT_NG_EXTRA_DATA,
+        ] {
+            assert_eq!(
+                parse_limits(case.as_bytes()).unwrap_err().kind(),
+                ErrorKind::Parse
+            );
+        }
 
         Ok(())
     }

@@ -744,11 +744,11 @@ pub(crate) trait CgroupHelper: Cgroup {
 
 impl<T: Cgroup> CgroupHelper for T {}
 
-fn parse_tasks_procs(file: File) -> Result<Vec<Pid>> {
+fn parse_tasks_procs(reader: impl std::io::Read) -> Result<Vec<Pid>> {
     use std::io::{BufRead, BufReader};
 
     let mut ids = vec![];
-    for line in BufReader::new(file).lines() {
+    for line in BufReader::new(reader).lines() {
         let id = line?.trim().parse::<u32>()?;
         ids.push(Pid::from(id))
     }
@@ -990,5 +990,32 @@ mod tests {
         let root = path.subsystem_root();
         assert!(root.is_subsystem_root());
         assert_eq!(root.to_path_buf(), PathBuf::from("/sys/fs/cgroup/cpu"),);
+    }
+
+    #[test]
+    fn test_parse_tasks_procs() -> Result<()> {
+        const CONTENT_OK: &str = "\
+1
+2
+3
+";
+
+        assert_eq!(
+            parse_tasks_procs(CONTENT_OK.as_bytes())?,
+            vec![1.into(), 2.into(), 3.into()]
+        );
+
+        const CONTENT_NG: &str = "\
+1
+2
+invalid
+";
+
+        assert_eq!(
+            parse_tasks_procs(CONTENT_NG.as_bytes()).unwrap_err().kind(),
+            ErrorKind::Parse
+        );
+
+        Ok(())
     }
 }

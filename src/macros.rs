@@ -14,6 +14,12 @@ macro_rules! subsystem_file {
     };
 }
 
+macro_rules! bail_parse {
+    () => {
+        return Err(crate::Error::new(crate::ErrorKind::Parse));
+    };
+}
+
 #[cfg(test)]
 macro_rules! gen_cgroup_name {
     () => {
@@ -49,7 +55,7 @@ mod tests {
     fn test_gen_cgroup_name() {
         assert_eq!(
             gen_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-macros-51")
+            std::path::PathBuf::from("cgroups_rs-macros-57")
         );
     }
 

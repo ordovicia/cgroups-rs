@@ -63,7 +63,7 @@
 //! ```no_run
 //! # fn main() -> cgroups::Result<()> {
 //! use std::{collections::HashMap, path::PathBuf};
-//! use cgroups::{Device, Max, v1::{devices, hugetlb, net_cls, rdma, Builder}};
+//! use cgroups::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder}};
 //!
 //! let mut cgroups =
 //!     // Start building a (set of) cgroup(s).
@@ -87,7 +87,7 @@
 //!         .use_hierarchy(true)
 //!         .done()
 //!     .pids()
-//!         .max(Max::<u32>::Limit(42))
+//!         .max(42.into())
 //!         .done()
 //!     .devices()
 //!         .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
@@ -119,7 +119,7 @@
 //!             [(
 //!                 "mlx4_0".to_string(),
 //!                 rdma::Limit {
-//!                     hca_handle: Max::<u32>::Limit(2),
+//!                     hca_handle: 2.into(),
 //!                     hca_object: Max::<u32>::Max,
 //!                 },
 //!             )]
@@ -366,8 +366,8 @@ impl FromStr for Device {
 
     fn from_str(s: &str) -> Result<Self> {
         let mut parts = s.split(':');
-        let major = parse::parse_option(parts.next())?;
-        let minor = parse::parse_option(parts.next())?;
+        let major = parse::parse_next(parts.by_ref())?;
+        let minor = parse::parse_next(parts)?;
 
         Ok(Device { major, minor })
     }
@@ -454,6 +454,8 @@ impl fmt::Display for DeviceNumber {
     }
 }
 
+// Testing utilitied
+
 // Consume CPU time on the all logical cores until a condition holds. Panics if the condition does
 // not hold in the given timeout.
 // FIXME: consume system time
@@ -489,4 +491,17 @@ pub fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
     }
 
     panic!("consume_cpu_until timeout")
+}
+
+#[cfg(test)]
+pub fn consume_memory(bytes: usize) -> Vec<u64> {
+    let n = bytes / 8;
+
+    let mut v = Vec::with_capacity(n);
+    v.push(0);
+    for _ in 1..n {
+        v.push(v.last().unwrap() + 1); // actually touch the memory
+    }
+
+    v
 }

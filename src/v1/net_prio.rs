@@ -40,7 +40,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
-    parse::{parse, parse_option},
+    parse::{parse, parse_next},
     v1::{self, Cgroup, CgroupPath},
     Error, ErrorKind, Result,
 };
@@ -53,7 +53,7 @@ pub struct Subsystem {
 
 /// Priority map of traffic originating from a cgroup.
 ///
-/// See the kernel's documentation for more information about the fields.
+/// See the kernel's documentation for more information about the field.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// Map of priorities assigned to traffic originating from this cgroup.
@@ -65,7 +65,7 @@ pub struct Resources {
 impl_cgroup! {
     Subsystem, NetPrio,
 
-    /// Applies `resources.net_prio.ifpriomap`.
+    /// Applies `resources.net_prio.ifpriomap` if it is not empty.
     ///
     /// See [`Cgroup::apply`] for general information.
     ///
@@ -99,7 +99,8 @@ impl Subsystem {
         gen_doc!(
             sets; net_prio,
             "a map of priorities assigned to traffic originating from this cgroup,"
-            : "The first element of the iterator item is traffic name, and the second is its priority.",
+            : "The first element of the iterator item is traffic name,
+               and the second is its priority.",
             ifpriomap
         ),
         gen_doc!(see; ifpriomap),
@@ -157,7 +158,11 @@ fn parse_ifpriomap(reader: impl std::io::Read) -> Result<HashMap<String, u32>> {
         let mut entry = line.split_whitespace();
 
         let interface = entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))?;
-        let prio = parse_option(entry.next())?;
+        let prio = parse_next(entry.by_ref())?;
+
+        if entry.next().is_some() {
+            bail_parse!();
+        }
 
         prio_map.insert(interface.to_string(), prio);
     }
@@ -197,11 +202,7 @@ mod tests {
             *prio += 1;
         }
 
-        cgroup.set_ifpriomap(
-            priorities
-                .iter()
-                .map(|(interface, prio)| (interface, *prio)),
-        )?;
+        cgroup.set_ifpriomap(priorities.iter().map(|(if_, prio)| (if_, *prio)))?;
         assert_eq!(cgroup.ifpriomap()?, priorities);
 
         cgroup.delete()
@@ -209,17 +210,43 @@ mod tests {
 
     #[test]
     fn test_parse_ifpriomap() -> Result<()> {
-        const CONTENT: &str = "\
+        const CONTENT_OK: &str = "\
 lo 0
 wlp1s0 1
 ";
 
         assert_eq!(
-            parse_ifpriomap(CONTENT.as_bytes())?,
+            parse_ifpriomap(CONTENT_OK.as_bytes())?,
             hashmap! { ("lo".to_string(), 0), ("wlp1s0".to_string(), 1) }
         );
 
         assert_eq!(parse_ifpriomap("".as_bytes())?, HashMap::new(),);
+
+        const CONTENT_NG_NOT_INT: &str = "\
+lo 0
+wlp1s0 invalid
+";
+
+        const CONTENT_NG_MISSING_DATA: &str = "\
+lo 
+wlp1s0 1
+";
+
+        const CONTENT_NG_EXTRA_DATA: &str = "\
+lo 
+wlp1s0 1 invalid
+";
+
+        for case in &[
+            CONTENT_NG_NOT_INT,
+            CONTENT_NG_MISSING_DATA,
+            CONTENT_NG_EXTRA_DATA,
+        ] {
+            assert_eq!(
+                parse_ifpriomap(case.as_bytes()).unwrap_err().kind(),
+                ErrorKind::Parse
+            );
+        }
 
         Ok(())
     }

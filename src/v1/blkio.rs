@@ -55,7 +55,7 @@ use std::{
 };
 
 use crate::{
-    parse::{parse, parse_option},
+    parse::{parse, parse_next},
     v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
     Device, Error, ErrorKind, Result,
 };
@@ -325,7 +325,8 @@ impl Subsystem {
     );
 
     _gen_getter!(
-        io_service; "the number of BIOS requests merged into I/O requests belonging to this cgroup,",
+        io_service;
+        "the number of BIOS requests merged into I/O requests belonging to this cgroup,",
         io_merged, io_merged_recursive
     );
 
@@ -403,8 +404,12 @@ where
         let line = line?;
         let mut entry = line.split_whitespace();
 
-        let device = parse_option(entry.next())?;
-        let val = parse_option(entry.next())?;
+        let device = parse_next(entry.by_ref())?;
+        let val = parse_next(entry.by_ref())?;
+
+        if entry.next().is_some() {
+            bail_parse!();
+        }
 
         result.insert(device, val);
     }
@@ -427,24 +432,24 @@ fn parse_io_service(reader: impl io::Read) -> Result<IoService> {
             // FIXME: 5 lines of the same device are guaranteed to be contiguous?
             [read, write, sync, async_, total] => {
                 let mut e = read.split_whitespace();
-                let device = parse_option(e.next())?;
+                let device = parse_next(e.by_ref())?;
 
-                let read = parse_option(e.nth(1))?;
-                let write = parse_option({
-                    let mut e = write.split_whitespace();
-                    e.nth(2)
+                let read = parse_next(e.skip(1))?;
+                let write = parse_next({
+                    let e = write.split_whitespace();
+                    e.skip(2)
                 })?;
-                let sync = parse_option({
-                    let mut e = sync.split_whitespace();
-                    e.nth(2)
+                let sync = parse_next({
+                    let e = sync.split_whitespace();
+                    e.skip(2)
                 })?;
-                let async_ = parse_option({
-                    let mut e = async_.split_whitespace();
-                    e.nth(2)
+                let async_ = parse_next({
+                    let e = async_.split_whitespace();
+                    e.skip(2)
                 })?;
-                let total = parse_option({
-                    let mut e = total.split_whitespace();
-                    e.nth(2)
+                let total = parse_next({
+                    let e = total.split_whitespace();
+                    e.skip(2)
                 })?;
 
                 devices.insert(
@@ -459,16 +464,21 @@ fn parse_io_service(reader: impl io::Read) -> Result<IoService> {
                 );
             }
             [tot] => {
-                let mut e = tot.split_whitespace();
-                if e.next() != Some("Total") {
-                    return Err(Error::new(ErrorKind::Parse));
+                let mut entry = tot.split_whitespace();
+                if entry.next() != Some("Total") {
+                    bail_parse!();
                 }
 
-                total = Some(parse_option(e.next())?);
+                total = Some(parse_next(entry.by_ref())?);
+
+                if entry.next().is_some() {
+                    bail_parse!();
+                }
+
                 break;
             }
             _ => {
-                return Err(Error::new(ErrorKind::Parse));
+                bail_parse!();
             }
         }
     }
@@ -476,7 +486,7 @@ fn parse_io_service(reader: impl io::Read) -> Result<IoService> {
     if let Some(total) = total {
         Ok(IoService { devices, total })
     } else {
-        Err(Error::new(ErrorKind::Parse))
+        bail_parse!();
     }
 }
 
@@ -694,7 +704,22 @@ mod tests {
 invalid:0 65536
 ";
 
-        for case in &[CONTENT_NG_NOT_INT, CONTENT_NG_NOT_DEVICE] {
+        const CONTENT_NG_MISSING_DATA: &str = "\
+7:26 
+259:0 65536
+";
+
+        const CONTENT_NG_EXTRA_DATA: &str = "\
+7:26 256 256
+259:0 65536
+";
+
+        for case in &[
+            CONTENT_NG_NOT_INT,
+            CONTENT_NG_NOT_DEVICE,
+            CONTENT_NG_MISSING_DATA,
+            CONTENT_NG_EXTRA_DATA,
+        ] {
             assert_eq!(
                 parse_map::<u32, _>(case.as_bytes()).unwrap_err().kind(),
                 ErrorKind::Parse
@@ -770,7 +795,17 @@ Total 0
 Total 29281497
         ";
 
-        const CONTENT_NG_WITHOUT_TOTAL: &str = "\
+        const CONTENT_NG_EXTRA_DATA: &str = "\
+259:0 Read 5941
+259:0 Write 10350930
+259:0 Sync 6786851
+259:0 Async 3570020
+259:0 Total 10356871
+Total 29281497
+259:0 Read 5941
+        ";
+
+        const CONTENT_NG_MISSING_TOTAL: &str = "\
 259:0 Read 5941
 259:0 Write 10350930
 259:0 Sync 6786851
@@ -794,7 +829,8 @@ Total 29281497
 
         for case in &[
             CONTENT_NG_MISSING_DATA,
-            CONTENT_NG_WITHOUT_TOTAL,
+            CONTENT_NG_EXTRA_DATA,
+            CONTENT_NG_MISSING_TOTAL,
             CONTENT_NG_TOTAL_ORDER,
         ] {
             assert_eq!(

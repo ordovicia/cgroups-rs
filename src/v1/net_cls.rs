@@ -41,7 +41,7 @@ use std::{fmt, path::PathBuf, str::FromStr};
 use crate::{
     parse::parse,
     v1::{self, Cgroup, CgroupPath},
-    Error, ErrorKind, Result,
+    Error, Result,
 };
 
 /// Handler of a net_cls subsystem.
@@ -52,7 +52,7 @@ pub struct Subsystem {
 
 /// Tag network packets from a cgroup with a class ID.
 ///
-/// See the kernel's documentation for more information about the fields.
+/// See the kernel's documentation for more information about the field.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// Class ID to be attached to network packets originating from this cgroup.
@@ -128,7 +128,7 @@ pub struct ClassId {
 impl_cgroup! {
     Subsystem, NetCls,
 
-    /// Applies the `Some` fields in `resources.net_cls`.
+    /// Applies `resources.net_cls.classid` if it is `Some`.
     ///
     /// See [`Cgroup::apply`] for general information.
     ///
@@ -183,7 +183,7 @@ impl FromStr for ClassId {
     fn from_str(s: &str) -> Result<Self> {
         let len = s.len();
         if len < 7 || len > 10 || (&s[0..2] != "0x" && &s[0..2] != "0X") {
-            return Err(Error::new(ErrorKind::Parse));
+            bail_parse!();
         }
 
         let major = u16::from_str_radix(&s[2..(len - 4)], 16)?;
@@ -265,7 +265,7 @@ mod tests {
         ] {
             assert_eq!(
                 case.parse::<ClassId>().unwrap_err().kind(),
-                ErrorKind::Parse
+                crate::ErrorKind::Parse
             );
         }
     }

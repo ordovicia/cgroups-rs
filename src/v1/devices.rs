@@ -48,9 +48,9 @@
 use std::{fmt, path::PathBuf, str::FromStr};
 
 use crate::{
-    parse::parse_option,
+    parse::parse_next,
     v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
-    Error, ErrorKind, Result,
+    Error, Result,
 };
 
 /// Handler of a devices subsystem.
@@ -235,13 +235,17 @@ impl FromStr for Access {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let mut sp = s.split_whitespace();
+        let mut entry = s.split_whitespace();
 
-        let device_type = parse_option(sp.next())?;
+        let device_type = parse_next(entry.by_ref())?;
 
-        if let Some(device_number) = sp.next() {
+        if let Some(device_number) = entry.next() {
             let device_number = device_number.parse()?;
-            let access_type = parse_option(sp.next())?;
+            let access_type = parse_next(entry.by_ref())?;
+
+            if entry.next().is_some() {
+                bail_parse!();
+            }
 
             Ok(Self {
                 device_type,
@@ -264,7 +268,7 @@ impl FromStr for Access {
                 },
             })
         } else {
-            Err(Error::new(ErrorKind::Parse))
+            bail_parse!();
         }
     }
 }
@@ -287,7 +291,9 @@ impl FromStr for DeviceType {
             "a" => Ok(Self::All),
             "c" => Ok(Self::Char),
             "b" => Ok(Self::Block),
-            _ => Err(Error::new(ErrorKind::Parse)),
+            _ => {
+                bail_parse!();
+            }
         }
     }
 }
@@ -313,7 +319,7 @@ impl FromStr for AccessType {
         macro_rules! s {
             ($r: ident) => {{
                 if access.$r {
-                    return Err(Error::new(ErrorKind::Parse));
+                    bail_parse!();
                 }
                 access.$r = true;
             }};
@@ -325,7 +331,7 @@ impl FromStr for AccessType {
                 'w' => s!(write),
                 'm' => s!(mknod),
                 _ => {
-                    return Err(Error::new(ErrorKind::Parse));
+                    bail_parse!();
                 }
             }
         }
@@ -355,7 +361,7 @@ impl fmt::Display for AccessType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Device, DeviceNumber};
+    use crate::{Device, DeviceNumber, ErrorKind};
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
@@ -408,6 +414,7 @@ mod tests {
             "a invalid rwm",
             "a rwm",
             "a 1:3",
+            "a 1:3 rwm invalid",
         ] {
             assert_eq!(case.parse::<Access>().unwrap_err().kind(), ErrorKind::Parse);
         }

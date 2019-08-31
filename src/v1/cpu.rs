@@ -51,9 +51,9 @@
 use std::path::PathBuf;
 
 use crate::{
-    parse::{parse, parse_option},
+    parse::{parse, parse_next},
     v1::{self, cgroup::CgroupHelper, Cgroup, CgroupPath},
-    Error, ErrorKind, Result,
+    Result,
 };
 
 /// Handler of a CPU subsystem.
@@ -173,15 +173,28 @@ fn parse_stat(reader: impl std::io::Read) -> Result<Stat> {
 
         match entry.next() {
             Some("nr_periods") => {
-                nr_periods = Some(parse_option(entry.next())?);
+                if nr_periods.is_some() {
+                    bail_parse!();
+                }
+                nr_periods = Some(parse_next(entry.by_ref())?);
             }
             Some("nr_throttled") => {
-                nr_throttled = Some(parse_option(entry.next())?);
+                if nr_throttled.is_some() {
+                    bail_parse!();
+                }
+                nr_throttled = Some(parse_next(entry.by_ref())?);
             }
             Some("throttled_time") => {
-                throttled_time = Some(parse_option(entry.next())?);
+                if throttled_time.is_some() {
+                    bail_parse!();
+                }
+                throttled_time = Some(parse_next(entry.by_ref())?);
             }
-            _ => return Err(Error::new(ErrorKind::Parse)),
+            _ => bail_parse!(),
+        };
+
+        if entry.next().is_some() {
+            bail_parse!();
         }
     }
 
@@ -191,7 +204,9 @@ fn parse_stat(reader: impl std::io::Read) -> Result<Stat> {
             nr_throttled,
             throttled_time,
         }),
-        _ => Err(Error::new(ErrorKind::Parse)),
+        _ => {
+            bail_parse!();
+        }
     }
 }
 
@@ -207,6 +222,7 @@ impl Into<v1::Resources> for Resources {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ErrorKind;
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
@@ -303,7 +319,25 @@ nr_periods 256
 throttled_time 32
 ";
 
-        for case in &[CONTENT_NG_NOT_INT, CONTENT_NG_MISSING_DATA] {
+        const CONTENT_NG_EXTRA_DATA: &str = "\
+nr_periods 256
+nr_throttled 8 256
+throttled_time 32
+";
+
+        const CONTENT_NG_EXTRA_ROW: &str = "\
+nr_periods 256
+nr_throttled 8 
+throttled_time 32
+invalid 256
+";
+
+        for case in &[
+            CONTENT_NG_NOT_INT,
+            CONTENT_NG_MISSING_DATA,
+            CONTENT_NG_EXTRA_DATA,
+            CONTENT_NG_EXTRA_ROW,
+        ] {
             assert_eq!(
                 parse_stat(case.as_bytes()).unwrap_err().kind(),
                 ErrorKind::Parse

@@ -59,7 +59,7 @@ pub struct Subsystem {
 
 /// Freeze tasks in a cgroup.
 ///
-/// See the kernel's documentation for more information about the fields.
+/// See the kernel's documentation for more information about the field.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// If `State::Frozen`, tasks in this cgroup will be frozen. If `State::Thawed`, they will be
@@ -194,7 +194,9 @@ impl std::str::FromStr for State {
             "THAWED" => Ok(Self::Thawed),
             "FREEZING" => Ok(Self::Freezing),
             "FROZEN" => Ok(Self::Frozen),
-            _ => Err(Error::new(ErrorKind::Parse)),
+            _ => {
+                bail_parse!();
+            }
         }
     }
 }

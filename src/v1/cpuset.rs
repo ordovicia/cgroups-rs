@@ -284,13 +284,20 @@ impl Subsystem {
     );
 
     _gen_getter!(
-        "whether the memory used by this cgroup should be migrated when memory selection is updated,",
-        memory_migrate : link, bool, parse_01_bool
+        "whether the memory used by this cgroup should be migrated 
+        when memory selection is updated,",
+        memory_migrate: link,
+        bool,
+        parse_01_bool
     );
 
     _gen_setter!(
-        "whether the memory used by this cgroup should be migrated when memory selection is updated,",
-        memory_migrate : link, set_memory_migrate, enable : bool as i32, true
+        "whether the memory used by this cgroup should be migrated 
+        when memory selection is updated,",
+        memory_migrate: link,
+        set_memory_migrate,
+        enable: bool as i32,
+        true
     );
 
     _gen_getter!(
@@ -539,7 +546,7 @@ impl std::str::FromStr for IdSet {
                     let end = end.parse()?; // inclusive
 
                     if end < start {
-                        return Err(Error::new(ErrorKind::Parse));
+                        bail_parse!();
                     }
 
                     for n in start..=end {
@@ -550,7 +557,7 @@ impl std::str::FromStr for IdSet {
                     result.push(single.parse()?);
                 }
                 _ => {
-                    return Err(Error::new(ErrorKind::Parse));
+                    bail_parse!();
                 }
             }
         }

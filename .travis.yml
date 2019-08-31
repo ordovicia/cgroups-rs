@@ -7,10 +7,10 @@ script:
   - cargo build --verbose --all
   - cargo test --verbose --all
   # must not be executed in parallel
-  - cargo test --verbose -- --ignored --test-threads=1 add_get_remove_tasks
-  - cargo test --verbose -- --ignored --test-threads=1 add_get_remove_procs
-  - cargo test --verbose -- --ignored cpu::tests::test_subsystem_stat_throttled
-  - cargo test --verbose -- --ignored cpuacct::tests::test_subsystem_update
+  - cargo test --verbose -- --ignored --test-threads=1 add_get_remove_tasks # Cgroup, UnifiedRepr
+  - cargo test --verbose -- --ignored --test-threads=1 add_get_remove_procs # Cgroup, UnifiedRepr
+  - cargo test --verbose -- --ignored --test-threads=1 subsystem_stat_throttled # cpu, memory
+  - cargo test --verbose -- --ignored cpuacct::tests::test_subsystem_stat_updated
   - cargo test --verbose -- --ignored pids::tests::test_subsystem_current
   # (temporarily) overrides the root cgroup
   - cargo test --verbose -- --ignored release_agent

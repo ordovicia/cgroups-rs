@@ -312,7 +312,14 @@ mod tests {
             cgroup.delete()
         }};
 
-        ($field: ident, $setter: ident, $dfl_mb2: expr, $dfl_gb1: expr, $val_mb2: expr, $val_gb1: expr) => {{
+        (
+            $field: ident,
+            $setter: ident,
+            $dfl_mb2: expr,
+            $dfl_gb1: expr,
+            $val_mb2: expr,
+            $val_gb1: expr
+        ) => {{
             let mut cgroup = Subsystem::new(CgroupPath::new(
                 v1::SubsystemKind::HugeTlb,
                 gen_cgroup_name!(),

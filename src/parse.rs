@@ -1,6 +1,6 @@
 use std::{error::Error as StdErr, io, str::FromStr};
 
-use crate::{Error, ErrorKind, Result};
+use crate::{Error, Result};
 
 pub fn parse<T, R>(mut reader: R) -> Result<T>
 where
@@ -13,15 +13,18 @@ where
     buf.trim().parse::<T>().map_err(Error::parse)
 }
 
-pub fn parse_option<T, S>(s: Option<S>) -> Result<T>
+pub fn parse_next<T, I, S>(iter: I) -> Result<T>
 where
     T: FromStr,
     <T as FromStr>::Err: StdErr + Sync + Send + 'static,
+    I: IntoIterator<Item = S>,
     S: AsRef<str>,
 {
-    match s {
+    match iter.into_iter().next() {
         Some(s) => s.as_ref().parse::<T>().map_err(Error::parse),
-        None => Err(Error::new(ErrorKind::Parse)),
+        None => {
+            bail_parse!();
+        }
     }
 }
 
@@ -43,20 +46,16 @@ pub fn parse_01_bool<R: io::Read>(reader: R) -> Result<bool> {
     parse::<i32, _>(reader).and_then(|n| match n {
         0 => Ok(false),
         1 => Ok(true),
-        _ => Err(Error::new(ErrorKind::Parse)),
+        _ => {
+            bail_parse!();
+        }
     })
-}
-
-pub fn parse_01_bool_option<S: AsRef<str>>(s: Option<S>) -> Result<bool> {
-    match s {
-        Some(s) => parse_01_bool(s.as_ref().as_bytes()),
-        None => Err(Error::new(ErrorKind::Parse)),
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ErrorKind;
 
     #[test]
     fn test_parse() {
@@ -70,16 +69,24 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_option() {
-        assert_eq!(parse_option::<i32, _>(Some("42")).unwrap(), 42);
-        assert_eq!(parse_option::<bool, _>(Some("true")).unwrap(), true);
+    fn test_parse_next() {
+        use std::iter;
+
+        assert_eq!(parse_next::<i32, _, _>(Some("42")).unwrap(), 42);
+        assert_eq!(parse_next::<bool, _, _>(iter::once("true")).unwrap(), true);
 
         assert_eq!(
-            parse_option::<i32, _>(Some("invalid")).unwrap_err().kind(),
+            parse_next::<i32, _, _>(Some("invalid")).unwrap_err().kind(),
             ErrorKind::Parse
         );
         assert_eq!(
-            parse_option::<i32, &str>(None).unwrap_err().kind(),
+            parse_next::<i32, _, &str>(None).unwrap_err().kind(),
+            ErrorKind::Parse
+        );
+        assert_eq!(
+            parse_next::<i32, _, &str>(iter::empty())
+                .unwrap_err()
+                .kind(),
             ErrorKind::Parse
         );
     }
@@ -119,21 +126,6 @@ mod tests {
         );
         assert_eq!(
             parse_01_bool("invalid".as_bytes()).unwrap_err().kind(),
-            ErrorKind::Parse
-        );
-    }
-
-    #[test]
-    fn test_parse_01_bool_option() {
-        assert_eq!(parse_01_bool_option(Some("0")).unwrap(), false);
-        assert_eq!(parse_01_bool_option(Some("1")).unwrap(), true);
-
-        assert_eq!(
-            parse_01_bool_option(Some("invalid")).unwrap_err().kind(),
-            ErrorKind::Parse
-        );
-        assert_eq!(
-            parse_01_bool_option::<&str>(None).unwrap_err().kind(),
             ErrorKind::Parse
         );
     }
