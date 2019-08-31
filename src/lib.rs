@@ -453,3 +453,40 @@ impl fmt::Display for DeviceNumber {
         }
     }
 }
+
+// Consume CPU time on the all logical cores until a condition holds. Panics if the condition does
+// not hold in the given timeout.
+// FIXME: consume system time
+#[cfg(test)]
+pub fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
+    use std::{sync, thread, time};
+
+    let finished = sync::Arc::new(sync::Mutex::new(false));
+
+    let handlers = (0..(num_cpus::get() - 1))
+        .map(|_| {
+            let fin = finished.clone();
+            thread::spawn(move || {
+                while !*fin.lock().unwrap() {
+                    // spin
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let start = time::Instant::now();
+    while start.elapsed() < time::Duration::from_secs(timeout_secs) {
+        if condition() {
+            *finished.lock().unwrap() = true;
+            for handler in handlers {
+                handler.join().unwrap();
+            }
+
+            return;
+        }
+
+        // spin
+    }
+
+    panic!("consume_cpu_until timeout")
+}

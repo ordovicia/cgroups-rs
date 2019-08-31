@@ -393,7 +393,10 @@ mod tests {
 
         cgroups.add_task(pid)?;
         assert_eq!(cgroups.cpu().unwrap().tasks()?, vec![pid]);
-        assert_eq!(cgroups.tasks()?, hashmap![(SubsystemKind::Cpu, vec![pid])]);
+        assert_eq!(
+            cgroups.tasks()?,
+            hashmap! { (SubsystemKind::Cpu, vec![pid]) }
+        );
 
         cgroups.remove_task(pid)?;
         assert!(cgroups.cpu().unwrap().tasks()?.is_empty());
@@ -414,7 +417,10 @@ mod tests {
 
         cgroups.add_proc(pid)?;
         assert_eq!(cgroups.cpu().unwrap().procs()?, vec![pid]);
-        assert_eq!(cgroups.procs()?, hashmap![(SubsystemKind::Cpu, vec![pid])]);
+        assert_eq!(
+            cgroups.procs()?,
+            hashmap! { (SubsystemKind::Cpu, vec![pid]) }
+        );
 
         // automatically added to the cgroup
         let mut child = Command::new("sleep").arg("1").spawn().unwrap();
@@ -424,13 +430,13 @@ mod tests {
                 || cgroups.cpu().unwrap().procs()? == vec![child_pid, pid]
         );
         assert!(
-            cgroups.procs()? == hashmap![(SubsystemKind::Cpu, vec![pid, child_pid])]
-                || cgroups.procs()? == hashmap![(SubsystemKind::Cpu, vec![child_pid, pid])]
+            cgroups.procs()? == hashmap! { (SubsystemKind::Cpu, vec![pid, child_pid]) }
+                || cgroups.procs()? == hashmap! { (SubsystemKind::Cpu, vec![child_pid, pid]) }
         );
 
         child.wait()?;
         assert!(cgroups.cpu().unwrap().procs()? == vec![pid]);
-        assert!(cgroups.procs()? == hashmap![(SubsystemKind::Cpu, vec![pid])]);
+        assert!(cgroups.procs()? == hashmap! { (SubsystemKind::Cpu, vec![pid]) });
 
         cgroups.remove_proc(pid)?;
         assert!(cgroups.cpu().unwrap().procs()?.is_empty());

@@ -1,6 +1,6 @@
 //! Operations on a cpuset subsystem.
 //!
-//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/cpusets.txt].
@@ -17,11 +17,7 @@
 //! cpuset_cgroup.create()?;
 //!
 //! // Define a resource limit about which CPU and memory nodes a cgroup can use.
-//! let id_set = {
-//!     let mut id_set = cpuset::IdSet::new();
-//!     id_set.add(0);
-//!     id_set
-//! };
+//! let id_set = [0].iter().copied().collect::<cpuset::IdSet>();
 //!
 //! let resources = cpuset::Resources {
 //!     cpus: Some(id_set.clone()),
@@ -101,8 +97,8 @@ pub struct Resources {
     /// `mems` field.
     pub memory_spread_page: Option<bool>,
 
-    /// If true, the kernel slab caches for file I/O are evenly spread across the memory nodes specified
-    /// in the `mems` field.
+    /// If true, the kernel slab caches for file I/O are evenly spread across the memory nodes
+    /// specified in the `mems` field.
     pub memory_spread_slab: Option<bool>,
 
     /// If true, the kernel will attempt to balance the load between the CPUs specified in the
@@ -112,11 +108,11 @@ pub struct Resources {
 
     /// Indicates how much work the kernel should do to balance the load on this cpuset.
     pub sched_relax_domain_level: Option<i32>,
-    // pub effective_cpus: Vec<usize>,
-    // pub effective_mems: Vec<usize>,
+    // pub effective_cpus: Vec<IdSet>,
+    // pub effective_mems: Vec<IdSet>,
 }
 
-/// Set of CPU ID or memory node ID for which CPUs and memory nodes a cgroup can use.
+/// Set of CPU ID or memory node ID for which CPUs and memory nodes.
 ///
 /// # Instantiation
 ///
@@ -124,8 +120,8 @@ pub struct Resources {
 ///
 /// ### Parse a cpuset IDs string (e.g. "0,1,3-5,7")
 ///
-/// `IdSet` implements [`FromStr`], so you can [`parse`] a string into a `IdSet`. If failed,
-/// `parse` returns an error with kind [`ErrorKind::Parse`].
+/// `IdSet` implements [`FromStr`], so you can [`parse`] a string into a `IdSet`. If failed, `parse`
+/// returns an error with kind [`ErrorKind::Parse`].
 ///
 /// ```
 /// use cgroups::v1::cpuset::IdSet;
@@ -139,8 +135,8 @@ pub struct Resources {
 ///
 /// ### Collect an iterator
 ///
-/// `IdSet` implements [`FromIterator`], so you can [`collect`] an iterator over `usize` into
-/// an `IdSet`.
+/// `IdSet` implements [`FromIterator`], so you can [`collect`] an iterator over `u32` into an
+/// `IdSet`.
 ///
 /// ```
 /// use cgroups::v1::cpuset::IdSet;
@@ -160,6 +156,8 @@ pub struct Resources {
 /// let mut id_set = IdSet::new();
 /// id_set.add(0);
 /// id_set.add(1);
+///
+/// assert_eq!(id_set.to_hash_set(), [0, 1].iter().copied().collect());
 /// ```
 ///
 /// # Formatting
@@ -184,7 +182,7 @@ pub struct Resources {
 ///
 /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct IdSet(HashSet<usize>);
+pub struct IdSet(HashSet<u32>);
 
 impl_cgroup! {
     Subsystem, Cpuset,
@@ -226,9 +224,6 @@ impl_cgroup! {
     }
 }
 
-const MEMORY_PRESSURE_ENABLED: &str = "cpuset.memory_pressure_enabled";
-const CLONE_CHILDREN: &str = "cgroup.clone_children";
-
 macro_rules! _gen_getter {
     ($desc: literal, $field: ident $( : $link : ident )?, $ty: ty, $parser: ident) => {
         gen_getter!(cpuset, $desc, $field $( : $link )?, $ty, $parser);
@@ -250,6 +245,12 @@ macro_rules! _gen_setter {
         gen_setter!(cpuset, $desc, $field: link, $setter, $arg: $ty as $as, $val);
     };
 }
+
+const MEMORY_PRESSURE_ENABLED: &str = "cpuset.memory_pressure_enabled";
+const CLONE_CHILDREN: &str = "cgroup.clone_children";
+
+const DOMAIN_LEVEL_MIN: i32 = -1;
+const DOMAIN_LEVEL_MAX: i32 = 5;
 
 impl Subsystem {
     _gen_getter!(
@@ -461,7 +462,7 @@ error if failed to write to `cpuset.sched_relax_domain_level` file of this cgrou
 [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument\n\n",
         gen_doc!(eg_write; cpuset, set_sched_relax_domain_level, 0)),
         pub fn set_sched_relax_domain_level(&mut self, level: i32) -> Result<()> {
-            if level < -1 || level > 5 {
+            if level < DOMAIN_LEVEL_MIN || level > DOMAIN_LEVEL_MAX {
                 return Err(Error::new(ErrorKind::InvalidArgument));
             }
 
@@ -509,8 +510,8 @@ impl Into<v1::Resources> for Resources {
     }
 }
 
-impl FromIterator<usize> for IdSet {
-    fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
+impl FromIterator<u32> for IdSet {
+    fn from_iter<I: IntoIterator<Item = u32>>(iter: I) -> Self {
         let mut s = IdSet::new();
         for id in iter {
             s.add(id);
@@ -523,6 +524,7 @@ impl std::str::FromStr for IdSet {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
+        let s = s.trim();
         if s.is_empty() {
             return Ok(IdSet::new());
         }
@@ -530,23 +532,26 @@ impl std::str::FromStr for IdSet {
         let mut result = Vec::new();
 
         for comma_split in s.split(',') {
-            if comma_split.contains('-') {
-                let dash_split = comma_split.split('-').collect::<Vec<_>>();
-                if dash_split.len() != 2 {
+            let mut dash_split = comma_split.split('-');
+            match (dash_split.next(), dash_split.next(), dash_split.next()) {
+                (Some(start), Some(end), None) => {
+                    let start = start.parse()?;
+                    let end = end.parse()?; // inclusive
+
+                    if end < start {
+                        return Err(Error::new(ErrorKind::Parse));
+                    }
+
+                    for n in start..=end {
+                        result.push(n);
+                    }
+                }
+                (Some(single), None, None) => {
+                    result.push(single.parse()?);
+                }
+                _ => {
                     return Err(Error::new(ErrorKind::Parse));
                 }
-
-                let start = dash_split[0].parse::<usize>()?;
-                let end = dash_split[1].parse::<usize>()?; // inclusive
-                if end < start {
-                    return Err(Error::new(ErrorKind::Parse));
-                }
-
-                for n in start..=end {
-                    result.push(n);
-                }
-            } else {
-                result.push(comma_split.parse::<usize>()?);
             }
         }
 
@@ -569,8 +574,8 @@ impl fmt::Display for IdSet {
 
         #[derive(Debug)]
         enum IdSegment {
-            Single(usize),
-            Range(usize, usize),
+            Single(u32),
+            Range(u32, u32),
         }
 
         let mut current = IdSegment::Single(ids.next().unwrap());
@@ -579,11 +584,11 @@ impl fmt::Display for IdSet {
             use IdSegment::*;
 
             match current {
-                Single(c) if id == c + 1 => {
-                    current = Range(c, id);
+                Single(cur) if id == cur + 1 => {
+                    current = Range(cur, id);
                 }
-                Range(s, e) if id == e + 1 => {
-                    current = Range(s, id);
+                Range(start, end) if id == end + 1 => {
+                    current = Range(start, id);
                 }
                 _ => {
                     segments.push(current);
@@ -633,24 +638,27 @@ impl IdSet {
         Self(HashSet::new())
     }
 
-    /// Copies cpuset IDs in this set into a new `Vec` in an arbitrary order.
+    /// Clones cpuset IDs in this set into a new [`HashSet`].
     ///
     /// # Examples
     ///
     /// ```
+    /// use std::collections::HashSet;
     /// use cgroups::v1::cpuset::IdSet;
     ///
     /// let id_set = [1, 2, 3, 5, 6, 7].iter().copied().collect::<IdSet>();
     /// assert_eq!(
     ///     id_set.to_hash_set(),
-    ///     [1, 2, 3, 5, 6, 7].iter().copied().collect(),
+    ///     [1, 2, 3, 5, 6, 7].iter().copied().collect::<HashSet<u32>>(),
     /// );
     /// ```
-    pub fn to_hash_set(&self) -> HashSet<usize> {
+    ///
+    /// [`HashSet`]: https://doc.rust-lang.org/std/collections/struct.HashSet.html
+    pub fn to_hash_set(&self) -> HashSet<u32> {
         self.0.clone()
     }
 
-    /// Add a cpuset ID to this set.
+    /// Adds a cpuset ID to this set.
     ///
     /// # Examples
     ///
@@ -661,7 +669,7 @@ impl IdSet {
     /// id_set.add(7);
     /// assert_eq!(id_set.to_hash_set(), [7].iter().copied().collect());
     /// ```
-    pub fn add(&mut self, id: usize) {
+    pub fn add(&mut self, id: u32) {
         self.0.insert(id);
     }
 
@@ -682,7 +690,7 @@ impl IdSet {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn remove(&mut self, id: usize) {
+    pub fn remove(&mut self, id: u32) {
         self.0.remove(&id);
     }
 }
@@ -701,12 +709,12 @@ mod tests {
 
         // non-root
         gen_subsystem_test!(
-            Cpuset, 
+            Cpuset,
             [
                 "cpus", "mems", "memory_migrate", "cpu_exclusive", "mem_exclusive", "mem_hardwall",
                 "memory_pressure", // "memory_pressure_enabled",
                 "memory_spread_page", "memory_spread_slab", "sched_load_balance",
-                "sched_relax_domain_level"
+                "sched_relax_domain_level",
             ]
         )?;
 
@@ -714,8 +722,8 @@ mod tests {
             Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, gen_cgroup_name!()));
         non_root.create()?;
 
-        assert!(!non_root.file_exists(MEMORY_PRESSURE_ENABLED));
         assert!(non_root.file_exists(CLONE_CHILDREN));
+        assert!(!non_root.file_exists(MEMORY_PRESSURE_ENABLED));
 
         non_root.delete()
     }
@@ -768,6 +776,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_memory_pressure() -> Result<()> {
+        // TODO: test adding tasks
         gen_subsystem_test!(Cpuset, memory_pressure, 0)
     }
 
@@ -788,15 +797,11 @@ mod tests {
 
     #[test]
     fn err_subsystem_memory_pressure_enabled() -> Result<()> {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, gen_cgroup_name!()));
-        cgroup.create()?;
-
-        assert_eq!(
-            cgroup.set_memory_pressure_enabled(true).unwrap_err().kind(),
-            ErrorKind::InvalidOperation
-        );
-
-        cgroup.delete()
+        gen_subsystem_test!(
+            Memory,
+            set_memory_pressure_enabled,
+            (InvalidOperation, true)
+        )
     }
 
     #[test]
@@ -836,24 +841,17 @@ mod tests {
     fn test_subsystem_sched_relax_domain_level() -> Result<()> {
         // TODO: `set_sched_relax_domain_level()` raises `io::Error` with kind `InvalidInput` on
         // some systems?
-        gen_subsystem_test!(Cpuset, sched_relax_domain_level, -1)
+        gen_subsystem_test!(Cpuset, sched_relax_domain_level, DOMAIN_LEVEL_MIN)
     }
 
     #[test]
     fn err_subsystem_sched_relax_domain_level() -> Result<()> {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, gen_cgroup_name!()));
-        cgroup.create()?;
-
-        assert_eq!(
-            cgroup.set_sched_relax_domain_level(-2).unwrap_err().kind(),
-            ErrorKind::InvalidArgument
-        );
-        assert_eq!(
-            cgroup.set_sched_relax_domain_level(6).unwrap_err().kind(),
-            ErrorKind::InvalidArgument
-        );
-
-        cgroup.delete()
+        gen_subsystem_test!(
+            Memory,
+            set_sched_relax_domain_level,
+            (InvalidArgument, DOMAIN_LEVEL_MIN - 1),
+            (InvalidArgument, DOMAIN_LEVEL_MAX + 1)
+        )
     }
 
     #[test]
@@ -881,6 +879,7 @@ mod tests {
             ("0-2,5-7", hashset! {0, 1, 2, 5, 6, 7}),
             ("2-3,4-5,6-7", hashset! {2, 3, 4, 5, 6, 7}),
             ("1,3,5-7,9,10", hashset! {1, 3, 5, 6, 7, 9, 10}),
+            (" 1,3,5-7,9,10 ", hashset! {1, 3, 5, 6, 7, 9, 10}),
             ("0-65535", (0..65536).collect()),
         ]
         .into_iter();
@@ -893,7 +892,20 @@ mod tests {
     #[test]
     fn err_id_set_from_str() {
         for case in &[
-            ",", ",0", "0,", "-", "-0", "0-", "0-,1", "0,-1", "1-0", "-1", "0.1", "invalid",
+            ",",
+            ",0",
+            "0,",
+            "0, 1",
+            "-",
+            "-0",
+            "0-",
+            "0-,1",
+            "0,-1",
+            "1-0",
+            "-1",
+            "0.1",
+            "invalid",
+            "0,invalid",
         ] {
             assert_eq!(case.parse::<IdSet>().unwrap_err().kind(), ErrorKind::Parse);
         }

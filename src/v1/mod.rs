@@ -2,7 +2,7 @@
 //!
 //! Operations for each subsystem are implemented in each module. See [`cpu::Subsystem`] for
 //! example. Currently this crate supports [CPU], [cpuset], [cpuacct], [memory], [hugetlb],
-//! [device], [blkio], [RDMA], [net_prio], [net_cls], [pids], [freezer], and [perf_event]
+//! [devices], [blkio], [RDMA], [net_prio], [net_cls], [pids], [freezer], and [perf_event]
 //! subsystems.
 //!
 //! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
@@ -156,7 +156,7 @@ impl fmt::Display for SubsystemKind {
 }
 
 impl SubsystemKind {
-    fn as_str(&self) -> &'static str {
+    fn as_str(self) -> &'static str {
         match self {
             Self::Cpu => "cpu",
             Self::Cpuset => "cpuset",

@@ -1,6 +1,6 @@
 //! Operations on a devices subsystem.
 //!
-//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/devices.txt].
@@ -83,12 +83,22 @@ pub struct Resources {
 ///     access,
 ///     Access {
 ///         device_type: DeviceType::Char,
-///         device_number: Device { major: DeviceNumber::Number(1), minor: DeviceNumber::Number(3) },
+///         device_number: [1, 3].into(),
 ///         access_type: AccessType { read: true, write: false, mknod: true },
 ///     }
 /// );
 ///
 /// let access = "a *:* rwm".parse::<Access>().unwrap();
+/// assert_eq!(
+///     access,
+///     Access {
+///         device_type: DeviceType::All,
+///         device_number: Device { major: DeviceNumber::Any, minor: DeviceNumber::Any },
+///         access_type: AccessType { read: true, write: true, mknod: true },
+///     }
+/// );
+///
+/// let access = "a".parse::<Access>().unwrap();    // equivalent to "a *:* rwm"
 /// assert_eq!(
 ///     access,
 ///     Access {
@@ -179,33 +189,11 @@ macro_rules! _gen_setter {
         " by writing to `devices.", stringify!($field), "` file.\n\n",
         gen_doc!(see; $field),
         gen_doc!(err_write; devices, $field),
-        _gen_setter!(_eg; $field)),
+        gen_doc!(eg_write; devices, $field, &"c 8:0 rm".parse::<devices::Access>()?)),
         pub fn $field(&mut self, access: &Access) -> Result<()> {
             self.write_file(subsystem_file!(devices, $field), access)
         }
     } };
-
-    (_eg; $field: ident) => { concat!(
-"# Examples
-
-```no_run
-# fn main() -> cgroups::Result<()> {
-use std::path::PathBuf;
-use cgroups::{Device, v1::{devices, Cgroup, CgroupPath, SubsystemKind}};
-
-let mut cgroup = devices::Subsystem::new(
-    CgroupPath::new(SubsystemKind::Devices, PathBuf::from(\"students/charlie\")));
-
-let access = devices::Access {
-    device_type: devices::DeviceType::Char,
-    device_number: [8, 0].into(),
-    access_type: devices::AccessType { read: true, write: false, mknod: true },
-};
-
-cgroup.", stringify!($field), "(&access)?;
-# Ok(())
-# }
-```") };
 }
 
 impl Subsystem {
@@ -225,9 +213,8 @@ fn parse_list(reader: impl std::io::Read) -> Result<Vec<Access>> {
     use std::io::{BufRead, BufReader};
 
     let mut result = Vec::new();
-    let buf = BufReader::new(reader);
 
-    for line in buf.lines() {
+    for line in BufReader::new(reader).lines() {
         let line = line?;
         result.push(line.parse::<Access>()?);
     }
@@ -244,6 +231,44 @@ impl Into<v1::Resources> for Resources {
     }
 }
 
+impl FromStr for Access {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let mut sp = s.split_whitespace();
+
+        let device_type = parse_option(sp.next())?;
+
+        if let Some(device_number) = sp.next() {
+            let device_number = device_number.parse()?;
+            let access_type = parse_option(sp.next())?;
+
+            Ok(Self {
+                device_type,
+                device_number,
+                access_type,
+            })
+        } else if device_type == DeviceType::All {
+            use crate::{Device, DeviceNumber};
+
+            Ok(Self {
+                device_type,
+                device_number: Device {
+                    major: DeviceNumber::Any,
+                    minor: DeviceNumber::Any,
+                },
+                access_type: AccessType {
+                    read: true,
+                    write: true,
+                    mknod: true,
+                },
+            })
+        } else {
+            Err(Error::new(ErrorKind::Parse))
+        }
+    }
+}
+
 impl fmt::Display for Access {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -254,21 +279,16 @@ impl fmt::Display for Access {
     }
 }
 
-impl FromStr for Access {
+impl FromStr for DeviceType {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let mut sp = s.split_whitespace();
-
-        let device_type = parse_option(sp.next())?;
-        let device_number = parse_option(sp.next())?;
-        let access_type = parse_option(sp.next())?;
-
-        Ok(Self {
-            device_type,
-            device_number,
-            access_type,
-        })
+        match s {
+            "a" => Ok(Self::All),
+            "c" => Ok(Self::Char),
+            "b" => Ok(Self::Block),
+            _ => Err(Error::new(ErrorKind::Parse)),
+        }
     }
 }
 
@@ -284,16 +304,33 @@ impl fmt::Display for DeviceType {
     }
 }
 
-impl FromStr for DeviceType {
+impl FromStr for AccessType {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "a" => Ok(Self::All),
-            "c" => Ok(Self::Char),
-            "b" => Ok(Self::Block),
-            _ => Err(Error::new(ErrorKind::Parse)),
+        let mut access = AccessType::default();
+
+        macro_rules! s {
+            ($r: ident) => {{
+                if access.$r {
+                    return Err(Error::new(ErrorKind::Parse));
+                }
+                access.$r = true;
+            }};
         }
+
+        for c in s.chars() {
+            match c {
+                'r' => s!(read),
+                'w' => s!(write),
+                'm' => s!(mknod),
+                _ => {
+                    return Err(Error::new(ErrorKind::Parse));
+                }
+            }
+        }
+
+        Ok(access)
     }
 }
 
@@ -312,45 +349,6 @@ impl fmt::Display for AccessType {
         }
 
         Ok(())
-    }
-}
-
-impl FromStr for AccessType {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        let mut access = AccessType::default();
-
-        for c in s.chars() {
-            match c {
-                'r' => {
-                    if access.read {
-                        return Err(Error::new(ErrorKind::Parse));
-                    } else {
-                        access.read = true;
-                    }
-                }
-                'w' => {
-                    if access.write {
-                        return Err(Error::new(ErrorKind::Parse));
-                    } else {
-                        access.write = true;
-                    }
-                }
-                'm' => {
-                    if access.mknod {
-                        return Err(Error::new(ErrorKind::Parse));
-                    } else {
-                        access.mknod = true;
-                    }
-                }
-                _ => {
-                    return Err(Error::new(ErrorKind::Parse));
-                }
-            }
-        }
-
-        Ok(access)
     }
 }
 
@@ -402,30 +400,27 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_list() -> Result<()> {
-        const CONTENT_0: &str = "a *:* rwm\n";
-        assert_eq!(
-            parse_list(CONTENT_0.as_bytes())?,
-            vec![Access {
-                device_type: DeviceType::All,
-                device_number: Device {
-                    major: DeviceNumber::Any,
-                    minor: DeviceNumber::Any
-                },
-                access_type: AccessType {
-                    read: true,
-                    write: true,
-                    mknod: true
-                }
-            }]
-        );
+    fn err_parse_access() {
+        for case in &[
+            "c",
+            "d *:* rwm",
+            "a *:* invalid",
+            "a invalid rwm",
+            "a rwm",
+            "a 1:3",
+        ] {
+            assert_eq!(case.parse::<Access>().unwrap_err().kind(), ErrorKind::Parse);
+        }
+    }
 
-        const CONTENT_1: &str = "\
+    #[test]
+    fn test_parse_list() -> Result<()> {
+        const CONTENT_OK: &str = "\
 c 1:3 rm
 b 8:0 rw
 ";
         assert_eq!(
-            parse_list(CONTENT_1.as_bytes())?,
+            parse_list(CONTENT_OK.as_bytes())?,
             vec![
                 Access {
                     device_type: DeviceType::Char,

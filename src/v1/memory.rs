@@ -1,6 +1,6 @@
 //! Operations on a memory subsystem.
 //!
-//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/memory.txt].
@@ -214,30 +214,23 @@ macro_rules! _gen_getter {
         $ty: ty
     ) => {
         _gen_getter!($desc, $field $( : $link )?, $ty, parse);
-        _gen_getter!(_variants; $field, $memsw, $kmem, $tcp, $ty);
-    };
 
-    // `memsw`, `kmem`, `kmem.tcp` variants
-    (_variants; $field: ident, $memsw: ident, $kmem: ident, $tcp: ident, $ty: ty) => {
-        with_doc! { concat!(
-            "Reads from `memory.memsw.", stringify!($field), "` file. See [`", stringify!($field),
-            "`](#method.", stringify!($field), ") method for more information."),
+        with_doc! {
+            gen_doc!(reads_see; "memory.memsw", $field, $field),
             pub fn $memsw(&self) -> Result<$ty> {
                 self.open_file_read(concat!("memory.memsw.", stringify!($field))).and_then(parse)
             }
         }
 
-        with_doc! { concat!(
-            "Reads from `memory.kmem.", stringify!($field), "` file. See [`", stringify!($field),
-            "`](#method.", stringify!($field), ") method for more information."),
+        with_doc! {
+            gen_doc!(reads_see; "memory.kmem", $field, $field),
             pub fn $kmem(&self) -> Result<$ty> {
                 self.open_file_read(concat!("memory.kmem.", stringify!($field))).and_then(parse)
             }
         }
 
-        with_doc! { concat!(
-            "Reads from `memory.kmem.tcp.", stringify!($field), "` file. See [`", stringify!($field),
-            "`](#method.", stringify!($field), ") method for more information."),
+        with_doc! {
+            gen_doc!(reads_see; "memory.kmem.tcp", $field, $field),
             pub fn $tcp(&self) -> Result<$ty> {
                 self.open_file_read(concat!("memory.kmem.tcp.", stringify!($field))).and_then(parse)
             }
@@ -273,14 +266,14 @@ if failed to write to `memory.", stringify!($field), "` file of this cgroup.
 
 impl Subsystem {
     _gen_getter!(
-        "statistics of memory usage of this cgroup",
+        "the statistics of memory usage of this cgroup",
         stat,
         Stat,
         parse_stat
     );
 
     _gen_getter!(
-        "statistics of memory usage per NUMA node of this cgroup",
+        "the statistics of memory usage per NUMA node of this cgroup",
         numa_stat,
         NumaStat,
         parse_numa_stat
@@ -331,46 +324,43 @@ impl Subsystem {
         gen_doc!(eg_write; memory, set_limit_in_bytes, 4 * (1 << 30))),
         pub fn set_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
             if self.is_root() {
-                Err(Error::new(ErrorKind::InvalidOperation))
-            } else {
-                self.write_file("memory.limit_in_bytes", limit)
+                return Err(Error::new(ErrorKind::InvalidOperation));
             }
+
+            self.write_file("memory.limit_in_bytes", limit)
         }
     }
 
-    /// Writes to `memory.memsw.limit_in_bytes` file. See [`set_limit_in_bytes`] for more
-    /// information.
-    ///
-    /// [`set_limit_in_bytes`]: #method.set_limit_in_bytes
-    pub fn set_memsw_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
-        if self.is_root() {
-            Err(Error::new(ErrorKind::InvalidOperation))
-        } else {
+    with_doc! {
+        gen_doc!(sets_see; "memory.memsw", limit_in_bytes, set_limit_in_bytes),
+        pub fn set_memsw_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
+            if self.is_root() {
+                return Err(Error::new(ErrorKind::InvalidOperation));
+            }
+
             self.write_file("memory.memsw.limit_in_bytes", limit)
         }
     }
 
-    /// Writes to `memory.kmem.limit_in_bytes` file. See [`set_limit_in_bytes`] for more
-    /// information.
-    ///
-    /// [`set_limit_in_bytes`]: #method.set_limit_in_bytes
-    pub fn set_kmem_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
-        if self.is_root() {
-            Err(Error::new(ErrorKind::InvalidOperation))
-        } else {
-            self.write_file("memory.kmem.limit_in_bytes", limit)
+    with_doc! {
+        gen_doc!(sets_see; "memory.kmem", limit_in_bytes, set_limit_in_bytes),
+        pub fn set_kmem_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
+            if self.is_root() {
+                Err(Error::new(ErrorKind::InvalidOperation))
+            } else {
+                self.write_file("memory.kmem.limit_in_bytes", limit)
+            }
         }
     }
 
-    /// Writes to `memory.kmem.tcp.limit_in_bytes` file. See [`set_limit_in_bytes`] for more
-    /// information.
-    ///
-    /// [`set_limit_in_bytes`]: #method.set_limit_in_bytes
-    pub fn set_kmem_tcp_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
-        if self.is_root() {
-            Err(Error::new(ErrorKind::InvalidOperation))
-        } else {
-            self.write_file("memory.kmem.tcp.limit_in_bytes", limit)
+    with_doc! {
+        gen_doc!(sets_see; "memory.kmem.tcp", limit_in_bytes, set_limit_in_bytes),
+        pub fn set_kmem_tcp_limit_in_bytes(&mut self, limit: i64) -> Result<()> {
+            if self.is_root() {
+                Err(Error::new(ErrorKind::InvalidOperation))
+            } else {
+                self.write_file("memory.kmem.tcp.limit_in_bytes", limit)
+            }
         }
     }
 
@@ -483,21 +473,17 @@ impl Into<v1::Resources> for Resources {
     }
 }
 
-fn p() -> Error {
-    Error::new(ErrorKind::Parse)
-}
-
-macro_rules! p {
+macro_rules! ret_err_parse {
     () => {
-        return Err(p());
+        return Err(Error::new(ErrorKind::Parse));
     };
 }
 
 fn parse_stat(reader: impl io::Read) -> Result<Stat> {
     let buf = io::BufReader::new(reader);
 
-    macro_rules! gen {
-        ( keys: [ $( $key: ident ),* ], keys_opt: [ $( $key_opt: ident ),* ] ) => {
+    macro_rules! g {
+        ([ $( $key: ident ),* ], [ $( $key_opt: ident ),* ]) => {
             $( let mut $key: Option<u64> = None; )*
             $( let mut $key_opt: Option<u64> = None; )*
 
@@ -505,20 +491,20 @@ fn parse_stat(reader: impl io::Read) -> Result<Stat> {
                 let line = line?;
                 let mut entry = line.split_whitespace();
 
-                match entry.next().ok_or_else(p)? {
+                match entry.next() {
                     $(
-                        stringify!($key) => {
-                            if $key.is_some() { p!(); }
+                        Some(stringify!($key)) => {
+                            if $key.is_some() { ret_err_parse!(); }
                             $key = Some(parse_option(entry.next())?);
                         }
                     )*
                     $(
-                        stringify!($key_opt) => {
-                            if $key_opt.is_some() { p!(); }
+                        Some(stringify!($key_opt)) => {
+                            if $key_opt.is_some() { ret_err_parse!(); }
                             $key_opt = Some(parse_option(entry.next())?);
                         }
                     )*
-                    _ => { p!(); }
+                    _ => { ret_err_parse!(); }
                 }
             }
 
@@ -528,13 +514,13 @@ fn parse_stat(reader: impl io::Read) -> Result<Stat> {
                     $( $key_opt, )*
                 })
             } else {
-                Err(p())
+                ret_err_parse!();
             }
         }
     }
 
-    gen! {
-        keys: [
+    g! {
+        [
             cache, rss, rss_huge, shmem, mapped_file, dirty, writeback, pgpgin, pgpgout,
             pgfault, pgmajfault, active_anon, inactive_anon, active_file, inactive_file,
             unevictable, hierarchical_memory_limit, total_cache, total_rss, total_rss_huge,
@@ -542,7 +528,7 @@ fn parse_stat(reader: impl io::Read) -> Result<Stat> {
             total_pgpgout, total_pgfault, total_pgmajfault, total_active_anon,
             total_inactive_anon, total_active_file, total_inactive_file, total_unevictable
         ],
-        keys_opt: [
+        [
             swap, total_swap, hierarchical_memsw_limit
         ]
     }
@@ -551,35 +537,35 @@ fn parse_stat(reader: impl io::Read) -> Result<Stat> {
 fn parse_numa_stat(reader: impl io::Read) -> Result<NumaStat> {
     let buf = io::BufReader::new(reader);
 
-    macro_rules! gen {
-        ( $key0: ident, $( $key: ident ),* ) => {
+    macro_rules! g {
+        ($key0: ident, $( $key: ident ),*) => {
             let mut $key0 = None;
             $( let mut $key = None; )*
 
-            gen!(p; $key0, $( $key ),*);
+            g!(_parse_keys; $key0, $( $key ),*);
 
             if $( $key.is_some() && )* $key0.is_some() {
                 let $key0 = $key0.unwrap();
                 $( let $key = $key.unwrap(); )*
 
                 let len = $key0.1.len();
-                $( if $key.1.len() != len { p!(); } )*
+                $( if $key.1.len() != len { ret_err_parse!(); } )*
 
                 Ok(NumaStat {
                     $key0,
                     $( $key, )*
                 })
             } else {
-                Err(p())
+                ret_err_parse!();
             }
         };
 
-        (p; $( $key: ident ),*) => {
+        (_parse_keys; $( $key: ident ),*) => {
             for line in buf.lines() {
                 let line = line?;
-                match line.split('=').next().ok_or_else(p)? {
+                match line.split('=').next() {
                     $(
-                        stringify!($key) => {
+                        Some(stringify!($key)) => {
                             let mut entry = line.split(|c| c == ' ' || c == '=');
 
                             let total = parse_option(entry.nth(1))?;
@@ -592,14 +578,14 @@ fn parse_numa_stat(reader: impl io::Read) -> Result<NumaStat> {
                             $key = Some((total, nodes));
                         }
                     )*
-                    _ => { p!(); }
+                    _ => { ret_err_parse!(); }
                 }
             }
 
         };
     }
 
-    gen! {
+    g! {
         total, file, anon, unevictable,
         hierarchical_total, hierarchical_file, hierarchical_anon, hierarchical_unevictable
     }
@@ -616,42 +602,41 @@ fn parse_oom_control(reader: impl io::Read) -> Result<OomControl> {
         let line = line?;
         let mut entry = line.split_whitespace();
 
-        match entry.next().ok_or_else(p)? {
-            "oom_kill_disable" => {
+        match entry.next() {
+            Some("oom_kill_disable") => {
                 if oom_kill_disable.is_some() {
-                    p!();
+                    ret_err_parse!();
                 }
                 oom_kill_disable = Some(parse_01_bool_option(entry.next())?);
             }
-            "under_oom" => {
+            Some("under_oom") => {
                 if under_oom.is_some() {
-                    p!();
+                    ret_err_parse!();
                 }
                 under_oom = Some(parse_01_bool_option(entry.next())?);
             }
-            "oom_kill" => {
+            Some("oom_kill") => {
                 if oom_kill.is_some() {
-                    p!();
+                    ret_err_parse!();
                 }
                 oom_kill = Some(parse_option(entry.next())?);
             }
             _ => {
-                p!();
+                ret_err_parse!();
             }
         }
     }
 
-    if let Some(oom_kill_disable) = oom_kill_disable {
-        if let Some(under_oom) = under_oom {
-            return Ok(OomControl {
-                oom_kill_disable,
-                under_oom,
-                oom_kill,
-            });
+    match (oom_kill_disable, under_oom) {
+        (Some(oom_kill_disable), Some(under_oom)) => Ok(OomControl {
+            oom_kill_disable,
+            under_oom,
+            oom_kill,
+        }),
+        _ => {
+            ret_err_parse!();
         }
     }
-
-    Err(p())
 }
 
 #[cfg(test)]
@@ -682,6 +667,7 @@ mod tests {
     // TODO: test adding tasks
 
     #[test]
+    #[rustfmt::skip]
     fn test_subsystem_stat() -> Result<()> {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Memory, gen_cgroup_name!()));
         cgroup.create()?;
@@ -693,46 +679,17 @@ mod tests {
         }
 
         assert_0!(
-            cache,
-            rss,
-            rss_huge,
-            shmem,
-            mapped_file,
-            dirty,
-            writeback,
-            pgpgin,
-            pgpgout,
-            pgfault,
-            pgmajfault,
-            active_anon,
-            inactive_anon,
-            active_file,
-            inactive_file,
-            unevictable,
+            cache, rss, rss_huge, shmem, mapped_file, dirty, writeback, pgpgin, pgpgout, pgfault,
+            pgmajfault, active_anon, inactive_anon, active_file, inactive_file, unevictable,
         );
         assert_eq!(stat.swap.unwrap_or(0), 0);
         assert_eq!(stat.hierarchical_memory_limit, LIMIT_DEFAULT);
-        assert_eq!(
-            stat.hierarchical_memsw_limit.unwrap_or(LIMIT_DEFAULT),
-            LIMIT_DEFAULT
-        );
+        assert_eq!(stat.hierarchical_memsw_limit.unwrap_or(LIMIT_DEFAULT), LIMIT_DEFAULT);
 
         assert_0!(
-            total_cache,
-            total_rss,
-            total_rss_huge,
-            total_shmem,
-            total_mapped_file,
-            total_dirty,
-            total_writeback,
-            total_pgpgin,
-            total_pgpgout,
-            total_pgfault,
-            total_pgmajfault,
-            total_active_anon,
-            total_inactive_anon,
-            total_active_file,
-            total_inactive_file,
+            total_cache, total_rss, total_rss_huge, total_shmem, total_mapped_file, total_dirty,
+            total_writeback, total_pgpgin, total_pgpgout, total_pgfault, total_pgmajfault,
+            total_active_anon, total_inactive_anon, total_active_file, total_inactive_file,
             total_unevictable,
         );
         assert_eq!(stat.total_swap.unwrap_or(0), 0);
@@ -743,6 +700,7 @@ mod tests {
     #[test]
     fn test_subsystem_numa_stat() -> Result<()> {
         // tested on a non-NUMA system
+        // TODO: test on NUMA systems
 
         gen_subsystem_test!(
             Memory,
@@ -759,8 +717,6 @@ mod tests {
                 hierarchical_unevictable: (0, vec![0]),
             }
         )
-
-        // TODO: test on NUMA systems
     }
 
     macro_rules! gen_getters_test {
@@ -770,7 +726,7 @@ mod tests {
             cgroup.create()?;
 
             assert_eq!(cgroup.$getter()?, $val);
-            if cgroup.file_exists(concat!("memory.", stringify!($memsw))) {
+            if cgroup.file_exists(subsystem_file!(memory, $memsw)) {
                 assert_eq!(cgroup.$memsw()?, $val);
             }
             assert_eq!(cgroup.$kmem()?, $val);

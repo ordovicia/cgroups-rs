@@ -1,6 +1,6 @@
 //! Operations on a freezer subsystem.
 //!
-//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/freezer-subsystem.txt].
@@ -134,12 +134,6 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_getter {
-    ($desc: literal, $field: ident $( : $link: ident )?, $ty: ty, $parser: ident) => {
-        gen_getter!(freezer, $desc, $field $( : $link )?, $ty, $parser);
-    };
-}
-
 macro_rules! _gen_setter {
     ($desc: literal, $setter: ident, $val: expr) => {
         with_doc! { concat!(
@@ -155,21 +149,24 @@ macro_rules! _gen_setter {
 }
 
 impl Subsystem {
-    _gen_getter!(
+    gen_getter!(
+        freezer,
         "the current state of this cgroup",
         state: link,
         State,
         parse
     );
 
-    _gen_getter!(
+    gen_getter!(
+        freezer,
         "whether this cgroup itself is frozen or in processes of being frozen,",
         self_freezing,
         bool,
         parse_01_bool
     );
 
-    _gen_getter!(
+    gen_getter!(
+        freezer,
         "whether any parent cgroups of this cgroup is frozen or in processes of being frozen,",
         parent_freezing,
         bool,
@@ -239,7 +236,7 @@ mod tests {
     }
 
     #[test]
-    fn test_self_freezing_freeze_thaw() -> Result<()> {
+    fn test_subsystem_self_freezing_freeze_thaw() -> Result<()> {
         let mut cgroup =
             Subsystem::new(CgroupPath::new(SubsystemKind::Freezer, gen_cgroup_name!()));
         cgroup.create()?;
@@ -255,13 +252,13 @@ mod tests {
     }
 
     #[test]
-    fn test_parent_freezing_freeze_thaw() -> Result<()> {
+    fn test_subsystem_parent_freezing_freeze_thaw() -> Result<()> {
         let name = gen_cgroup_name!();
 
-        let mut parent = Subsystem::new(CgroupPath::new(SubsystemKind::Freezer, name.clone()));
-        parent.create()?;
-
         let mut child = Subsystem::new(CgroupPath::new(SubsystemKind::Freezer, name.join("child")));
+        let mut parent = Subsystem::new(CgroupPath::new(SubsystemKind::Freezer, name));
+
+        parent.create()?;
         child.create()?;
 
         assert!(!parent.parent_freezing()?);

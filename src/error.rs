@@ -8,7 +8,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// respectively.
 ///
 /// [`Result::Err`]: https://doc.rust-lang.org/std/result/enum.Result.html#variant.Err
-///
 /// [`kind`]: #method.kind
 /// [`source`]: https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.source
 #[derive(Debug)]

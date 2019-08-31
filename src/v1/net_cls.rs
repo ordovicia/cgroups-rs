@@ -1,6 +1,6 @@
 //! Operations on a net_cls subsystem.
 //!
-//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/net_cls.txt].

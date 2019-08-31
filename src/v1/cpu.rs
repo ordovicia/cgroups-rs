@@ -1,6 +1,6 @@
 //! Operations on a CPU subsystem.
 //!
-//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/scheduler/sched-design-CFS.txt]
@@ -21,7 +21,7 @@
 //! let resources = cpu::Resources {
 //!     shares: Some(1024),
 //!     cfs_quota_us: Some(500_000),
-//!     cfs_period_us: Some(1000_000),
+//!     cfs_period_us: Some(1_000_000),
 //! };
 //!
 //! // Apply the resource limit to this cgroup.
@@ -75,6 +75,7 @@ pub struct Resources {
     pub cfs_quota_us: Option<i64>,
     /// Length of a period (in microseconds).
     pub cfs_period_us: Option<u64>,
+    // TODO: realtime support
     // pub realtime_runtime: Option<i64>,
     // pub realtime_period: Option<u64>,
 }
@@ -82,7 +83,9 @@ pub struct Resources {
 /// Throttling statistics of a cgroup.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stat {
-    /// Number of periods (as specified in `Resources.cfs_period_us`) that have elapsed.
+    /// Number of periods (as specified in [`Resources.cfs_period_us`]) that have elapsed.
+    ///
+    /// [`Resources.cfs_period_us`]: struct.Resources.html#structfield.cfs_period_us
     pub nr_periods: u64,
     /// Number of times this cgroup has been throttled.
     pub nr_throttled: u64,
@@ -117,56 +120,40 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_getter {
-    ($desc: literal, $field: ident $( : $link: ident )?, $ty: ty, $parser: ident) => {
-        gen_getter!(cpu, $desc, $field $( : $link )?, $ty, $parser);
-    };
-}
-
-macro_rules! _gen_setter {
-    ($desc: literal, $field: ident : link, $setter: ident, $ty: ty, $val: expr) => {
-        gen_setter!(cpu, $desc, $field : link, $setter, $ty, $val);
-    };
-
-    (
-        $desc: literal $( : $detail: literal )?,
-        $field: ident : link,
-        $setter: ident,
-        $arg: ident : $ty: ty,
-        $val: expr
-    ) => {
-        gen_setter!(cpu, $desc $( : $detail )?, $field : link, $setter, $arg : $ty, $val);
-    };
-}
-
 impl Subsystem {
-    _gen_getter!(
+    gen_getter!(
+        cpu,
         "the throttling statistics of this cgroup",
-        stat, Stat, parse_stat
+        stat,
+        Stat,
+        parse_stat
     );
 
-    _gen_getter!("the CPU time shares", shares: link, u64, parse);
-    _gen_setter!("CPU time shares", shares: link, set_shares, u64, 2048);
+    gen_getter!(cpu, "the CPU time shares", shares: link, u64, parse);
+    gen_setter!(cpu, "CPU time shares", shares: link, set_shares, u64, 2048);
 
-    _gen_getter!(
+    gen_getter!(
+        cpu,
         "the total available CPU time within a period (in microseconds)",
         cfs_quota_us: link,
         i64,
         parse
     );
-    _gen_setter!(
-        "total available CPU time within a period (in microseconds)"
+    gen_setter!(
+        cpu, "total available CPU time within a period (in microseconds)"
         : "Setting -1 removes the current limit.",
         cfs_quota_us : link, set_cfs_quota_us, quota: i64, 500 * 1000
     );
 
-    _gen_getter!(
+    gen_getter!(
+        cpu,
         "the length of period (in microseconds)",
         cfs_period_us: link,
         u64,
         parse
     );
-    _gen_setter!(
+    gen_setter!(
+        cpu,
         "length of period (in microseconds)",
         cfs_period_us: link,
         set_cfs_period_us,
@@ -179,20 +166,19 @@ fn parse_stat(reader: impl std::io::Read) -> Result<Stat> {
     use std::io::{BufRead, BufReader};
 
     let (mut nr_periods, mut nr_throttled, mut throttled_time) = (None, None, None);
-    let buf = BufReader::new(reader);
 
-    for line in buf.lines() {
+    for line in BufReader::new(reader).lines() {
         let line = line?;
         let mut entry = line.split_whitespace();
 
-        match entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))? {
-            "nr_periods" => {
+        match entry.next() {
+            Some("nr_periods") => {
                 nr_periods = Some(parse_option(entry.next())?);
             }
-            "nr_throttled" => {
+            Some("nr_throttled") => {
                 nr_throttled = Some(parse_option(entry.next())?);
             }
-            "throttled_time" => {
+            Some("throttled_time") => {
                 throttled_time = Some(parse_option(entry.next())?);
             }
             _ => return Err(Error::new(ErrorKind::Parse)),
@@ -224,10 +210,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(
-            Cpu,
-            ["stat", "shares", "cfs_quota_us", "cfs_period_us"]
-        )
+        gen_subsystem_test!(Cpu, ["stat", "shares", "cfs_quota_us", "cfs_period_us"])
     }
 
     #[test]
@@ -241,6 +224,29 @@ mod tests {
                 throttled_time: 0
             }
         )
+    }
+
+    #[test]
+    #[ignore] // must not executed in parallel
+    fn test_subsystem_stat_throttled() -> Result<()> {
+        let mut cgroup =
+            Subsystem::new(CgroupPath::new(v1::SubsystemKind::Cpu, gen_cgroup_name!()));
+        cgroup.create()?;
+
+        let pid = crate::Pid::from(std::process::id());
+        cgroup.add_proc(pid)?;
+
+        cgroup.set_cfs_quota_us(1000)?; // 1%
+
+        crate::consume_cpu_until(|| cgroup.stat().unwrap().nr_throttled > 0, 10);
+        // dbg!(cgroup.stat()?);
+
+        let stat = cgroup.stat()?;
+        assert!(stat.nr_periods > 0);
+        assert!(stat.throttled_time > 0);
+
+        cgroup.remove_proc(pid)?;
+        cgroup.delete()
     }
 
     #[test]
@@ -266,14 +272,14 @@ mod tests {
 
     #[test]
     fn test_parse_stat() -> Result<()> {
-        const CONTENT: &str = "\
+        const CONTENT_OK: &str = "\
 nr_periods 256
 nr_throttled 8
 throttled_time 32
 ";
 
         assert_eq!(
-            parse_stat(CONTENT.as_bytes())?,
+            parse_stat(CONTENT_OK.as_bytes())?,
             Stat {
                 nr_periods: 256,
                 nr_throttled: 8,
@@ -285,6 +291,24 @@ throttled_time 32
             parse_stat("".as_bytes()).unwrap_err().kind(),
             ErrorKind::Parse
         );
+
+        const CONTENT_NG_NOT_INT: &str = "\
+nr_periods invalid
+nr_throttled 8
+throttled_time 32
+";
+
+        const CONTENT_NG_MISSING_DATA: &str = "\
+nr_periods 256
+throttled_time 32
+";
+
+        for case in &[CONTENT_NG_NOT_INT, CONTENT_NG_MISSING_DATA] {
+            assert_eq!(
+                parse_stat(case.as_bytes()).unwrap_err().kind(),
+                ErrorKind::Parse
+            );
+        }
 
         Ok(())
     }

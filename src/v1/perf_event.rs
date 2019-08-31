@@ -1,6 +1,6 @@
 //! Definition of a perf_event subsystem.
 //!
-//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
 //! By using perf_event subsystem, you can monitor processes using `perf` tool in cgroup unit. This
 //! subsystem does not have any configurable parameters.

@@ -1,6 +1,6 @@
 //! Operations on a blkio subsystem.
 //!
-//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/blkio-controller.txt].
@@ -34,7 +34,7 @@
 //!
 //! // Do something ...
 //!
-//! // Get the I/O service transferred by this cgroup in operation count.
+//! // Get the operation count of block I/O service transferred by this cgroup.
 //! println!("{:?}", blkio_cgroup.io_serviced()?);
 //!
 //! blkio_cgroup.remove_task(pid)?;
@@ -166,10 +166,6 @@ impl_cgroup! {
 }
 
 macro_rules! _gen_getter {
-    ($desc: literal, $field: ident : link, $ty: ty, $parser: ident) => {
-        gen_getter!(blkio, $desc, $field : link, $ty, $parser);
-    };
-
     (map; $desc: literal, $field: ident $( : $link: ident )?, $ty: ty $(, $recursive: ident )?) => {
         gen_getter!(blkio, $desc, $field $( : $link )?, HashMap<Device, $ty>, parse_map);
         $( _gen_getter!(_rec; $recursive, $field, HashMap<Device, $ty>, parse_map); )?
@@ -181,22 +177,17 @@ macro_rules! _gen_getter {
     };
 
     (throttle; $desc: literal, $field: ident : link) => { with_doc! { concat!(
-        "Reads ", $desc,
-        " for each device, from `blkio.throttle.", stringify!($field), "` file.\n\n",
+        gen_doc!(reads; "blkio.throttle", $desc, $field),
         gen_doc!(see; $field),
-        "# Errors\n\n",
-        "Returns an error if failed to read and parse `blkio.throttle.", stringify!($field),
-        "`file of this cgroup.\n\n",
+        gen_doc!(err_read; "blkio.throttle", $field),
         gen_doc!(eg_read; blkio, $field)),
         pub fn $field(&self) -> Result<HashMap<Device, u64>> {
-            self.open_file_read(concat!("blkio.throttle.", stringify!($field))).and_then(parse_map)
+            self.open_file_read(subsystem_file!("blkio.throttle", $field)).and_then(parse_map)
         }
     } };
 
-    (_rec; $recursive: ident, $field: ident, $ty: ty, $parser: ident) => { with_doc! { concat!(
-        "Reads from `", subsystem_file!(blkio, $recursive), "` file.",
-        " See [`", stringify!($field), "`](#method.", stringify!($field), ")",
-        " method for more information."),
+    (_rec; $recursive: ident, $field: ident, $ty: ty, $parser: ident) => { with_doc! {
+        gen_doc!(reads_see; blkio, $recursive, $field),
         pub fn $recursive(&self) -> Result<$ty> {
             self.open_file_read(subsystem_file!(blkio, $recursive))
                 .and_then($parser)
@@ -235,24 +226,21 @@ macro_rules! _gen_setter {
         }
     } };
 
-    (throttle; $desc: literal, $field: ident : link, $setter: ident, $arg: ident, $ty: ty) => { with_doc! {
-        concat!(
-            "Throttles ", $desc, " for a device,",
-            " by writing to `blkio.throttle.", stringify!($field), "` file.\n\n",
+    (throttle; $desc: literal, $field: ident : link, $setter: ident, $arg: ident, $ty: ty) => {
+        with_doc! { concat!(
+            gen_doc!(sets; "blkio.throttle", $desc, $field),
             gen_doc!(see; $field),
-            "# Errors\n\n",
-            "Returns an error if failed to write to `blkio.throttle.", stringify!($field),
-            "`file of this cgroup.\n\n",
-            gen_doc!(eg_write; blkio, $setter, [8, 0].into(), 100),
-        ),
-        pub fn $setter(&mut self, device: Device, $arg: $ty) -> Result<()> {
-            use io::Write;
+            gen_doc!(err_write; "blkio.throttle", $field),
+            gen_doc!(eg_write; blkio, $setter, [8, 0].into(), 100)),
+            pub fn $setter(&mut self, device: Device, $arg: $ty) -> Result<()> {
+                use io::Write;
 
-            let mut file = self.open_file_write(concat!("blkio.throttle.", stringify!($field)))?;
-            // write!(file, "{} {}", device, $arg).map_err(Into::into) // not work
-            file.write_all(format!("{} {}", device, $arg).as_bytes()).map_err(Into::into)
+                let mut file = self.open_file_write(subsystem_file!("blkio.throttle", $field))?;
+                // write!(file, "{} {}", device, $arg).map_err(Into::into) // not work
+                file.write_all(format!("{} {}", device, $arg).as_bytes()).map_err(Into::into)
+            }
         }
-    } };
+    };
 
     (_sets_see_err_weight; $desc: literal, $field: ident) => { concat!(
         gen_doc!(
@@ -269,7 +257,8 @@ error if failed to write to `", subsystem_file!(blkio, $field), "` file of this 
 }
 
 impl Subsystem {
-    _gen_getter!(
+    gen_getter!(
+        blkio,
         "the relative weight of block I/O performed by this cgroup,",
         weight: link,
         u16,
@@ -286,7 +275,8 @@ impl Subsystem {
         weight_device : link, set_weight_device
     );
 
-    _gen_getter!(
+    gen_getter!(
+        blkio,
         "the weight this cgroup has while competing against descendant cgroups,",
         leaf_weight: link,
         u16,
@@ -345,37 +335,37 @@ impl Subsystem {
     );
 
     _gen_getter!(
-        throttle; "bandwidth of read access in terms of bytes/s",
+        throttle; "throttle on bandwidth of read access in terms of bytes/s,",
         read_bps_device : link
     );
     _gen_getter!(
-        throttle; "bandwidth of write access in terms of bytes/s",
+        throttle; "throttle on bandwidth of write access in terms of bytes/s,",
         write_bps_device : link
     );
     _gen_getter!(
-        throttle; "bandwidth of read access in terms of ops/s",
+        throttle; "throttle on bandwidth of read access in terms of ops/s,",
         read_iops_device : link
     );
     _gen_getter!(
-        throttle; "bandwidth of write access in terms of ops/s",
+        throttle; "throttle on bandwidth of write access in terms of ops/s,",
         write_iops_device : link
     );
 
     _gen_setter!(
-        throttle; "bandwidth of read access in terms of bytes/s",
+        throttle; "throttle on bandwidth of read access in terms of bytes/s,",
         read_bps_device : link, throttle_read_bps_device, bps, u64
     );
     _gen_setter!(
-        throttle; "bandwidth of write access in terms of bytes/s",
+        throttle; "throttle on bandwidth of write access in terms of bytes/s,",
         write_bps_device : link, throttle_write_bps_device, bps, u64
     );
 
     _gen_setter!(
-        throttle; "bandwidth of read access in terms of ops/s",
+        throttle; "throttle on bandwidth of read access in terms of ops/s,",
         read_iops_device : link, throttle_read_iops_device, iops, u64
     );
     _gen_setter!(
-        throttle; "bandwidth of write access in terms of ops/s",
+        throttle; "throttle on bandwidth of write access in terms of ops/s,",
         write_iops_device : link, throttle_write_iops_device, iops, u64
     );
 
@@ -400,11 +390,12 @@ impl Into<v1::Resources> for Resources {
     }
 }
 
-fn parse_map<T>(reader: impl io::Read) -> Result<HashMap<Device, T>>
+fn parse_map<T, R>(reader: R) -> Result<HashMap<Device, T>>
 where
     T: FromStr,
     <T as FromStr>::Err: std::error::Error + Sync + Send + 'static,
     Error: From<<T as FromStr>::Err>,
+    R: io::Read,
 {
     let mut result = HashMap::new();
 
@@ -412,16 +403,20 @@ where
         let line = line?;
         let mut entry = line.split_whitespace();
 
-        result.insert(parse_option(entry.next())?, parse_option(entry.next())?);
+        let device = parse_option(entry.next())?;
+        let val = parse_option(entry.next())?;
+
+        result.insert(device, val);
     }
 
     Ok(result)
 }
 
 fn parse_io_service(reader: impl io::Read) -> Result<IoService> {
-    let mut devices: HashMap<Device, Operations> = HashMap::new();
+    let mut devices = HashMap::new();
     let mut total = None;
 
+    // FIXME: avoid memory allocation
     let lines = io::BufReader::new(reader)
         .lines()
         .collect::<std::result::Result<Vec<_>, std::io::Error>>()?;
@@ -429,7 +424,7 @@ fn parse_io_service(reader: impl io::Read) -> Result<IoService> {
     for lines5 in lines.chunks(5) {
         match &lines5 {
             // FIXME: order is guaranteed?
-            // FIXME: 5 data of the same device are guaranteed to be contiguous?
+            // FIXME: 5 lines of the same device are guaranteed to be contiguous?
             [read, write, sync, async_, total] => {
                 let mut e = read.split_whitespace();
                 let device = parse_option(e.next())?;
@@ -494,7 +489,7 @@ mod tests {
     #[rustfmt::skip]
     fn test_subsystem_create_file_exists() -> Result<()> {
         gen_subsystem_test!(
-            BlkIo, 
+            BlkIo,
             [
                 "weight", "weight_device", "leaf_weight", "leaf_weight_device",
                 "throttle.io_service_bytes", "throttle.io_serviced",
@@ -508,7 +503,7 @@ mod tests {
 
                 "time_recursive", "sectors_recursive",
                 "io_service_bytes_recursive", "io_service_time_recursive", "io_serviced_recursive",
-                "io_merged_recursive", "io_queued_recursive", "io_wait_time_recursive"
+                "io_merged_recursive", "io_queued_recursive", "io_wait_time_recursive",
             ]
         )
     }
@@ -516,52 +511,78 @@ mod tests {
     #[test]
     fn test_subsystem_weight() -> Result<()> {
         const WEIGHT_DEFAULT: u16 = 500;
-        gen_subsystem_test!(BlkIo, weight, WEIGHT_DEFAULT, set_weight, WEIGHT_MAX)?;
+
+        gen_subsystem_test!(
+            BlkIo,
+            weight,
+            WEIGHT_DEFAULT,
+            set_weight,
+            WEIGHT_MIN,
+            WEIGHT_MAX,
+        )?;
         gen_subsystem_test!(
             BlkIo,
             leaf_weight,
             WEIGHT_DEFAULT,
             set_leaf_weight,
-            WEIGHT_MAX
+            WEIGHT_MIN,
+            WEIGHT_MAX,
         )
     }
 
     #[test]
     fn err_subsystem_weight() -> Result<()> {
-        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::BlkIo, gen_cgroup_name!()));
-        cgroup.create()?;
-
-        assert_eq!(
-            cgroup.set_weight(WEIGHT_MIN - 1).unwrap_err().kind(),
-            ErrorKind::InvalidArgument
-        );
-        assert_eq!(
-            cgroup.set_weight(WEIGHT_MAX + 1).unwrap_err().kind(),
-            ErrorKind::InvalidArgument
-        );
-
-        cgroup.delete()
+        gen_subsystem_test!(
+            BlkIo,
+            set_weight,
+            (InvalidArgument, WEIGHT_MIN - 1),
+            (InvalidArgument, WEIGHT_MAX + 1),
+        )?;
+        gen_subsystem_test!(
+            BlkIo,
+            set_leaf_weight,
+            (InvalidArgument, WEIGHT_MIN - 1),
+            (InvalidArgument, WEIGHT_MAX + 1),
+        )
     }
 
     #[test]
     fn test_subsystem_weight_device() -> Result<()> {
         // TODO: test setting weights
-        gen_subsystem_test!(BlkIo, weight_device, hashmap![])?;
-        gen_subsystem_test!(BlkIo, leaf_weight_device, hashmap![])
+        gen_subsystem_test!(BlkIo, weight_device, hashmap! {})?;
+        gen_subsystem_test!(BlkIo, leaf_weight_device, hashmap! {})
+    }
+
+    #[test]
+    fn err_subsystem_weight_device() -> Result<()> {
+        let device = lsblk();
+
+        gen_subsystem_test!(
+            BlkIo,
+            set_weight_device,
+            (InvalidArgument, device, WEIGHT_MIN - 1),
+            (InvalidArgument, device, WEIGHT_MAX + 1),
+        )?;
+        gen_subsystem_test!(
+            BlkIo,
+            set_leaf_weight_device,
+            (InvalidArgument, device, WEIGHT_MIN - 1),
+            (InvalidArgument, device, WEIGHT_MAX + 1),
+        )
     }
 
     // TODO: test adding tasks
 
     #[test]
     fn test_subsystem_time() -> Result<()> {
-        gen_subsystem_test!(BlkIo, time, hashmap![])?;
-        gen_subsystem_test!(BlkIo, time_recursive, hashmap![])
+        gen_subsystem_test!(BlkIo, time, hashmap! {})?;
+        gen_subsystem_test!(BlkIo, time_recursive, hashmap! {})
     }
 
     #[test]
     fn test_subsystem_sectors() -> Result<()> {
-        gen_subsystem_test!(BlkIo, sectors, hashmap![])?;
-        gen_subsystem_test!(BlkIo, sectors_recursive, hashmap![])
+        gen_subsystem_test!(BlkIo, sectors, hashmap! {})?;
+        gen_subsystem_test!(BlkIo, sectors_recursive, hashmap! {})
     }
 
     #[test]
@@ -571,11 +592,11 @@ mod tests {
             total: 0,
         };
 
-        gen_subsystem_test!(BlkIo, io_serviced, io_service)?;
-        gen_subsystem_test!(BlkIo, io_serviced_recursive, io_service)?;
-
         gen_subsystem_test!(BlkIo, io_service_bytes, io_service)?;
         gen_subsystem_test!(BlkIo, io_service_bytes_recursive, io_service)?;
+
+        gen_subsystem_test!(BlkIo, io_serviced, io_service)?;
+        gen_subsystem_test!(BlkIo, io_serviced_recursive, io_service)?;
 
         gen_subsystem_test!(BlkIo, io_service_time, io_service)?;
         gen_subsystem_test!(BlkIo, io_service_time_recursive, io_service)
@@ -631,10 +652,10 @@ mod tests {
         cgroup.throttle_read_iops_device(device, 42)?;
         cgroup.throttle_write_iops_device(device, 42)?;
 
-        assert_eq!(cgroup.read_bps_device()?, hashmap![(device, 42)]);
-        assert_eq!(cgroup.write_bps_device()?, hashmap![(device, 42)]);
-        assert_eq!(cgroup.read_iops_device()?, hashmap![(device, 42)]);
-        assert_eq!(cgroup.write_iops_device()?, hashmap![(device, 42)]);
+        assert_eq!(cgroup.read_bps_device()?, hashmap! {(device, 42)});
+        assert_eq!(cgroup.write_bps_device()?, hashmap! {(device, 42)});
+        assert_eq!(cgroup.read_iops_device()?, hashmap! {(device, 42)});
+        assert_eq!(cgroup.write_iops_device()?, hashmap! {(device, 42)});
 
         cgroup.delete()
     }
@@ -651,25 +672,41 @@ mod tests {
 
     #[test]
     fn test_parse_map() -> Result<()> {
-        const CONTENT: &str = "\
+        const CONTENT_OK: &str = "\
 7:26 256
 259:0 65536
 ";
 
-        let actual = parse_map(CONTENT.as_bytes())?;
+        let actual = parse_map(CONTENT_OK.as_bytes())?;
         assert_eq!(
             actual,
-            hashmap![([7, 26].into(), 256), ([259, 0].into(), 65536),]
+            hashmap! {([7, 26].into(), 256), ([259, 0].into(), 65536)}
         );
 
-        assert_eq!(parse_map("".as_bytes())?, HashMap::<Device, u32>::new());
+        assert_eq!(parse_map::<u32, _>("".as_bytes())?, hashmap! {});
+
+        const CONTENT_NG_NOT_INT: &str = "\
+7:26 invalid
+259:0 65536
+";
+        const CONTENT_NG_NOT_DEVICE: &str = "\
+7:26 256
+invalid:0 65536
+";
+
+        for case in &[CONTENT_NG_NOT_INT, CONTENT_NG_NOT_DEVICE] {
+            assert_eq!(
+                parse_map::<u32, _>(case.as_bytes()).unwrap_err().kind(),
+                ErrorKind::Parse
+            );
+        }
 
         Ok(())
     }
 
     #[test]
     fn test_parse_io_service() -> Result<()> {
-        const CONTENT_0: &str = "\
+        const CONTENT_OK: &str = "\
 259:0 Read 5941
 259:0 Write 10350930
 259:0 Sync 6786851
@@ -683,9 +720,9 @@ mod tests {
 Total 29281497
 ";
 
-        let actual = parse_io_service(CONTENT_0.as_bytes())?;
+        let actual = parse_io_service(CONTENT_OK.as_bytes())?;
         let expected = IoService {
-            devices: hashmap![
+            devices: hashmap! {
                 (
                     [259, 0].into(),
                     Operations {
@@ -706,17 +743,17 @@ Total 29281497
                         total: 0,
                     },
                 ),
-            ],
+            },
             total: 29281497,
         };
 
         assert_eq!(actual, expected);
 
-        const CONTENT_1: &str = "\
+        const CONTENT_OK_EMPTY: &str = "\
 Total 0
 ";
 
-        let actual = parse_io_service(CONTENT_1.as_bytes())?;
+        let actual = parse_io_service(CONTENT_OK_EMPTY.as_bytes())?;
         assert_eq!(
             actual,
             IoService {
@@ -724,6 +761,47 @@ Total 0
                 total: 0
             }
         );
+
+        const CONTENT_NG_MISSING_DATA: &str = "\
+259:0 Read 5941
+259:0 Write 10350930
+259:0 Sync 6786851
+259:0 Total 10356871
+Total 29281497
+        ";
+
+        const CONTENT_NG_WITHOUT_TOTAL: &str = "\
+259:0 Read 5941
+259:0 Write 10350930
+259:0 Sync 6786851
+259:0 Async 3570020
+259:0 Total 10356871
+        ";
+
+        const CONTENT_NG_TOTAL_ORDER: &str = "\
+259:0 Read 5941
+259:0 Write 10350930
+259:0 Sync 6786851
+259:0 Async 3570020
+259:0 Total 10356871
+Total 29281497
+7:26 Read 0
+7:26 Write 0
+7:26 Sync 0
+7:26 Async 0
+7:26 Total 0
+        ";
+
+        for case in &[
+            CONTENT_NG_MISSING_DATA,
+            CONTENT_NG_WITHOUT_TOTAL,
+            CONTENT_NG_TOTAL_ORDER,
+        ] {
+            assert_eq!(
+                parse_io_service(case.as_bytes()).unwrap_err().kind(),
+                ErrorKind::Parse
+            );
+        }
 
         Ok(())
     }

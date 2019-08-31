@@ -160,8 +160,6 @@ pub trait Cgroup {
     ///
     /// Returns an error if failed to create the directory, with kind [`ErrorKind::Io`].
     ///
-    /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
-    ///
     /// # Examples
     ///
     /// ```no_run
@@ -176,6 +174,8 @@ pub trait Cgroup {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
     fn create(&mut self) -> Result<()> {
         fs::create_dir(self.path()).map_err(Into::into)
     }
@@ -221,8 +221,6 @@ pub trait Cgroup {
     ///
     /// Returns an error if failed to delete the directory, with kind [`ErrorKind::Io`].
     ///
-    /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
-    ///
     /// # Examples
     ///
     /// ```no_run
@@ -239,6 +237,8 @@ pub trait Cgroup {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
     fn delete(&mut self) -> Result<()> {
         fs::remove_dir(self.path()).map_err(Into::into)
     }
@@ -481,8 +481,6 @@ pub trait Cgroup {
     /// an error is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup, returns
     /// an error if failed to read `release_agent` file.
     ///
-    /// [`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation
-    ///
     /// # Examples
     ///
     /// ```no_run
@@ -497,6 +495,8 @@ pub trait Cgroup {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// [`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation
     fn release_agent(&self) -> Result<String> {
         use std::io::Read;
 
@@ -522,8 +522,6 @@ pub trait Cgroup {
     /// an error is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup, returns
     /// an error if failed to write to `release_agent` file.
     ///
-    /// [`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation
-    ///
     /// # Examples
     ///
     /// ```no_run
@@ -538,6 +536,8 @@ pub trait Cgroup {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// [`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation
     fn set_release_agent(&mut self, agent_path: impl AsRef<[u8]>) -> Result<()> {
         if !self.is_root() {
             return Err(Error::new(ErrorKind::InvalidOperation));
@@ -572,8 +572,6 @@ pub trait Cgroup {
     ///
     /// Returns an error if failed to open the file, with kind [`ErrorKind::Io`].
     ///
-    /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
-    ///
     /// # Examples
     ///
     /// ```no_run
@@ -588,6 +586,8 @@ pub trait Cgroup {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
     fn open_file_read(&self, name: &str) -> Result<File> {
         File::open(self.path().join(name)).map_err(Into::into)
     }
@@ -597,8 +597,6 @@ pub trait Cgroup {
     /// # Errors
     ///
     /// Returns an error if failed to open the file, with kind [`ErrorKind::Io`].
-    ///
-    /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
     ///
     /// # Examples
     ///
@@ -614,6 +612,8 @@ pub trait Cgroup {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
     fn open_file_write(&mut self, name: &str) -> Result<File> {
         fs::OpenOptions::new()
             .write(true)

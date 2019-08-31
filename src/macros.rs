@@ -9,6 +9,9 @@ macro_rules! subsystem_file {
     ($subsystem: ident, $field: ident) => {
         concat!(stringify!($subsystem), ".", stringify!($field))
     };
+    ($subsystem: literal, $field: ident) => {
+        concat!($subsystem, ".", stringify!($field))
+    };
 }
 
 #[cfg(test)]
@@ -46,7 +49,7 @@ mod tests {
     fn test_gen_cgroup_name() {
         assert_eq!(
             gen_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-macros-48")
+            std::path::PathBuf::from("cgroups_rs-macros-51")
         );
     }
 
@@ -55,7 +58,7 @@ mod tests {
         use std::collections::HashMap;
 
         assert_eq!(
-            hashmap![(0, "zero"), (1, "one")],
+            hashmap! { (0, "zero"), (1, "one") },
             [(0, "zero"), (1, "one")]
                 .iter()
                 .copied()

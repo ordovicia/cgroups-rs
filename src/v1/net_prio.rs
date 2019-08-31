@@ -1,6 +1,6 @@
 //! Operations on a net_prio subsystem.
 //!
-//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/net_prio.txt].
@@ -216,7 +216,7 @@ wlp1s0 1
 
         assert_eq!(
             parse_ifpriomap(CONTENT.as_bytes())?,
-            hashmap![("lo".to_string(), 0), ("wlp1s0".to_string(), 1),]
+            hashmap! { ("lo".to_string(), 0), ("wlp1s0".to_string(), 1) }
         );
 
         assert_eq!(parse_ifpriomap("".as_bytes())?, HashMap::new(),);

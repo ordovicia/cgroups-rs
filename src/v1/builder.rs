@@ -213,7 +213,8 @@ impl Builder {
 }
 
 macro_rules! gen_subsystem_builder {
-    ($subsystem: ident, $builder: ident, $name: literal, $( $tt: tt )*) => { with_doc! { concat!(
+    ($subsystem: ident, $builder: ident, $name: literal, $( $tt: tt )*) => {
+        with_doc! { concat!(
             $name, " subsystem builder.\n\n",
             "This struct is crated by [`Builder::", stringify!($subsystem), "`]",
             "(struct.Builder.html#method.", stringify!($subsystem), ") method."),
@@ -281,7 +282,9 @@ gen_subsystem_builder! {
 
     gen_getter!(some; cpu, "CPU time shares", shares, u64);
     gen_getter!(some; cpu, "length of period (in microseconds)", cfs_period_us, u64);
-    gen_getter!(some; cpu, "total available CPU time within a period (in microseconds)", cfs_quota_us, i64);
+    gen_getter!(
+        some; cpu, "total available CPU time within a period (in microseconds)", cfs_quota_us, i64
+    );
 }
 
 gen_subsystem_builder! {
@@ -303,7 +306,7 @@ gen_subsystem_builder! {
 
     gen_getter!(
         some; cpuset,
-        "whether the memory used by this cgroup should beb migrated when memory selection is updated",
+        "whether the memory used by this cgroup should be migrated when memory selection is updated",
         memory_migrate,
         enable,
         bool

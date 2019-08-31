@@ -1,6 +1,6 @@
 //! Operations on a cpuacct (CPU accounting) subsystem.
 //!
-//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/cpuacct.txt].
@@ -22,7 +22,7 @@
 //!
 //! // Do something ...
 //!
-//! // Get the statistics on CPU usage.
+//! // Get the statistics about CPU usage.
 //! let stat_hz = cpuacct_cgroup.stat()?;
 //! println!(
 //!     "cgroup used {} USER_HZ in system mode, {} USER_HZ in user mode.",
@@ -87,8 +87,8 @@ macro_rules! _gen_getter {
 
 impl Subsystem {
     _gen_getter!(
-        "statistics about how much CPU time is consumed by this cgroup (in `USER_HZ` unit)" :
-        "The CPU time is further divided into user and system times.",
+        "the statistics about how much CPU time is consumed by this cgroup (in `USER_HZ` unit)"
+        : "The CPU time is further divided into user and system times.",
         stat, Stat, parse_stat
     );
 
@@ -156,11 +156,11 @@ fn parse_stat(reader: impl io::Read) -> Result<Stat> {
         let line = line?;
         let mut entry = line.split_whitespace();
 
-        match entry.next().ok_or_else(|| Error::new(ErrorKind::Parse))? {
-            "system" => {
+        match entry.next() {
+            Some("system") => {
                 system = Some(parse_option(entry.next())?);
             }
-            "user" => {
+            Some("user") => {
                 user = Some(parse_option(entry.next())?);
             }
             _ => return Err(Error::new(ErrorKind::Parse)),
@@ -180,13 +180,14 @@ fn parse_usage_all(reader: impl io::Read) -> Result<Vec<Stat>> {
     buf.read_line(&mut header).map_err(Error::parse)?;
     let mut header = header.split_whitespace();
 
-    if !header.next().map(|h| h == "cpu").unwrap_or(false) {
+    if header.next() != Some("cpu") {
         return Err(Error::new(ErrorKind::Parse));
     }
 
-    let sys_col_num = match (header.next(), header.next()) {
-        (Some("user"), Some("system")) => 1, // FIXME: column order is guaranteed ?
+    // FIXME: not need to detect column order?
+    let system_column = match (header.next(), header.next()) {
         (Some("system"), Some("user")) => 0,
+        (Some("user"), Some("system")) => 1,
         _ => {
             return Err(Error::new(ErrorKind::Parse));
         }
@@ -195,20 +196,20 @@ fn parse_usage_all(reader: impl io::Read) -> Result<Vec<Stat>> {
     let mut stats = Vec::new();
     for line in buf.lines() {
         let line = line?;
-        let mut entry = line.split_whitespace().skip(1); // skip CPU ID
-                                                         // FIXME: IDs are guaranteed to be sorted ?
 
-        let usage_0 = parse_option(entry.next())?;
-        let usage_1 = parse_option(entry.next())?;
-        if sys_col_num == 0 {
+        // skip CPU ID
+        // FIXME: IDs are guaranteed to be sorted ?
+        let mut entry = line.split_whitespace().skip(1);
+
+        if system_column == 0 {
             stats.push(Stat {
-                system: usage_0,
-                user: usage_1,
+                system: parse_option(entry.next())?,
+                user: parse_option(entry.next())?,
             });
         } else {
             stats.push(Stat {
-                system: usage_1,
-                user: usage_0,
+                user: parse_option(entry.next())?,
+                system: parse_option(entry.next())?,
             });
         }
     }
@@ -231,8 +232,6 @@ mod tests {
             ]
         )
     }
-
-    // TODO: test adding tasks
 
     #[test]
     fn test_subsystem_stat() -> Result<()> {
@@ -290,5 +289,154 @@ mod tests {
         assert_eq!(cgroup.stat()?, Stat { system: 0, user: 0 });
 
         cgroup.delete()
+    }
+
+    #[test]
+    #[ignore] // must not be executed in parallel
+    fn test_subsystem_update() -> Result<()> {
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            v1::SubsystemKind::Cpuacct,
+            gen_cgroup_name!(),
+        ));
+        cgroup.create()?;
+
+        let pid = crate::Pid::from(std::process::id());
+        cgroup.add_proc(pid)?;
+
+        crate::consume_cpu_until(|| cgroup.usage().unwrap() > 0, 10);
+        // dbg!(cgroup.usage_all()?);
+
+        let usage = cgroup.usage()?;
+        let usage_all = cgroup.usage_all()?;
+        let usage_percpu = cgroup.usage_percpu()?;
+        let usage_percpu_sys = cgroup.usage_percpu_sys()?;
+        let usage_percpu_user = cgroup.usage_percpu_user()?;
+        let usage_sys = cgroup.usage_sys()?;
+        let usage_user = cgroup.usage_user()?;
+
+        let usage_all_sys_sum = usage_all.iter().map(|u| u.system).sum();
+        let usage_all_user_sum = usage_all.iter().map(|u| u.user).sum();
+
+        assert_eq!(usage, usage_all_sys_sum + usage_all_user_sum);
+        assert_eq!(usage_sys, usage_all_sys_sum);
+        assert_eq!(usage_user, usage_all_user_sum);
+        assert_eq!(
+            usage_percpu_sys,
+            usage_all.iter().map(|u| u.system).collect::<Vec<_>>()
+        );
+        assert_eq!(
+            usage_percpu_user,
+            usage_all.iter().map(|u| u.user).collect::<Vec<_>>()
+        );
+        assert_eq!(
+            usage_percpu,
+            usage_all
+                .iter()
+                .map(|u| u.system + u.user)
+                .collect::<Vec<_>>()
+        );
+
+        cgroup.reset()?;
+        assert_eq!(cgroup.usage()?, 0);
+
+        cgroup.remove_proc(pid)?;
+        cgroup.delete()
+    }
+
+    #[test]
+    fn tets_parse_stat() -> Result<()> {
+        const CONTENT_OK: &str = "\
+user 9434783
+system 2059970
+";
+
+        assert_eq!(
+            parse_stat(CONTENT_OK.as_bytes())?,
+            Stat {
+                system: 2059970,
+                user: 9434783
+            }
+        );
+
+        assert_eq!(
+            parse_stat("".as_bytes()).unwrap_err().kind(),
+            ErrorKind::Parse
+        );
+
+        const CONTENT_NG_NOT_INT: &str = "\
+user 9434783
+system invalid
+";
+
+        const CONTENT_NG_MISSING_DATA: &str = "\
+user 9434783
+";
+
+        for case in &[CONTENT_NG_NOT_INT, CONTENT_NG_MISSING_DATA] {
+            assert_eq!(
+                parse_stat(case.as_bytes()).unwrap_err().kind(),
+                ErrorKind::Parse
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_usage_all() -> Result<()> {
+        const CONTENT_OK: &str = "\
+cpu user system
+0 29308474949876 365961153038
+1 29360907385495 300617395557
+2 29097088553941 333686385015
+3 28649065680082 311282670956
+";
+
+        assert_eq!(
+            parse_usage_all(CONTENT_OK.as_bytes())?,
+            vec![
+                Stat {
+                    user: 29308474949876,
+                    system: 365961153038
+                },
+                Stat {
+                    user: 29360907385495,
+                    system: 300617395557
+                },
+                Stat {
+                    user: 29097088553941,
+                    system: 333686385015
+                },
+                Stat {
+                    user: 28649065680082,
+                    system: 311282670956
+                },
+            ]
+        );
+
+        const CONTENT_NG_NOT_INT: &str = "\
+cpu user system
+0 29308474949876 365961153038
+1 29360907385495 300617395557
+2 29097088553941 invalid
+3 28649065680082 311282670956
+";
+
+        const CONTENT_NG_MISSING_DATA: &str = "\
+cpu user system
+0 29308474949876 365961153038
+1 29360907385495 
+2 29097088553941 333686385015
+3 28649065680082 311282670956
+";
+
+        for case in &[CONTENT_NG_NOT_INT, CONTENT_NG_MISSING_DATA] {
+            assert_eq!(
+                parse_usage_all(case.as_bytes()).unwrap_err().kind(),
+                ErrorKind::Parse
+            );
+        }
+
+        Ok(())
     }
 }

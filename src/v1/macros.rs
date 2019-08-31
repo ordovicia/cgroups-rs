@@ -2,11 +2,41 @@ macro_rules! gen_doc {
     (reads; $subsystem: ident, $desc: literal $( : $detail: literal )?, $field: ident) => { concat!(
         "Reads ", $desc, " from `", subsystem_file!($subsystem, $field), "` file.",
         $( " ", $detail, )? "\n\n",
-     ) };
+    ) };
+    (reads; $file_prefix: literal, $desc: literal $( : $detail: literal )?, $field: ident) => {
+        concat!(
+            "Reads ", $desc, " from `", subsystem_file!($file_prefix, $field), "` file.",
+            $( " ", $detail, )? "\n\n",
+        )
+    };
+
+    (reads_see; $subsystem: ident, $field: ident, $method: ident) => { concat!(
+        "Reads `", subsystem_file!($subsystem, $field), "` file.",
+        gen_doc!(_see_method; $method)
+    ) };
+    (reads_see; $file_prefix: literal, $field: ident, $method: ident) => { concat!(
+        "Reads `", subsystem_file!($file_prefix, $field), "` file.",
+        gen_doc!(_see_method; $method)
+    ) };
 
     (sets; $subsystem: ident, $desc: literal $( : $detail: literal )?, $field: ident) => { concat!(
         "Sets ", $desc, " by writing to `", subsystem_file!($subsystem, $field), "` file.",
         $( " ", $detail, )? "\n\n",
+    ) };
+    (sets; $file_prefix: literal, $desc: literal $( : $detail: literal )?, $field: ident) => {
+        concat!(
+            "Sets ", $desc, " by writing to `", subsystem_file!($file_prefix, $field), "` file.",
+            $( " ", $detail, )? "\n\n",
+        )
+    };
+
+    (sets_see; $file_prefix: literal, $field: ident, $method: ident) => { concat!(
+        "Writes to `", subsystem_file!($file_prefix, $field), "` file.",
+        gen_doc!(_see_method; $method)
+    ) };
+    (_see_method; $method: ident) => { concat!(
+        " See [`", stringify!($method), "`](#method.", stringify!($method), ")",
+        " method for more information."
     ) };
 
     (see $(; $field: ident )?)  => { concat!(
@@ -21,11 +51,21 @@ macro_rules! gen_doc {
         "Returns an error if failed to read and parse `",
         subsystem_file!($subsystem, $field), "` file of this cgroup.\n\n"
     ) };
+    (err_read; $file_prefix: literal, $field: ident) => { concat!(
+        "# Errors\n\n",
+        "Returns an error if failed to read and parse `",
+        subsystem_file!($file_prefix, $field), "` file of this cgroup.\n\n"
+    ) };
 
     (err_write; $subsystem: ident, $field: ident) => { concat!(
         "# Errors\n\n",
         "Returns an error if failed to write to `",
         subsystem_file!($subsystem, $field), "` file of this cgroup.\n\n"
+    ) };
+    (err_write; $file_prefix: literal, $field: ident) => { concat!(
+        "# Errors\n\n",
+        "Returns an error if failed to write to `",
+        subsystem_file!($file_prefix, $field), "` file of this cgroup.\n\n"
     ) };
 
     (eg_read; $subsystem: ident, $field: ident $(, $val: expr )*) => { concat!(
@@ -118,7 +158,7 @@ macro_rules! gen_setter {
 #[cfg(test)]
 macro_rules! gen_subsystem_test {
     // Test create, file_exists, and delete
-    ($kind: ident, [ $( $file: literal ),* ]) => { {
+    ($kind: ident, [ $( $file: literal ),* $(, )?]) => { {
         use crate::v1::SubsystemKind;
 
         let files = vec![$(
@@ -139,6 +179,19 @@ macro_rules! gen_subsystem_test {
         ok
     } };
 
+    // Test errors
+    ($kind: ident, $field: ident, $( ($err_kind: ident, $($arg: expr),*) ),* $(, )?) => { {
+        let mut cgroup = Subsystem::new(
+            CgroupPath::new(crate::v1::SubsystemKind::$kind, gen_cgroup_name!()));
+        cgroup.create()?;
+
+        $(
+            assert_eq!(cgroup.$field($( $arg ),*).unwrap_err().kind(), crate::ErrorKind::$err_kind);
+        )*
+
+        cgroup.delete()
+    } };
+
     // Test a read-only field
     ($kind: ident, $field: ident, $default: expr) => { {
         let mut cgroup = Subsystem::new(
@@ -150,14 +203,16 @@ macro_rules! gen_subsystem_test {
     } };
 
     // Test a read-write field
-    ($kind: ident, $field: ident, $default: expr, $setter: ident, $val: expr) => { {
+    ($kind: ident, $field: ident, $default: expr, $setter: ident, $( $val: expr ),* $(, )?) => { {
         let mut cgroup = Subsystem::new(
             CgroupPath::new(crate::v1::SubsystemKind::$kind, gen_cgroup_name!()));
         cgroup.create()?;
         assert_eq!(cgroup.$field()?, $default);
 
-        cgroup.$setter($val)?;
-        assert_eq!(cgroup.$field()?, $val);
+        $(
+            cgroup.$setter($val)?;
+            assert_eq!(cgroup.$field()?, $val);
+        )*
 
         cgroup.delete()
     } };

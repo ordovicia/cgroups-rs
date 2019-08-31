@@ -1,6 +1,6 @@
 //! Operations on an RDMA subsystem.
 //!
-//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/rdma.txt].
@@ -111,7 +111,7 @@ impl_cgroup! {
             Ok(())
         } else {
             // FIXME: avoid clone
-            self.set_max(max.iter().map(|(d, lim)| (d, lim.clone())))
+            self.set_max(max.iter().map(|(d, lim)| (d, *lim)))
         }
     }
 }
@@ -304,7 +304,7 @@ mlx4_0 hca_handle=2 hca_object=2000
 ocrdma1 hca_handle=3 hca_object=max
 ";
 
-        let expected = hashmap![
+        let expected = hashmap! {
             (
                 "mlx4_0".to_string(),
                 Limit {
@@ -319,7 +319,7 @@ ocrdma1 hca_handle=3 hca_object=max
                     hca_object: Max::<u32>::Max,
                 },
             ),
-        ];
+        };
 
         assert_eq!(expected, parse_limits(CONTENT_0.as_bytes())?);
         assert_eq!(expected, parse_limits(CONTENT_1.as_bytes())?);

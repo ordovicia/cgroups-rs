@@ -1,6 +1,6 @@
 //! Operations on a pids subsystem.
 //!
-//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific behaviors.
+//! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
 //! For more information about this subsystem, see the kernel's documentation
 //! [Documentation/cgroup-v1/pids.txt].
@@ -89,17 +89,25 @@ macro_rules! _gen_getter {
 impl Subsystem {
     _gen_getter!(
         "the maximum number of processes this cgroup can have",
-        max: link, Max<u32>, parse
+        max: link,
+        Max<u32>,
+        parse
     );
 
     gen_setter!(
-        pids, "a maximum number of processes this cgroup can have,",
-        max: link, set_max, Max<u32>, cgroups::Max::<u32>::Limit(2)
+        pids,
+        "a maximum number of processes this cgroup can have,",
+        max: link,
+        set_max,
+        Max<u32>,
+        cgroups::Max::<u32>::Limit(2)
     );
 
     _gen_getter!(
         "the number of processes this cgroup currently has",
-        current, u32, parse
+        current,
+        u32,
+        parse
     );
 
     _gen_getter!(
