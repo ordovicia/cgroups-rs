@@ -159,7 +159,7 @@ macro_rules! gen_setter {
 macro_rules! gen_subsystem_test {
     // Test create, file_exists, and delete
     ($kind: ident, [ $( $file: literal ),* $(, )?]) => { {
-        use crate::v1::SubsystemKind;
+        use crate::v1::{CgroupPath, SubsystemKind};
 
         let files = vec![$(
             format!("{}.{}", SubsystemKind::$kind.as_str(), $file)
@@ -181,12 +181,14 @@ macro_rules! gen_subsystem_test {
 
     // Test errors
     ($kind: ident, $field: ident, $( ($err_kind: ident, $($arg: expr),*) ),* $(, )?) => { {
+        use crate::{ErrorKind, v1::{CgroupPath, SubsystemKind}};
+
         let mut cgroup = Subsystem::new(
-            CgroupPath::new(crate::v1::SubsystemKind::$kind, gen_cgroup_name!()));
+            CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
         cgroup.create()?;
 
         $(
-            assert_eq!(cgroup.$field($( $arg ),*).unwrap_err().kind(), crate::ErrorKind::$err_kind);
+            assert_eq!(cgroup.$field($( $arg ),*).unwrap_err().kind(), ErrorKind::$err_kind);
         )*
 
         cgroup.delete()
@@ -194,8 +196,10 @@ macro_rules! gen_subsystem_test {
 
     // Test a read-only field
     ($kind: ident, $field: ident, $default: expr) => { {
+        use crate::v1::{CgroupPath, SubsystemKind};
+
         let mut cgroup = Subsystem::new(
-            CgroupPath::new(crate::v1::SubsystemKind::$kind, gen_cgroup_name!()));
+            CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
         cgroup.create()?;
         assert_eq!(cgroup.$field()?, $default);
 
@@ -204,8 +208,10 @@ macro_rules! gen_subsystem_test {
 
     // Test a read-write field
     ($kind: ident, $field: ident, $default: expr, $setter: ident, $( $val: expr ),* $(, )?) => { {
+        use crate::v1::{CgroupPath, SubsystemKind};
+
         let mut cgroup = Subsystem::new(
-            CgroupPath::new(crate::v1::SubsystemKind::$kind, gen_cgroup_name!()));
+            CgroupPath::new(SubsystemKind::$kind, gen_cgroup_name!()));
         cgroup.create()?;
         assert_eq!(cgroup.$field()?, $default);
 

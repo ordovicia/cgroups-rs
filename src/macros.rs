@@ -61,14 +61,12 @@ mod tests {
 
     #[test]
     fn test_hashmap() {
-        use std::collections::HashMap;
-
         assert_eq!(
             hashmap! { (0, "zero"), (1, "one") },
             [(0, "zero"), (1, "one")]
                 .iter()
                 .copied()
-                .collect::<HashMap<_, _>>()
+                .collect::<std::collections::HashMap<_, _>>()
         );
     }
 }
