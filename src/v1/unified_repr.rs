@@ -8,7 +8,7 @@ use crate::{
 macro_rules! gen_unified_repr {
     ( $( ($subsystem: ident, $subsystem_mut: ident, $kind: ident, $name: literal) ),* $(, )? ) => {
 
-use crate::v1::{$( $subsystem ),*};
+use v1::{$( $subsystem ),*};
 
 /// Unified representation of a set of cgroups sharing the same name.
 ///
@@ -63,12 +63,21 @@ use crate::v1::{$( $subsystem ),*};
 /// ```
 #[derive(Debug)]
 pub struct UnifiedRepr {
-    $( $subsystem: Option<$subsystem::Subsystem> ),*
+    $( $subsystem: Option<Subsys<$subsystem::Subsystem>> ),*
+}
+
+#[derive(Debug)]
+struct Subsys<T> {
+    subsystem: T,
+    create: bool,
 }
 
 impl UnifiedRepr {
-    /// Creates a new unified representation of a set of cgroups with all subsystems available in
+    /// Defines a new unified representation of a set of cgroups with all subsystems available in
     /// this crate.
+    ///
+    /// For the directory name of the each subsystem, the standard name (e.g. `SubsystemKind::Cpu`
+    /// => `cpu`) are used.
     ///
     /// See [`SubsystemKind`] for the available subsystems.
     ///
@@ -86,7 +95,10 @@ impl UnifiedRepr {
         Self::with_subsystems(name, &[$(SubsystemKind::$kind),*])
     }
 
-    /// Creates a new unified representation of a set of cgroups with the given subsystem kinds.
+    /// Defines a new unified representation of a set of cgroups with the given subsystem kinds.
+    ///
+    /// For the directory name of the each subsystem, the standard name (e.g. `SubsystemKind::Cpu`
+    /// => `cpu`) are used.
     ///
     /// # Examples
     ///
@@ -97,15 +109,45 @@ impl UnifiedRepr {
     /// let cgroups = UnifiedRepr::with_subsystems(
     ///     PathBuf::from("students/charlie"), &[SubsystemKind::Cpu]);
     /// ```
-    pub fn with_subsystems(name: PathBuf, subsystem_kinds: &[SubsystemKind]) -> Self {
+    pub fn with_subsystems(name: PathBuf, subsystems: &[SubsystemKind]) -> Self {
+        Self::with_custom_name_subsystems(
+            subsystems.iter().map(|k| (*k, CgroupPath::new(*k, name.clone())))
+        )
+    }
+
+    /// Defines a new unified representation of a set of cgroups with the given subsystem kinds and
+    /// their paths.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{CgroupPath, SubsystemKind, UnifiedRepr};
+    ///
+    /// let name = PathBuf::from("students/charlie");
+    /// let cgroups = UnifiedRepr::with_custom_name_subsystems(
+    ///         [
+    ///             (SubsystemKind::Cpu, CgroupPath::new(SubsystemKind::Cpu, name.clone())),
+    ///             (SubsystemKind::Cpuset, CgroupPath::with_subsystem_name("custom", name)),
+    ///         ].iter().cloned()
+    ///     );
+    /// ```
+    pub fn with_custom_name_subsystems(
+        subsystems: impl IntoIterator<Item = (SubsystemKind, CgroupPath)>,
+    ) -> Self {
         $( let mut $subsystem = None; )*
-        for kind in subsystem_kinds {
-            let path = CgroupPath::new(*kind, name.clone());
+        for (kind, path) in subsystems {
             match kind {
-                $( SubsystemKind::$kind => { $subsystem = Some($subsystem::Subsystem::new(path)); } )*
+                $(
+                    SubsystemKind::$kind => {
+                        $subsystem = Some(Subsys {
+                            subsystem: $subsystem::Subsystem::new(path),
+                            create: true,
+                        });
+                    }
+                )*
             }
         }
-
         Self { $( $subsystem ),* }
     }
 
@@ -130,31 +172,58 @@ impl UnifiedRepr {
         }
     }
 
-    $(
-        with_doc!(
-            concat!("Returns a reference to the ", $name, " subsystem."),
-            pub fn $subsystem(&self) -> Option<&$subsystem::Subsystem> {
-                self.$subsystem.as_ref()
+    /// Skips creating and deleting the directories for some subsystems.
+    ///
+    /// This method is useful when multiple subsystems share the same hierarchy (including via
+    /// symbolic links), and thus [`create`]/[`delete`] method tries to create/delete the same
+    /// directory multiple times.
+    ///
+    /// [`create`]: #method.create
+    /// [`delete`]: #method.delete
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> cgroups::Result<()> {
+    /// use std::path::PathBuf;
+    /// use cgroups::v1::{CgroupPath, SubsystemKind, UnifiedRepr};
+    ///
+    /// let mut cgroups = UnifiedRepr::with_subsystems(
+    ///     PathBuf::from("students/charlie"), &[SubsystemKind::Cpu, SubsystemKind::Cpuset]);
+    ///
+    /// cgroups.skip_create(&[SubsystemKind::Cpuset]);
+    ///
+    /// cgroups.create()?;  // Creates only a directory for the CPU subsystem
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn skip_create(&mut self, skip_subsystems: &[SubsystemKind]) {
+        for kind in skip_subsystems {
+            match kind {
+                $(
+                    SubsystemKind::$kind => {
+                        if let Some(ref mut s) = self.$subsystem {
+                            s.create = false;
+                        }
+                    }
+                )*
             }
-        );
+        }
+    }
 
-        with_doc!(
-            concat!("Returns a mutable reference to the ", $name, " subsystem."),
-            pub fn $subsystem_mut(&mut self) -> Option<&mut $subsystem::Subsystem> {
-                self.$subsystem.as_mut()
-            }
-        );
-    )*
-
-    /// Creates new directories for each cgroup of the all supported subsystems.
+    /// Creates new directories for each cgroup of the all supported subsystems except for ones that
+    /// was skipped by [`skip_create`] method.
     ///
     /// See [`Cgroup::create`] for more information.
     ///
+    /// [`skip_create`]: #method.skip_create
     /// [`Cgroup::create`]: trait.Cgroup.html#method.create
     pub fn create(&mut self) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
-                s.create()?;
+                if s.create {
+                    s.subsystem.create()?;
+            }
             }
         )*
         Ok(())
@@ -168,21 +237,25 @@ impl UnifiedRepr {
     pub fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
-                s.apply(&resources)?;
+                s.subsystem.apply(&resources)?;
             }
         )*
         Ok(())
     }
 
-    /// Deletes directories for each cgroup of the all supported subsystems.
+    /// Deletes directories for each cgroup of the all supported subsystems except for ones that
+    /// was skipped by [`skip_create`] method.
     ///
     /// See [`Cgroup::delete`] for more information.
     ///
+    /// [`skip_create`]: #method.skip_create
     /// [`Cgroup::delete`]: trait.Cgroup.html#method.delete
     pub fn delete(&mut self) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
-                s.delete()?;
+                if s.create {
+                    s.subsystem.delete()?;
+            }
             }
         )*
         Ok(())
@@ -197,7 +270,7 @@ impl UnifiedRepr {
         let mut tasks = HashMap::new();
         $(
             if let Some(ref s) = self.$subsystem {
-                tasks.insert(SubsystemKind::$kind, s.tasks()?);
+                tasks.insert(SubsystemKind::$kind, s.subsystem.tasks()?);
             }
         )*
         Ok(tasks)
@@ -211,7 +284,7 @@ impl UnifiedRepr {
     pub fn add_task(&mut self, pid: Pid) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
-                s.add_task(pid)?;
+                s.subsystem.add_task(pid)?;
             }
         )*
         Ok(())
@@ -225,7 +298,7 @@ impl UnifiedRepr {
     pub fn remove_task(&mut self, pid: Pid) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
-                s.remove_task(pid)?;
+                s.subsystem.remove_task(pid)?;
             }
         )*
         Ok(())
@@ -240,7 +313,7 @@ impl UnifiedRepr {
         let mut procs = HashMap::new();
         $(
             if let Some(ref s) = self.$subsystem {
-                procs.insert(SubsystemKind::$kind, s.procs()?);
+                procs.insert(SubsystemKind::$kind, s.subsystem.procs()?);
             }
         )*
         Ok(procs)
@@ -254,7 +327,7 @@ impl UnifiedRepr {
     pub fn add_proc(&mut self, pid: Pid) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
-                s.add_proc(pid)?;
+                s.subsystem.add_proc(pid)?;
             }
         )*
         Ok(())
@@ -268,11 +341,27 @@ impl UnifiedRepr {
     pub fn remove_proc(&mut self, pid: Pid) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
-                s.remove_proc(pid)?;
+                s.subsystem.remove_proc(pid)?;
             }
         )*
         Ok(())
     }
+
+    $(
+        with_doc!(
+            concat!("Returns a reference to the ", $name, " subsystem."),
+            pub fn $subsystem(&self) -> Option<&$subsystem::Subsystem> {
+                self.$subsystem.as_ref().map(|s| &s.subsystem)
+            }
+        );
+
+        with_doc!(
+            concat!("Returns a mutable reference to the ", $name, " subsystem."),
+            pub fn $subsystem_mut(&mut self) -> Option<&mut $subsystem::Subsystem> {
+                self.$subsystem.as_mut().map(|s| &mut s.subsystem)
+            }
+        );
+    )*
 }
     };
 }
@@ -331,8 +420,6 @@ mod tests {
     fn test_unified_repr_create_delete() -> Result<()> {
         {
             // with CPU and cpuset subsystems
-            // we don't enable all SubsystemKind because CPU and cpuacct subsystems, and net_cls
-            // and net_prio subsystems are aliased in some systems
 
             let mut cgroups = UnifiedRepr::with_subsystems(
                 gen_cgroup_name!(),
@@ -391,6 +478,27 @@ mod tests {
             assert!(!cpu.path().exists());
             assert!(!cpuset.path().exists());
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_unified_repr_skip_create() -> Result<()> {
+        let mut cgroups = UnifiedRepr::with_subsystems(
+            gen_cgroup_name!(),
+            &[SubsystemKind::Cpu, SubsystemKind::Cpuset],
+        );
+
+        cgroups.skip_create(&[SubsystemKind::Cpuset]);
+        cgroups.create()?;
+
+        assert!(cgroups.cpu().unwrap().path().exists());
+        assert!(!cgroups.cpuset().unwrap().path().exists());
+
+        cgroups.delete()?;
+
+        assert!(!cgroups.cpu().unwrap().path().exists());
+        assert!(!cgroups.cpuset().unwrap().path().exists());
 
         Ok(())
     }

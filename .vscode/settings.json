@@ -46,6 +46,7 @@
         "sched",
         "shmem",
         "structfield",
+        "subsys",
         "swappiness",
         "tmpfs",
         "tymethod",
