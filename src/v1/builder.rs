@@ -22,7 +22,7 @@ use crate::{
 /// ```no_run
 /// # fn main() -> cgroups::Result<()> {
 /// use std::{collections::HashMap, path::PathBuf};
-/// use cgroups::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder}};
+/// use cgroups::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
 ///
 /// let mut cgroups =
 ///     // Start building a (set of) cgroup(s).
@@ -98,6 +98,9 @@ use crate::{
 ///     // Enable monitoring this cgroup via `perf` tool.
 ///     // Like `cpuacct()` method, this method does not return a subsystem builder.
 ///     .perf_event()
+///     // Skip creating directories for cpuacct subsystem and net_cls subsystem.
+///     // This is useful when some subsystems share hierarchy with others.
+///     .skip_create(vec![SubsystemKind::Cpuacct, SubsystemKind::NetCls])
 ///     // Actually build cgroups with the configuration.
 ///     .build()?;
 ///
@@ -157,6 +160,7 @@ use crate::{
 pub struct Builder {
     name: PathBuf,
     subsystems: Vec<SubsystemKind>,
+    skips: Vec<SubsystemKind>,
     resources: Resources,
 }
 
@@ -181,8 +185,21 @@ impl Builder {
         Self {
             name,
             subsystems: Vec::new(),
+            skips: Vec::new(),
             resources: Resources::default(),
         }
+    }
+
+    /// Skips creating and deleting the directories for some subsystems.
+    ///
+    /// This method is useful when multiple subsystems share the same hierarchy (including via
+    /// symbolic links), and thus [`build`] method tries to create the same directory multiple
+    /// times.
+    ///
+    /// [`build`]: #method.build
+    pub fn skip_create(mut self, skip_subsystems: Vec<SubsystemKind>) -> Self {
+        self.skips = skip_subsystems;
+        self
     }
 
     gen_subsystem_builder_calls! {
@@ -220,12 +237,18 @@ impl Builder {
     /// i.e. if you called only [`cpu`] method, only one cgroup directory is created for the CPU
     /// subsystem.
     ///
+    /// Also, this method does not create subsystems that are skipped by [`skip_create`] method.
+    ///
     /// [`cpu`]: #method.cpu
+    /// [`skip_create`]: #method.skip_create
     pub fn build(self) -> Result<UnifiedRepr> {
         let mut unified_repr = UnifiedRepr::with_subsystems(self.name, &self.subsystems);
 
+        unified_repr.skip_create(&self.skips);
         unified_repr.create()?;
+
         unified_repr.apply(&self.resources)?;
+
         Ok(unified_repr)
     }
 }
@@ -606,6 +629,19 @@ gen_subsystem_builder! {
     );
 }
 
+gen_subsystem_builder! {
+    freezer, FreezerBuilder, "freezer",
+
+    /// Freezes tasks in this cgroup.
+    ///
+    /// See [`freezer::Subsystem::freeze`](../freezer/struct.Subsystem.html#method.freeze) for more
+    /// information.
+    pub fn freeze(mut self) -> Self {
+        self.builder.resources.freezer.state = Some(freezer::State::Frozen);
+        self
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -650,6 +686,23 @@ mod tests {
 
         // assert!(cgroups.cpuacct().unwrap().path().exists());
         assert!(cgroups.perf_event().unwrap().path().exists());
+
+        cgroups.delete()
+    }
+
+    #[test]
+    fn test_builder_skip_create() -> Result<()> {
+        #[rustfmt::skip]
+        let mut cgroups = Builder::new(gen_cgroup_name!())
+            .cpu()
+                .done()
+            .cpuset()
+                .done()
+            .skip_create(vec![SubsystemKind::Cpuset])
+            .build()?;
+
+        assert!(cgroups.cpu().unwrap().path().exists());
+        assert!(!cgroups.cpuset().unwrap().path().exists());
 
         cgroups.delete()
     }

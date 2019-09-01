@@ -49,7 +49,7 @@ cgroup.delete()?;
 
 ```rust
 use std::{collections::HashMap, path::PathBuf};
-use cgroups::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder}};
+use cgroups::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
 
 let mut cgroups =
     // Start building a (set of) cgroup(s).
@@ -125,6 +125,9 @@ let mut cgroups =
     // Enable monitoring this cgroup via `perf` tool.
     // Like `cpuacct()` method, this method does not return a subsystem builder.
     .perf_event()
+    // Skip creating directories for cpuacct subsystem and net_cls subsystem.
+    // This is useful when some subsystems share hierarchy with others.
+    .skip_create(vec![SubsystemKind::Cpuacct, SubsystemKind::NetCls])
     // Actually build cgroups with the configuration.
     .build()?;
 
