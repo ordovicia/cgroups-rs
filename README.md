@@ -72,27 +72,13 @@ let mut cgroups =
         .soft_limit_in_bytes(3 * (1 << 30))
         .use_hierarchy(true)
         .done()
-    .pids()
-        .max(42.into())
-        .done()
-    .devices()
-        .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
-        .allow(vec!["c 1:3 mr".parse::<devices::Access>().unwrap()])
-        .done()
     .hugetlb()
         .limit_2mb(hugetlb::Limit::Pages(4))
         .limit_1gb(hugetlb::Limit::Pages(2))
         .done()
-    .net_cls()
-        .classid([0x10, 0x1].into())
-        .done()
-    .net_prio()
-        .ifpriomap(
-            [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)]
-                .iter()
-                .cloned()
-                .collect(),
-        )
+    .devices()
+        .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
+        .allow(vec!["c 1:3 mr".parse::<devices::Access>().unwrap()])
         .done()
     .blkio()
         .weight(1000)
@@ -114,10 +100,31 @@ let mut cgroups =
                 .collect(),
         )
         .done()
+    .net_prio()
+        .ifpriomap(
+            [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)]
+                .iter()
+                .cloned()
+                .collect(),
+        )
+        .done()
+    .net_cls()
+        .classid([0x10, 0x1].into())
+        .done()
+    .pids()
+        .max(42.into())
+        .done()
+    .freezer()
+        // Tasks in this cgroup will be frozen.
+        .freeze()
+        .done()
+    // Enable CPU accounting for this cgroup.
+    // cpuacct subsystem has no parameter, so this method does not return a subsystem builder,
+    // just enables the accounting.
+    .cpuacct()
     // Enable monitoring this cgroup via `perf` tool.
+    // Like `cpuacct()` method, this method does not return a subsystem builder.
     .perf_event()
-        // perf_event subsystem has no parameter, so this method does not
-        // return a subsystem builder, just enables the monitoring.
     // Actually build cgroups with the configuration.
     .build()?;
 

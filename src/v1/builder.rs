@@ -7,7 +7,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
-    v1::{cpuset, devices, hugetlb, net_cls, rdma, Resources, SubsystemKind, UnifiedRepr},
+    v1::{cpuset, devices, freezer, hugetlb, net_cls, rdma, Resources, SubsystemKind, UnifiedRepr},
     Device, Result,
 };
 
@@ -17,7 +17,7 @@ use crate::{
 ///
 /// By using `Builder`, you can configure a (set of) cgroup(s) in the builder pattern. This
 /// builder creates directories for the cgroups, but only for the configured subsystems. e.g. If
-/// you call only [`cpu`], only one cgroup directory is created for the CPU subsystem.
+/// you call only [`cpu`] method, only one cgroup directory is created for the CPU subsystem.
 ///
 /// ```no_run
 /// # fn main() -> cgroups::Result<()> {
@@ -45,27 +45,13 @@ use crate::{
 ///         .soft_limit_in_bytes(3 * (1 << 30))
 ///         .use_hierarchy(true)
 ///         .done()
-///     .pids()
-///         .max(42.into())
-///         .done()
-///     .devices()
-///         .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
-///         .allow(vec!["c 1:3 mr".parse::<devices::Access>().unwrap()])
-///         .done()
 ///     .hugetlb()
 ///         .limit_2mb(hugetlb::Limit::Pages(4))
 ///         .limit_1gb(hugetlb::Limit::Pages(2))
 ///         .done()
-///     .net_cls()
-///         .classid([0x10, 0x1].into())
-///         .done()
-///     .net_prio()
-///         .ifpriomap(
-///             [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)]
-///                 .iter()
-///                 .cloned()
-///                 .collect(),
-///         )
+///     .devices()
+///         .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
+///         .allow(vec!["c 1:3 mr".parse::<devices::Access>().unwrap()])
 ///         .done()
 ///     .blkio()
 ///         .weight(1000)
@@ -87,10 +73,31 @@ use crate::{
 ///                 .collect(),
 ///         )
 ///         .done()
+///     .net_prio()
+///         .ifpriomap(
+///             [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)]
+///                 .iter()
+///                 .cloned()
+///                 .collect(),
+///         )
+///         .done()
+///     .net_cls()
+///         .classid([0x10, 0x1].into())
+///         .done()
+///     .pids()
+///         .max(42.into())
+///         .done()
+///     .freezer()
+///         // Tasks in this cgroup will be frozen.
+///         .freeze()
+///         .done()
+///     // Enable CPU accounting for this cgroup.
+///     // cpuacct subsystem has no parameter, so this method does not return a subsystem builder,
+///     // just enables the accounting.
+///     .cpuacct()
 ///     // Enable monitoring this cgroup via `perf` tool.
+///     // Like `cpuacct()` method, this method does not return a subsystem builder.
 ///     .perf_event()
-///         // perf_event subsystem has no parameter, so this method does not
-///         // return a subsystem builder, just enables the monitoring.
 ///     // Actually build cgroups with the configuration.
 ///     .build()?;
 ///
@@ -149,7 +156,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Builder {
     name: PathBuf,
-    subsystem_kinds: Vec<SubsystemKind>,
+    subsystems: Vec<SubsystemKind>,
     resources: Resources,
 }
 
@@ -158,7 +165,7 @@ macro_rules! gen_subsystem_builder_calls {
         with_doc! {
             concat!("Starts configuring the ", $name, " subsystem."),
             pub fn $subsystem(mut self) -> $builder {
-                self.subsystem_kinds.push(SubsystemKind::$kind);
+                self.subsystems.push(SubsystemKind::$kind);
                 $builder { builder: self }
             }
         }
@@ -173,7 +180,7 @@ impl Builder {
     pub fn new(name: PathBuf) -> Self {
         Self {
             name,
-            subsystem_kinds: Vec::new(),
+            subsystems: Vec::new(),
             resources: Resources::default(),
         }
     }
@@ -182,30 +189,41 @@ impl Builder {
         (cpu, Cpu, CpuBuilder, "CPU"),
         (cpuset, Cpuset, CpusetBuilder, "cpuset"),
         (memory, Memory, MemoryBuilder, "memory"),
-        (pids, Pids, PidsBuilder, "pids"),
-        (devices, Devices, DevicesBuilder, "devices"),
         (hugetlb, HugeTlb, HugeTlbBuilder, "hugetlb"),
-        (net_cls, NetCls, NetClsBuilder, "net_cls"),
-        (net_prio, NetPrio, NetPrioBuilder, "net_prio"),
+        (devices, Devices, DevicesBuilder, "devices"),
         (blkio, BlkIo, BlkIoBuilder, "blkio"),
         (rdma, Rdma, RdmaBuilder, "RDMA"),
+        (net_prio, NetPrio, NetPrioBuilder, "net_prio"),
+        (net_cls, NetCls, NetClsBuilder, "net_cls"),
+        (pids, Pids, PidsBuilder, "pids"),
+        (freezer, Freezer, FreezerBuilder, "freezer"),
     }
 
     // Calling e.g. `cpu()` twice will push duplicated `SubsystemKind::Cpu`, but it is not a problem
     // for `UnifiedRepr::with_subsystems()`.
 
+    /// Enables CPU accounting for this cgroup.
+    pub fn cpuacct(mut self) -> Self {
+        self.subsystems.push(SubsystemKind::Cpuacct);
+        self
+    }
+
     /// Enables monitoring this cgroup via `perf` tool.
     pub fn perf_event(mut self) -> Self {
-        self.subsystem_kinds.push(SubsystemKind::PerfEvent);
+        self.subsystems.push(SubsystemKind::PerfEvent);
         self
     }
 
     /// Builds a (set of) cgroup(s) with the configuration.
     ///
     /// This method creates directories for the cgroups, but only for the configured subsystems.
-    /// i.e. if you called only `cpu`, only one cgroup directory is created for the CPU subsystem.
+    /// i.e. if you called only [`cpu`] method, only one cgroup directory is created for the CPU
+    /// subsystem.
+    ///
+    /// [`cpu`]: #method.cpu
     pub fn build(self) -> Result<UnifiedRepr> {
-        let mut unified_repr = UnifiedRepr::with_subsystems(self.name, &self.subsystem_kinds);
+        let mut unified_repr = UnifiedRepr::with_subsystems(self.name, &self.subsystems);
+
         unified_repr.create()?;
         unified_repr.apply(&self.resources)?;
         Ok(unified_repr)
@@ -237,9 +255,9 @@ macro_rules! gen_subsystem_builder {
     };
 }
 
-macro_rules! gen_getter {
+macro_rules! gen_setter {
     (some; $subsystem: ident, $desc: literal, $field: ident, $ty: ty $( as $as: ty )?) => {
-        gen_getter!(some; $subsystem, $desc, $field, $field, $ty $( as $as )?);
+        gen_setter!(some; $subsystem, $desc, $field, $field, $ty $( as $as )?);
     };
 
     (
@@ -250,7 +268,7 @@ macro_rules! gen_getter {
         $arg: ident,
         $ty: ty $( as $as: ty )?
     ) => { with_doc! {
-        gen_getter!(_doc; $desc, $subsystem, $field),
+        gen_setter!(_doc; $desc, $subsystem, $field),
         pub fn $field(mut self, $arg: $ty) -> Self {
             self.builder.resources.$subsystem.$field = Some($arg $( as $as )*);
             self
@@ -258,11 +276,11 @@ macro_rules! gen_getter {
     } };
 
     ($subsystem: ident, $desc: literal, $field: ident, $ty: ty) => {
-        gen_getter!($subsystem, $desc, $field, $field, $ty);
+        gen_setter!($subsystem, $desc, $field, $field, $ty);
     };
 
     ($subsystem: ident, $desc: literal, $field: ident, $arg: ident, $ty: ty) => { with_doc! {
-        gen_getter!(_doc; $desc, $subsystem, $field),
+        gen_setter!(_doc; $desc, $subsystem, $field),
         pub fn $field(mut self, $arg: $ty) -> Self {
             self.builder.resources.$subsystem.$field = $arg;
             self
@@ -280,9 +298,9 @@ macro_rules! gen_getter {
 gen_subsystem_builder! {
     cpu, CpuBuilder, "CPU",
 
-    gen_getter!(some; cpu, "CPU time shares", shares, u64);
-    gen_getter!(some; cpu, "length of period (in microseconds)", cfs_period_us, u64);
-    gen_getter!(
+    gen_setter!(some; cpu, "CPU time shares", shares, u64);
+    gen_setter!(some; cpu, "length of period (in microseconds)", cfs_period_us, u64);
+    gen_setter!(
         some; cpu, "total available CPU time within a period (in microseconds)", cfs_quota_us, i64
     );
 }
@@ -290,21 +308,21 @@ gen_subsystem_builder! {
 gen_subsystem_builder! {
     cpuset, CpusetBuilder, "cpuset",
 
-    gen_getter!(
+    gen_setter!(
         some; cpuset,
         "a set of CPUs this cgroup can run",
         cpus,
         cpuset::IdSet
     );
 
-    gen_getter!(
+    gen_setter!(
         some; cpuset,
         "a set of memory nodes this cgroup can use",
         mems,
         cpuset::IdSet
     );
 
-    gen_getter!(
+    gen_setter!(
         some; cpuset,
         "whether the memory used by this cgroup
         should be migrated when memory selection is updated",
@@ -313,7 +331,7 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_getter!(
+    gen_setter!(
         some; cpuset,
         "whether the selected CPUs should be exclusive to this cgroup",
         cpu_exclusive,
@@ -321,7 +339,7 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_getter!(
+    gen_setter!(
         some; cpuset,
         "whether the selected memory nodes should be exclusive to this cgroup",
         mem_exclusive,
@@ -329,7 +347,7 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_getter!(
+    gen_setter!(
         some; cpuset,
         "whether this cgroup is \"hardwalled\"",
         mem_hardwall,
@@ -348,7 +366,7 @@ gen_subsystem_builder! {
         self
     }
 
-    gen_getter!(
+    gen_setter!(
         some; cpuset,
         "whether file system buffers are spread across the selected memory nodes",
         memory_spread_page,
@@ -356,7 +374,7 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_getter!(
+    gen_setter!(
         some; cpuset,
         "whether file system buffers are spread across the selected memory nodes",
         memory_spread_slab,
@@ -364,7 +382,7 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_getter!(
+    gen_setter!(
         some; cpuset,
         "whether the kernel balances the load across the selected CPUs",
         sched_load_balance,
@@ -372,7 +390,7 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_getter!(
+    gen_setter!(
         some; cpuset,
         "how much work the kernel do to balance the load on this cgroup",
         sched_relax_domain_level,
@@ -384,7 +402,7 @@ gen_subsystem_builder! {
 gen_subsystem_builder! {
     memory, MemoryBuilder, "memory",
 
-    gen_getter!(
+    gen_setter!(
         some; memory,
         "limit on memory usage by this cgroup",
         limit_in_bytes,
@@ -392,7 +410,7 @@ gen_subsystem_builder! {
         u64 as i64 // not i64 because setting -1 to a new cgroup does not make sense
     );
 
-    gen_getter!(
+    gen_setter!(
         some; memory,
         "limit on total of memory and swap usage by this cgroup",
         memsw_limit_in_bytes,
@@ -400,7 +418,7 @@ gen_subsystem_builder! {
         u64 as i64
     );
 
-    gen_getter!(
+    gen_setter!(
         some; memory,
         "limit on kernel memory usage by this cgroup",
         kmem_limit_in_bytes,
@@ -408,7 +426,7 @@ gen_subsystem_builder! {
         u64 as i64
     );
 
-    gen_getter!(
+    gen_setter!(
         some; memory,
         "limit on kernel memory usage for TCP by this cgroup",
         kmem_tcp_limit_in_bytes,
@@ -416,7 +434,7 @@ gen_subsystem_builder! {
         u64 as i64
     );
 
-    gen_getter!(
+    gen_setter!(
         some; memory,
         "soft limit on memory usage by this cgroup",
         soft_limit_in_bytes,
@@ -424,7 +442,7 @@ gen_subsystem_builder! {
         u64 as i64
     );
 
-    gen_getter!(
+    gen_setter!(
         some; memory,
         "whether pages may be recharged to the new cgroup when a task is moved",
         move_charge_at_immigrate,
@@ -432,48 +450,19 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_getter!(
+    gen_setter!(
         some; memory,
         "the kernel's tendency to swap out pages consumed by this cgroup",
         swappiness,
         u64
     );
 
-    gen_getter!(
+    gen_setter!(
         some; memory,
         "whether the OOM killer tries to reclaim memory from the self and descendant cgroups",
         use_hierarchy,
         use_,
         bool
-    );
-}
-
-gen_subsystem_builder! {
-    pids, PidsBuilder, "pids",
-
-    gen_getter!(
-        some; pids,
-        "a maximum number of tasks this cgroup can have",
-        max,
-        crate::Max
-    );
-}
-
-gen_subsystem_builder! {
-    devices, DevicesBuilder, "devices",
-
-    gen_getter!(
-        devices,
-        "a list of allowed device accesses. `deny` list is applied first, and then `allow` list is",
-        allow,
-        Vec<devices::Access>
-    );
-
-    gen_getter!(
-        devices,
-        "a list of denied device accesses. `deny` list is applied first, and then `allow` list is",
-        deny,
-        Vec<devices::Access>
     );
 }
 
@@ -500,6 +489,100 @@ gen_subsystem_builder! {
 }
 
 gen_subsystem_builder! {
+    devices, DevicesBuilder, "devices",
+
+    gen_setter!(
+        devices,
+        "a list of allowed device accesses. `deny` list is applied first, and then `allow` list is",
+        allow,
+        Vec<devices::Access>
+    );
+
+    gen_setter!(
+        devices,
+        "a list of denied device accesses. `deny` list is applied first, and then `allow` list is",
+        deny,
+        Vec<devices::Access>
+    );
+}
+
+gen_subsystem_builder! {
+    blkio, BlkIoBuilder, "blkio",
+
+    gen_setter!(
+        some; blkio,
+        "a relative weight of block I/O performed by this cgroup",
+        weight,
+        u16
+    );
+    gen_setter!(blkio, "overriding weights for each device", weight_device, HashMap<Device, u16>);
+
+    gen_setter!(
+        some; blkio,
+        "a weight this cgroup has while competing against descendant cgroups",
+        leaf_weight,
+        u16
+    );
+    gen_setter!(
+        blkio,
+        "overriding leaf weights for each device",
+        leaf_weight_device,
+        HashMap<Device, u16>
+    );
+
+    gen_setter!(
+        blkio,
+        "a throttling on read access in terms of bytes/s for each device",
+        read_bps_device,
+        bps,
+        HashMap<Device, u64>
+    );
+    gen_setter!(
+        blkio,
+        "a throttling on write access in terms of bytes/s for each device",
+        write_bps_device,
+        bps,
+        HashMap<Device, u64>
+    );
+    gen_setter!(
+        blkio,
+        "a throttling on read access in terms of ops/s for each device",
+        read_iops_device,
+        iops,
+        HashMap<Device, u64>
+    );
+    gen_setter!(
+        blkio,
+        "a throttling on write access in terms of ops/s for each device",
+        write_iops_device,
+        iops,
+        HashMap<Device, u64>
+    );
+}
+
+gen_subsystem_builder! {
+    rdma, RdmaBuilder, "RDMA",
+
+    gen_setter!(
+        rdma,
+        "limits on the usage of RDMA/IB devices",
+        max,
+        HashMap<String, rdma::Limit>
+    );
+}
+
+gen_subsystem_builder! {
+    net_prio, NetPrioBuilder, "net_prio",
+
+    gen_setter!(
+        net_prio,
+        "a map of priorities assigned to traffic originating from this cgroup",
+        ifpriomap,
+        HashMap<String, u32>
+    );
+}
+
+gen_subsystem_builder! {
     net_cls, NetClsBuilder, "net_cls",
 
     /// Tags network packet from this cgroup with a class ID.
@@ -513,78 +596,13 @@ gen_subsystem_builder! {
 }
 
 gen_subsystem_builder! {
-    net_prio, NetPrioBuilder, "net_prio",
+    pids, PidsBuilder, "pids",
 
-    gen_getter!(
-        net_prio,
-        "a map of priorities assigned to traffic originating from this cgroup",
-        ifpriomap,
-        HashMap<String, u32>
-    );
-}
-
-gen_subsystem_builder! {
-    blkio, BlkIoBuilder, "blkio",
-
-    gen_getter!(
-        some; blkio,
-        "a relative weight of block I/O performed by this cgroup",
-        weight,
-        u16
-    );
-    gen_getter!(blkio, "overriding weights for each device", weight_device, HashMap<Device, u16>);
-
-    gen_getter!(
-        some; blkio,
-        "a weight this cgroup has while competing against descendant cgroups",
-        leaf_weight,
-        u16
-    );
-    gen_getter!(
-        blkio,
-        "overriding leaf weights for each device",
-        leaf_weight_device,
-        HashMap<Device, u16>
-    );
-
-    gen_getter!(
-        blkio,
-        "a throttling on read access in terms of bytes/s for each device",
-        read_bps_device,
-        bps,
-        HashMap<Device, u64>
-    );
-    gen_getter!(
-        blkio,
-        "a throttling on write access in terms of bytes/s for each device",
-        write_bps_device,
-        bps,
-        HashMap<Device, u64>
-    );
-    gen_getter!(
-        blkio,
-        "a throttling on read access in terms of ops/s for each device",
-        read_iops_device,
-        iops,
-        HashMap<Device, u64>
-    );
-    gen_getter!(
-        blkio,
-        "a throttling on write access in terms of ops/s for each device",
-        write_iops_device,
-        iops,
-        HashMap<Device, u64>
-    );
-}
-
-gen_subsystem_builder! {
-    rdma, RdmaBuilder, "RDMA",
-
-    gen_getter!(
-        rdma,
-        "limits on the usage of RDMA/IB devices",
+    gen_setter!(
+        some; pids,
+        "a maximum number of tasks this cgroup can have",
         max,
-        HashMap<String, rdma::Limit>
+        crate::Max
     );
 }
 
@@ -592,13 +610,15 @@ gen_subsystem_builder! {
 mod tests {
     use super::*;
     use crate::{
-        v1::{cpuset, pids, Cgroup, CgroupPath},
+        v1::{cpuset, Cgroup, CgroupPath},
         ErrorKind,
     };
 
     #[test]
     fn test_builder() -> Result<()> {
         let id_set = [0].iter().copied().collect::<cpuset::IdSet>();
+
+        // TODO: test more resources
 
         #[rustfmt::skip]
         let mut cgroups = Builder::new(gen_cgroup_name!())
@@ -612,6 +632,8 @@ mod tests {
                 .mems(id_set.clone())
                 .memory_migrate(true)
                 .done()
+            // .cpuacct()   
+            .perf_event()
             .build()?;
 
         let cpu = cgroups.cpu().unwrap();
@@ -625,6 +647,9 @@ mod tests {
         assert_eq!(cpuset.cpus()?, id_set.clone());
         assert_eq!(cpuset.mems()?, id_set.clone());
         assert_eq!(cpuset.memory_migrate()?, true);
+
+        // assert!(cgroups.cpuacct().unwrap().path().exists());
+        assert!(cgroups.perf_event().unwrap().path().exists());
 
         cgroups.delete()
     }
@@ -655,12 +680,10 @@ mod tests {
         let mut cgroups = Builder::new(name.clone())
             .cpu()
                 .done()
-            .cpuset()
-                .done()
             .build()?;
 
-        let pids = pids::Subsystem::new(CgroupPath::new(SubsystemKind::Pids, name));
-        assert!(!pids.path().exists());
+        let cpuset = cpuset::Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, name));
+        assert!(!cpuset.path().exists());
 
         cgroups.delete()
     }
@@ -716,6 +739,4 @@ mod tests {
 
         cgroup.delete()
     }
-
-    // TODO: test apply
 }
