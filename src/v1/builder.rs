@@ -652,37 +652,69 @@ mod tests {
 
     #[test]
     fn test_builder() -> Result<()> {
-        let id_set = [0].iter().copied().collect::<cpuset::IdSet>();
+        const GB: u64 = 1 << 30;
 
-        // TODO: test more resources
+        let id_set = [0].iter().copied().collect::<cpuset::IdSet>();
+        let class_id = [0x01, 0x10].into();
+        let pids_max = crate::Max::Limit(21);
 
         #[rustfmt::skip]
         let mut cgroups = Builder::new(gen_cgroup_name!())
             .cpu()
-                .shares(1000)
-                .cfs_quota_us(500 * 1000)
-                .cfs_period_us(1000 * 1000)
+                .cfs_quota_us(500_000)
                 .done()
             .cpuset()
-                .cpus(id_set.clone())
                 .mems(id_set.clone())
-                .memory_migrate(true)
+                .done()
+            .memory()
+                .soft_limit_in_bytes(1 * GB)
+                .done()
+            .hugetlb()
+                .limit_1gb(hugetlb::Limit::Pages(1))
+                .done()
+            .devices()
+                .deny(vec!["a".parse::<devices::Access>().unwrap()])
+                .done()
+            .blkio()
+                .leaf_weight(1000)
+                .done()
+            .rdma()
+                // .max()
+                .done()
+            .net_prio()
+                .ifpriomap(hashmap! {("lo".to_string(), 1)})
+                .done()
+            .net_cls()
+                .classid(class_id)
+                .done()
+            .pids()
+                .max(pids_max)
+                .done()
+            .freezer()
+                .freeze()
                 .done()
             // .cpuacct()   
             .perf_event()
+            .skip_create(vec![SubsystemKind::NetPrio])
             .build()?;
 
-        let cpu = cgroups.cpu().unwrap();
-        assert!(cpu.path().exists());
-        assert_eq!(cpu.shares()?, 1000);
-        assert_eq!(cpu.cfs_quota_us()?, 500 * 1000);
-        assert_eq!(cpu.cfs_period_us()?, 1000 * 1000);
-
-        let cpuset = cgroups.cpuset().unwrap();
-        assert!(cpuset.path().exists());
-        assert_eq!(cpuset.cpus()?, id_set.clone());
-        assert_eq!(cpuset.mems()?, id_set.clone());
-        assert_eq!(cpuset.memory_migrate()?, true);
+        assert_eq!(cgroups.cpu().unwrap().cfs_quota_us()?, 500 * 1000);
+        assert_eq!(cgroups.cpuset().unwrap().mems()?, id_set);
+        assert_eq!(cgroups.memory().unwrap().soft_limit_in_bytes()?, 1 * GB);
+        assert_eq!(
+            cgroups
+                .hugetlb()
+                .unwrap()
+                .limit_in_pages(hugetlb::HugepageSize::Gb1)?,
+            1
+        );
+        assert!(cgroups.devices().unwrap().list()?.is_empty());
+        assert_eq!(cgroups.blkio().unwrap().leaf_weight()?, 1000);
+        // assert_eq!(cgroups.rdma().unwrap().max()?, );
+        assert_eq!(cgroups.net_prio().unwrap().ifpriomap()?["lo"], 1);
+        assert_eq!(cgroups.net_cls().unwrap().classid()?, class_id);
+        assert_eq!(cgroups.pids().unwrap().max()?, pids_max);
+        assert_eq!(cgroups.freezer().unwrap().state()?, freezer::State::Frozen);
 
         // assert!(cgroups.cpuacct().unwrap().path().exists());
         assert!(cgroups.perf_event().unwrap().path().exists());
@@ -781,14 +813,12 @@ mod tests {
                 .done()
             .cpu()
                 .cfs_quota_us(500 * 1000)
-                .cfs_period_us(1000 * 1000)
                 .done()
             .build()?;
 
         let cpu = cgroup.cpu().unwrap();
         assert_eq!(cpu.shares()?, 1000);
         assert_eq!(cpu.cfs_quota_us()?, 500 * 1000);
-        assert_eq!(cpu.cfs_period_us()?, 1000 * 1000);
 
         cgroup.delete()
     }
