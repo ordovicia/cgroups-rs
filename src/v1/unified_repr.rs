@@ -223,7 +223,7 @@ impl UnifiedRepr {
             if let Some(ref mut s) = self.$subsystem {
                 if s.create {
                     s.subsystem.create()?;
-            }
+                }
             }
         )*
         Ok(())
@@ -255,7 +255,7 @@ impl UnifiedRepr {
             if let Some(ref mut s) = self.$subsystem {
                 if s.create {
                     s.subsystem.delete()?;
-            }
+                }
             }
         )*
         Ok(())
@@ -565,5 +565,46 @@ mod tests {
         cgroups.delete()
     }
 
-    // TODO: test apply
+    #[test]
+    fn test_unified_repr_apply() -> Result<()> {
+        let mut cgroups = UnifiedRepr::new(gen_cgroup_name!());
+        cgroups.skip_create(&[SubsystemKind::Cpuacct, SubsystemKind::NetCls]);
+        cgroups.create()?;
+
+        let id_set = [0].iter().copied().collect::<cpuset::IdSet>();
+        let class_id = [0x10, 0x1].into();
+        let pids_max = crate::Max::Limit(42);
+
+        let mut resources = v1::Resources::default();
+        resources.cpu.shares = Some(1024);
+        resources.cpuset.cpus = Some(id_set.clone());
+        resources.devices.deny = vec!["a *:* rwm".parse::<devices::Access>().unwrap()];
+        resources.freezer.state = Some(freezer::State::Frozen);
+        resources.hugetlb.limit_2mb = Some(hugetlb::Limit::Pages(1));
+        resources.memory.limit_in_bytes = Some(1 * (1 << 30));
+        resources.net_cls.classid = Some(class_id);
+        resources.net_prio.ifpriomap = hashmap! { ("lo".to_string(), 1)};
+        resources.pids.max = Some(pids_max);
+        // resources.rdma.max =
+
+        cgroups.apply(&resources)?;
+
+        assert_eq!(cgroups.cpu().unwrap().shares()?, 1024);
+        assert_eq!(cgroups.cpuset().unwrap().cpus()?, id_set);
+        assert!(cgroups.devices().unwrap().list()?.is_empty());
+        assert_eq!(cgroups.freezer().unwrap().state()?, freezer::State::Frozen);
+        assert_eq!(
+            cgroups
+                .hugetlb()
+                .unwrap()
+                .limit_in_pages(hugetlb::HugepageSize::Mb2)?,
+            1
+        );
+        assert_eq!(cgroups.memory().unwrap().limit_in_bytes()?, 1 * (1 << 30));
+        assert_eq!(cgroups.net_cls().unwrap().classid()?, class_id);
+        assert_eq!(cgroups.net_prio().unwrap().ifpriomap()?["lo"], 1);
+        assert_eq!(cgroups.pids().unwrap().max()?, pids_max);
+
+        cgroups.delete()
+    }
 }
