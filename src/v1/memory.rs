@@ -676,6 +676,31 @@ mod tests {
     }
 
     #[test]
+    fn test_subsystem_apply() -> Result<()> {
+        const GB: i64 = 1 << 30;
+
+        gen_subsystem_test!(
+            Memory,
+            Resources {
+                limit_in_bytes: Some(1 * GB),
+                memsw_limit_in_bytes: None, // Some(1 * GB),
+                kmem_limit_in_bytes: Some(1 * GB),
+                kmem_tcp_limit_in_bytes: Some(1 * GB),
+                soft_limit_in_bytes: Some(2 * GB),
+                swappiness: Some(100),
+                move_charge_at_immigrate: Some(true),
+                use_hierarchy: None, // Some(false),
+            },
+            (limit_in_bytes, 1 * GB as u64),
+            (kmem_limit_in_bytes, 1 * GB as u64),
+            (kmem_tcp_limit_in_bytes, 1 * GB as u64),
+            (soft_limit_in_bytes, 2 * GB as u64),
+            (swappiness, 100),
+            (move_charge_at_immigrate, true),
+        )
+    }
+
+    #[test]
     #[rustfmt::skip]
     fn test_subsystem_stat() -> Result<()> {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Memory, gen_cgroup_name!()));

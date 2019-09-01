@@ -283,6 +283,28 @@ mod tests {
     }
 
     #[test]
+    fn test_subsystem_apply() -> Result<()> {
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            v1::SubsystemKind::HugeTlb,
+            gen_cgroup_name!(),
+        ));
+        cgroup.create()?;
+
+        cgroup.apply(
+            &Resources {
+                limit_2mb: Some(Limit::Pages(4)),
+                limit_1gb: Some(Limit::Pages(2)),
+            }
+            .into(),
+        )?;
+
+        assert_eq!(cgroup.limit_in_pages(HugepageSize::Mb2)?, 4);
+        assert_eq!(cgroup.limit_in_pages(HugepageSize::Gb1)?, 2);
+
+        cgroup.delete()
+    }
+
+    #[test]
     fn test_subsystem_size_supported() -> Result<()> {
         let mut cgroup =
             Subsystem::new(CgroupPath::new(SubsystemKind::HugeTlb, gen_cgroup_name!()));

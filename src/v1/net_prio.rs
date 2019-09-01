@@ -169,6 +169,26 @@ mod tests {
     }
 
     #[test]
+    fn test_subsystem_apply() -> Result<()> {
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            v1::SubsystemKind::NetPrio,
+            gen_cgroup_name!(),
+        ));
+        cgroup.create()?;
+
+        cgroup.apply(
+            &Resources {
+                ifpriomap: hashmap! {("lo".to_string(), 1)},
+            }
+            .into(),
+        )?;
+
+        assert_eq!(cgroup.ifpriomap()?["lo"], 1);
+
+        cgroup.delete()
+    }
+
+    #[test]
     fn test_subsystem_prioidx() -> Result<()> {
         let mut cgroup =
             Subsystem::new(CgroupPath::new(SubsystemKind::NetPrio, gen_cgroup_name!()));

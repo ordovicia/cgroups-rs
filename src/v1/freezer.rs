@@ -222,6 +222,17 @@ mod tests {
     }
 
     #[test]
+    fn test_subsystem_apply() -> Result<()> {
+        gen_subsystem_test!(
+            Freezer,
+            Resources {
+                state: Some(State::Frozen),
+            },
+            (state, State::Frozen),
+        )
+    }
+
+    #[test]
     fn test_subsystem_state_freeze_thaw() -> Result<()> {
         let mut cgroup =
             Subsystem::new(CgroupPath::new(SubsystemKind::Freezer, gen_cgroup_name!()));

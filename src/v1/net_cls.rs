@@ -239,6 +239,17 @@ mod tests {
     }
 
     #[test]
+    fn test_subsystem_apply() -> Result<()> {
+        gen_subsystem_test!(
+            NetCls,
+            Resources {
+                classid: Some([0x10, 0x1].into()),
+            },
+            (classid, [0x10, 0x1].into()),
+        )
+    }
+
+    #[test]
     fn test_subsystem_classid() -> Result<()> {
         gen_subsystem_test!(
             NetCls,

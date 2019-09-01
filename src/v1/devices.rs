@@ -17,7 +17,7 @@
 //! devices_cgroup.create()?;
 //!
 //! // Deny and allow accesses to devices by this cgroup.
-//! let denied = "a *:* rwm".parse::<Access>().unwrap();
+//! let denied = "a".parse::<Access>().unwrap();
 //! devices_cgroup.deny(&denied)?;
 //!
 //! let allowed = "c 1:3 mr".parse::<Access>().unwrap();
@@ -369,6 +369,18 @@ mod tests {
     }
 
     #[test]
+    fn test_subsystem_apply() -> Result<()> {
+        gen_subsystem_test!(
+            Devices,
+            Resources {
+                deny: vec!["a".parse::<Access>().unwrap()],
+                allow: vec!["c 1:3 rm".parse::<Access>().unwrap()],
+            },
+            (list, vec!["c 1:3 rm".parse::<Access>().unwrap()]),
+        )
+    }
+
+    #[test]
     fn test_subsystem_list() -> Result<()> {
         let allowed_all = Access {
             device_type: DeviceType::All,
@@ -394,7 +406,7 @@ mod tests {
         ));
         cgroup.create()?;
 
-        let all = "a *:* rwm".parse::<Access>().unwrap();
+        let all = "a".parse::<Access>().unwrap();
         cgroup.deny(&all)?;
         assert!(cgroup.list()?.is_empty());
 

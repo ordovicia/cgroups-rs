@@ -230,6 +230,21 @@ mod tests {
     }
 
     #[test]
+    fn test_subsystem_apply() -> Result<()> {
+        gen_subsystem_test!(
+            Cpu,
+            Resources {
+                shares: Some(1024),
+                cfs_quota_us: Some(100_000),
+                cfs_period_us: Some(1_000_000),
+            },
+            (shares, 1024),
+            (cfs_quota_us, 100_000),
+            (cfs_period_us, 1_000_000)
+        )
+    }
+
+    #[test]
     fn test_subsystem_stat() -> Result<()> {
         gen_subsystem_test!(
             Cpu,

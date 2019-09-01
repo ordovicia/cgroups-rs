@@ -146,13 +146,13 @@ impl_cgroup! {
             };
         }
 
-        if let Some(weight) = res.weight {
-            self.set_weight(weight)?;
+        if let Some(w) = res.weight {
+            self.set_weight(w)?;
         }
         a!(weight_device, set_weight_device);
 
-        if let Some(leaf_weight) = res.leaf_weight {
-            self.set_weight(leaf_weight)?;
+        if let Some(w) = res.leaf_weight {
+            self.set_leaf_weight(w)?;
         }
         a!(leaf_weight_device, set_leaf_weight_device);
 
@@ -518,6 +518,27 @@ mod tests {
         )
     }
 
+    // TODO: test setting device weights
+
+    #[test]
+    fn test_subsystem_apply() -> Result<()> {
+        gen_subsystem_test!(
+            BlkIo,
+            Resources {
+                weight: Some(1000),
+                weight_device: hashmap! {},
+                leaf_weight: Some(1000),
+                leaf_weight_device: hashmap! {},
+                read_bps_device: hashmap! {},
+                write_bps_device: hashmap! {},
+                read_iops_device: hashmap! {},
+                write_iops_device: hashmap! {},
+            },
+            (weight, 1000),
+            (leaf_weight, 1000),
+        )
+    }
+
     #[test]
     fn test_subsystem_weight() -> Result<()> {
         const WEIGHT_DEFAULT: u16 = 500;
@@ -558,7 +579,6 @@ mod tests {
 
     #[test]
     fn test_subsystem_weight_device() -> Result<()> {
-        // TODO: test setting weights
         gen_subsystem_test!(BlkIo, weight_device, hashmap! {})?;
         gen_subsystem_test!(BlkIo, leaf_weight_device, hashmap! {})
     }
@@ -581,7 +601,7 @@ mod tests {
         )
     }
 
-    // TODO: test adding tasks
+    // TODO: test throttling
 
     #[test]
     fn test_subsystem_time() -> Result<()> {

@@ -153,6 +153,17 @@ mod tests {
     }
 
     #[test]
+    fn test_subsystem_apply() -> Result<()> {
+        gen_subsystem_test!(
+            Pids,
+            Resources {
+                max: Some(Max::Limit(42)),
+            },
+            (max, Max::Limit(42)),
+        )
+    }
+
+    #[test]
     fn test_subsystem_max() -> Result<()> {
         gen_subsystem_test!(Pids, max, Max::Max, set_max, Max::Limit(42))
     }
@@ -183,10 +194,7 @@ mod tests {
     #[test]
     fn test_parse_events() -> Result<()> {
         const CONTENT_OK_MAX: &str = "max 0\n";
-        assert_eq!(
-            parse_events(CONTENT_OK_MAX.as_bytes())?,
-            (Max::Max, 0)
-        );
+        assert_eq!(parse_events(CONTENT_OK_MAX.as_bytes())?, (Max::Max, 0));
 
         const CONTENT_OK_LIM: &str = "42 7\n";
         assert_eq!(

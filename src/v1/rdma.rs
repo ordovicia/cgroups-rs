@@ -251,6 +251,13 @@ mod tests {
     }
 
     #[test]
+    fn test_subsystem_apply() -> Result<()> {
+        //
+
+        Ok(())
+    }
+
+    #[test]
     #[ignore] // some systems have no RDMA/IB devices
     fn test_subsystem_current() -> Result<()> {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Rdma, gen_cgroup_name!()));

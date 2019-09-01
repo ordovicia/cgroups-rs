@@ -194,6 +194,21 @@ macro_rules! gen_subsystem_test {
         cgroup.delete()
     } };
 
+    // Test `apply()`
+    ($kind: ident, $resources: expr, $( ($field: ident, $val: expr) ),* $(, )?) => { {
+        let mut cgroup =
+            Subsystem::new(CgroupPath::new(v1::SubsystemKind::$kind, gen_cgroup_name!()));
+        cgroup.create()?;
+
+        cgroup.apply(&$resources.into())?;
+
+        $(
+            assert_eq!(cgroup.$field()?, $val);
+        )*
+
+        cgroup.delete()
+    } };
+
     // Test a read-only field
     ($kind: ident, $field: ident, $default: expr) => { {
         use crate::v1::{CgroupPath, SubsystemKind};

@@ -736,6 +736,37 @@ mod tests {
     }
 
     #[test]
+    fn test_subsystem_apply() -> Result<()> {
+        let id_set = [0].iter().copied().collect::<IdSet>();
+
+        gen_subsystem_test!(
+            Cpuset,
+            Resources {
+                cpus: Some(id_set.clone()),
+                mems: Some(id_set.clone()),
+                memory_migrate: Some(true),
+                cpu_exclusive: Some(true),
+                mem_exclusive: Some(true),
+                mem_hardwall: Some(true),
+                memory_pressure_enabled: None, // Some(true),
+                memory_spread_page: Some(true),
+                memory_spread_slab: Some(true),
+                sched_load_balance: Some(false),
+                sched_relax_domain_level: None, // Some(0)
+            },
+            (cpus, id_set.clone()),
+            (mems, id_set),
+            (memory_migrate, true),
+            (cpu_exclusive, true),
+            (mem_exclusive, true),
+            (mem_hardwall, true),
+            (memory_spread_page, true),
+            (memory_spread_slab, true),
+            (sched_load_balance, false),
+        )
+    }
+
+    #[test]
     fn test_subsystem_cpus() -> Result<()> {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, gen_cgroup_name!()));
         cgroup.create()?;
