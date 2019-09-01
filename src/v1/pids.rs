@@ -63,7 +63,7 @@ pub struct Resources {
     ///
     /// [`Max::Max`]: ../../enum.Max.html#variant.Max
     /// [`Max::Limit(n)`]: ../../enum.Max.html#variant.Limit
-    pub max: Option<Max<u32>>,
+    pub max: Option<Max>,
 }
 
 impl_cgroup! {
@@ -88,7 +88,7 @@ impl Subsystem {
         pids,
         "the maximum number of processes this cgroup can have",
         max: link,
-        Max<u32>,
+        Max,
         parse
     );
 
@@ -97,8 +97,8 @@ impl Subsystem {
         "a maximum number of processes this cgroup can have,",
         max: link,
         set_max,
-        Max<u32>,
-        cgroups::Max::<u32>::Limit(2)
+        Max,
+        cgroups::Max::Limit(2)
     );
 
     gen_getter!(
@@ -114,7 +114,7 @@ impl Subsystem {
         "the event counter, i.e. a pair of the maximum number of processes, 
         and the number of times fork failed due to the limit",
         events,
-        (Max<u32>, u64),
+        (Max, u64),
         parse_events
     );
 }
@@ -128,7 +128,7 @@ impl Into<v1::Resources> for Resources {
     }
 }
 
-fn parse_events(mut reader: impl std::io::Read) -> Result<(Max<u32>, u64)> {
+fn parse_events(mut reader: impl std::io::Read) -> Result<(Max, u64)> {
     let mut buf = String::new();
     reader.read_to_string(&mut buf)?;
 
@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_max() -> Result<()> {
-        gen_subsystem_test!(Pids, max, Max::<u32>::Max, set_max, Max::<u32>::Limit(42))
+        gen_subsystem_test!(Pids, max, Max::Max, set_max, Max::Limit(42))
     }
 
     #[test]
@@ -177,7 +177,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_events() -> Result<()> {
-        gen_subsystem_test!(Pids, events, (Max::<u32>::Max, 0))
+        gen_subsystem_test!(Pids, events, (Max::Max, 0))
     }
 
     #[test]
@@ -185,13 +185,13 @@ mod tests {
         const CONTENT_OK_MAX: &str = "max 0\n";
         assert_eq!(
             parse_events(CONTENT_OK_MAX.as_bytes())?,
-            (Max::<u32>::Max, 0)
+            (Max::Max, 0)
         );
 
         const CONTENT_OK_LIM: &str = "42 7\n";
         assert_eq!(
             parse_events(CONTENT_OK_LIM.as_bytes())?,
-            (Max::<u32>::Limit(42), 7)
+            (Max::Limit(42), 7)
         );
 
         const CONTENT_NG_MAX: &str = "invalid 0\n";

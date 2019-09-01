@@ -120,7 +120,7 @@
 //!                 "mlx4_0".to_string(),
 //!                 rdma::Limit {
 //!                     hca_handle: 2.into(),
-//!                     hca_object: Max::<u32>::Max,
+//!                     hca_object: Max::Max,
 //!                 },
 //!             )]
 //!                 .iter()
@@ -222,14 +222,14 @@ impl Display for Pid {
 /// ```
 /// use cgroups::Max;
 ///
-/// let max = "max".parse::<Max<u32>>().unwrap();
-/// assert_eq!(max, Max::<u32>::Max);
+/// let max = "max".parse::<Max>().unwrap();
+/// assert_eq!(max, Max::Max);
 ///
-/// let num = "42".parse::<Max<u32>>().unwrap();
-/// assert_eq!(num, Max::<u32>::Limit(42));
+/// let num = "42".parse::<Max>().unwrap();
+/// assert_eq!(num, Max::Limit(42));
 ///
-/// assert_eq!(Max::<u32>::Max.to_string(), "max");
-/// assert_eq!(Max::<u32>::Limit(42).to_string(), "42");
+/// assert_eq!(Max::Max.to_string(), "max");
+/// assert_eq!(Max::Limit(42).to_string(), "42");
 /// ```
 ///
 /// `Max` also implements [`Default`], which yields `Max::Max`.
@@ -237,7 +237,7 @@ impl Display for Pid {
 /// ```
 /// use cgroups::Max;
 ///
-/// assert_eq!(Max::<u32>::default(), Max::<u32>::Max);
+/// assert_eq!(Max::default(), Max::Max);
 /// ```
 ///
 /// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
@@ -247,31 +247,26 @@ impl Display for Pid {
 ///
 /// [`Default`]: https://doc.rust-lang.org/std/default/trait.Default.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Max<T> {
+pub enum Max {
     /// Not limit the maximum number or amount of a resource.
     Max,
     /// Limits the maximum number or amount of a resource to this value.
-    Limit(T),
+    Limit(u32), // only `u32` is used for the integer type of `Max` in this crate
 }
 
-impl<T> Default for Max<T> {
+impl Default for Max {
     fn default() -> Self {
         Self::Max
     }
 }
 
-impl<T> From<T> for Max<T> {
-    fn from(n: T) -> Self {
+impl From<u32> for Max {
+    fn from(n: u32) -> Self {
         Self::Limit(n)
     }
 }
 
-impl<T> FromStr for Max<T>
-where
-    T: FromStr,
-    <T as FromStr>::Err: std::error::Error + Send + Sync + 'static,
-    Error: From<<T as FromStr>::Err>,
-{
+impl FromStr for Max {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
@@ -282,7 +277,7 @@ where
     }
 }
 
-impl<T: Display> Display for Max<T> {
+impl Display for Max {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Max => write!(f, "max"),

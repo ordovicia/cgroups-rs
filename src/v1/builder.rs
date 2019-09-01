@@ -8,7 +8,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
     v1::{cpuset, devices, hugetlb, net_cls, rdma, Resources, SubsystemKind, UnifiedRepr},
-    Device, Max, Result,
+    Device, Result,
 };
 
 // NOTE: Keep the example below in sync with README.md and lib.rs
@@ -79,7 +79,7 @@ use crate::{
 ///                 "mlx4_0".to_string(),
 ///                 rdma::Limit {
 ///                     hca_handle: 2.into(),
-///                     hca_object: Max::<u32>::Max,
+///                     hca_object: Max::Max,
 ///                 },
 ///             )]
 ///                 .iter()
@@ -455,7 +455,7 @@ gen_subsystem_builder! {
         some; pids,
         "a maximum number of tasks this cgroup can have",
         max,
-        Max<u32>
+        crate::Max
     );
 }
 

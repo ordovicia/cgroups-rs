@@ -29,7 +29,7 @@
 //!             "ocrdma1",
 //!             rdma::Limit {
 //!                 hca_handle: 3.into(),
-//!                 hca_object: Max::<u32>::Max,
+//!                 hca_object: Max::Max,
 //!             },
 //!         ),
 //!     ];
@@ -88,9 +88,9 @@ pub struct Resources {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Limit {
     /// Max number or usage of HCA handles.
-    pub hca_handle: Max<u32>,
+    pub hca_handle: Max,
     /// Max number or usage of HCA objects.
-    pub hca_object: Max<u32>,
+    pub hca_object: Max,
 }
 
 impl_cgroup! {
@@ -139,7 +139,7 @@ impl Subsystem {
             set_max,
             [(
                 "mlx4_0",
-                rdma::Limit { hca_handle: 3.into(), hca_object: cgroups::Max::<u32>::Max }
+                rdma::Limit { hca_handle: 3.into(), hca_object: cgroups::Max::Max }
             )].iter()
         )),
         pub fn set_max<I, T, K>(&mut self, limits: I) -> Result<()>
@@ -270,13 +270,13 @@ mod tests {
         let mut limits = cgroup.max()?;
         for (_, limit) in limits.iter_mut() {
             limit.hca_handle = match limit.hca_handle {
-                Max::<u32>::Max => Max::<u32>::Limit(3),
-                Max::<u32>::Limit(_) => Max::<u32>::Max,
+                Max::Max => Max::Limit(3),
+                Max::Limit(_) => Max::Max,
             };
 
             limit.hca_object = match limit.hca_object {
-                Max::<u32>::Max => Max::<u32>::Limit(3000),
-                Max::<u32>::Limit(_) => Max::<u32>::Max,
+                Max::Max => Max::Limit(3000),
+                Max::Limit(_) => Max::Max,
             };
         }
 
@@ -302,15 +302,15 @@ ocrdma1 hca_object=max hca_handle=3
             (
                 "mlx4_0".to_string(),
                 Limit {
-                    hca_handle: Max::<u32>::Limit(2),
-                    hca_object: Max::<u32>::Limit(2000),
+                    hca_handle: Max::Limit(2),
+                    hca_object: Max::Limit(2000),
                 },
             ),
             (
                 "ocrdma1".to_string(),
                 Limit {
-                    hca_handle: Max::<u32>::Limit(3),
-                    hca_object: Max::<u32>::Max,
+                    hca_handle: Max::Limit(3),
+                    hca_object: Max::Max,
                 },
             ),
         };

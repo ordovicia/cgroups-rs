@@ -106,7 +106,7 @@ let mut cgroups =
                 "mlx4_0".to_string(),
                 rdma::Limit {
                     hca_handle: 2.into(),
-                    hca_object: Max::<u32>::Max,
+                    hca_object: Max::Max,
                 },
             )]
                 .iter()
