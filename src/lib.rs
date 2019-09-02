@@ -508,7 +508,7 @@ pub fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
         if condition() {
             *finished.lock().unwrap() = true;
             for handler in handlers {
-                handler.join().unwrap();
+                handler.join().expect("Failed to join a thread");
             }
 
             return;

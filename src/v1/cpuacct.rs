@@ -113,7 +113,7 @@ impl Subsystem {
     );
 
     _gen_getter!(
-        "the per-CPU total CPU times consumed by this cgroup 
+        "the per-CPU total CPU times consumed by this cgroup
         in the system (kernel) mode (in nanoseconds)",
         usage_percpu_sys,
         Vec<u64>,
@@ -248,7 +248,7 @@ mod tests {
     #[rustfmt::skip]
     fn test_subsystem_create_file_exists() -> Result<()> {
         gen_subsystem_test!(
-            Cpuacct, 
+            Cpuacct,
             [
                 "stat", "usage", "usage_all", "usage_percpu", "usage_percpu_sys",
                 "usage_percpu_user", "usage_sys", "usage_user"
@@ -317,6 +317,10 @@ mod tests {
     #[test]
     #[ignore] // must not be executed in parallel
     fn test_subsystem_stat_updated() -> Result<()> {
+        fn wait(millis: u64) {
+            std::thread::sleep(std::time::Duration::from_millis(millis));
+        }
+
         let mut cgroup = Subsystem::new(CgroupPath::new(
             v1::SubsystemKind::Cpuacct,
             gen_cgroup_name!(),
@@ -327,7 +331,8 @@ mod tests {
         cgroup.add_proc(pid)?;
 
         crate::consume_cpu_until(|| cgroup.usage().unwrap() > 0, 10);
-        // dbg!(cgroup.usage_all()?);
+        wait(100);
+        // dbg!(cgroup.max_usage_all()?);
 
         let usage = cgroup.usage()?;
         let usage_all = cgroup.usage_all()?;
@@ -340,6 +345,7 @@ mod tests {
         let usage_all_sys_sum = usage_all.iter().map(|u| u.system).sum();
         let usage_all_user_sum = usage_all.iter().map(|u| u.user).sum();
 
+        // FIXME: more permissive assertion?
         assert_eq!(usage, usage_all_sys_sum + usage_all_user_sum);
         assert_eq!(usage_sys, usage_all_sys_sum);
         assert_eq!(usage_user, usage_all_user_sum);
@@ -359,10 +365,12 @@ mod tests {
                 .collect::<Vec<_>>()
         );
 
+        wait(100);
+        cgroup.remove_proc(pid)?;
+
         cgroup.reset()?;
         assert_eq!(cgroup.usage()?, 0);
 
-        cgroup.remove_proc(pid)?;
         cgroup.delete()
     }
 
@@ -472,7 +480,7 @@ invalid 29308474949876 365961153038
         const CONTENT_NG_MISSING_DATA: &str = "\
 cpu user system
 0 29308474949876 365961153038
-1 29360907385495 
+1 29360907385495
 2 29097088553941 333686385015
 3 28649065680082 311282670956
 ";
