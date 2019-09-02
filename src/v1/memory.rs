@@ -667,7 +667,7 @@ mod tests {
                 "usage_in_bytes", "max_usage_in_bytes", "limit_in_bytes", "failcnt",
                 // "memsw.usage_in_bytes", "memsw.max_usage_in_bytes", "memsw.limit_in_bytes",
                 // "memsw.failcnt",
-                "kmem.usage_in_bytes", "kmem.max_usage_in_bytes", "kmem.limit_in_bytes", 
+                "kmem.usage_in_bytes", "kmem.max_usage_in_bytes", "kmem.limit_in_bytes",
                 "kmem.failcnt",
                 "kmem.tcp.usage_in_bytes", "kmem.tcp.max_usage_in_bytes", "kmem.tcp.limit_in_bytes",
                 "kmem.tcp.failcnt"
@@ -878,8 +878,11 @@ mod tests {
         cgroup.set_limit_in_bytes(LIMIT as i64)?;
 
         let mut child = std::process::Command::new("bash")
-            .arg("tests/consume_memory.sh")
-            .arg((LIMIT / 64).to_string())
+            .arg("-c")
+            .arg(&format!(
+                "sleep 1; ary=(); for ((i=0; i<{}; i++)); do ary+=(0); done",
+                LIMIT / 64
+            ))
             .spawn()
             .unwrap();
 
@@ -887,7 +890,9 @@ mod tests {
         cgroup.add_proc(child_pid)?;
 
         child.wait().unwrap();
+
         // dbg!(cgroup.stat()?);
+        // dbg!(cgroup.max_usage_in_bytes()?);
 
         let stat = cgroup.stat()?;
         assert!(stat.pgpgin > 0 && stat.pgpgout > 0 && stat.pgfault > 0);
@@ -1064,7 +1069,7 @@ under_oom invalid
         const CONTENT_NG_MISSING_DATA: &str = "\
 oom_kill_disable 1
 under_oom invalid
-oom_kill 
+oom_kill
 ";
 
         const CONTENT_NG_EXTRA_DATA: &str = "\
