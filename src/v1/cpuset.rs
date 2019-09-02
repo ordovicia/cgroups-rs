@@ -284,7 +284,7 @@ impl Subsystem {
     );
 
     _gen_getter!(
-        "whether the memory used by this cgroup should be migrated 
+        "whether the memory used by this cgroup should be migrated
         when memory selection is updated,",
         memory_migrate: link,
         bool,
@@ -292,7 +292,7 @@ impl Subsystem {
     );
 
     _gen_setter!(
-        "whether the memory used by this cgroup should be migrated 
+        "whether the memory used by this cgroup should be migrated
         when memory selection is updated,",
         memory_migrate: link,
         set_memory_migrate,
@@ -736,6 +736,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // must not be executed in parallel because of `{cpu,mem}_exclusive`
     fn test_subsystem_apply() -> Result<()> {
         let id_set = [0].iter().copied().collect::<IdSet>();
 
@@ -798,11 +799,13 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // must not be executed in parallel
     fn test_subsystem_cpu_exclusive() -> Result<()> {
         gen_subsystem_test!(Cpuset, cpu_exclusive, false, set_cpu_exclusive, true)
     }
 
     #[test]
+    #[ignore] // must not be executed in parallel
     fn test_subsystem_mem_exclusive() -> Result<()> {
         gen_subsystem_test!(Cpuset, mem_exclusive, false, set_mem_exclusive, true)
     }
