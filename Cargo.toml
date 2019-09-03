@@ -1,5 +1,5 @@
 [package]
-name = "cgroups"
+name = "controlgroup"
 version = "0.2.0"
 edition = "2018"
 authors = ["Hidehito Yabuuchi <hdht.ybuc@gmail.com>"]

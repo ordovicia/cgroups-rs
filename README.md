@@ -1,4 +1,4 @@
-# cgroups-rs ![Build](https://travis-ci.org/levex/cgroups-rs.svg?branch=master)
+# controlgroup-rs [![Build Status](https://travis-ci.com/ordovicia/controlgroup-rs.svg?branch=master)](https://travis-ci.com/ordovicia/controlgroup-rs)
 
 Native Rust crate for operating on cgroups.
 
