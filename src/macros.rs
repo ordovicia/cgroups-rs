@@ -24,7 +24,7 @@ macro_rules! bail_parse {
 macro_rules! gen_cgroup_name {
     () => {
         std::path::PathBuf::from(format!(
-            "cgroups_rs-{}-{}",
+            "controlgroup_rs-{}-{}",
             std::path::Path::new(file!())
                 .file_stem()
                 .and_then(std::ffi::OsStr::to_str)
@@ -56,7 +56,7 @@ mod tests {
     fn test_gen_cgroup_name() {
         assert_eq!(
             gen_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-macros-58")
+            std::path::PathBuf::from("controlgroup_rs-macros-58")
         );
     }
 
