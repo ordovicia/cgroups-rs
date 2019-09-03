@@ -475,6 +475,8 @@ impl Into<v1::Resources> for Resources {
 }
 
 fn parse_stat(reader: impl io::Read) -> Result<Stat> {
+    #![allow(clippy::unnecessary_unwrap)]
+
     let buf = io::BufReader::new(reader);
 
     macro_rules! g {
@@ -532,6 +534,8 @@ fn parse_stat(reader: impl io::Read) -> Result<Stat> {
 }
 
 fn parse_numa_stat(reader: impl io::Read) -> Result<NumaStat> {
+    #![allow(clippy::unnecessary_unwrap)]
+
     let buf = io::BufReader::new(reader);
 
     macro_rules! g {
@@ -677,6 +681,8 @@ mod tests {
 
     #[test]
     fn test_subsystem_apply() -> Result<()> {
+        #![allow(clippy::identity_op)]
+
         const GB: i64 = 1 << 30;
 
         gen_subsystem_test!(
@@ -703,6 +709,9 @@ mod tests {
     #[test]
     #[rustfmt::skip]
     fn test_subsystem_stat() -> Result<()> {
+        // TODO: Remove when https://github.com/rust-lang/rust-clippy/issues/3900 is fixed
+        #![allow(clippy::cognitive_complexity)]
+
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Memory, gen_cgroup_name!()));
         cgroup.create()?;
 
@@ -870,6 +879,8 @@ mod tests {
     #[test]
     #[ignore] // must not be executed in parallel
     fn test_subsystem_stat_throttled() -> Result<()> {
+        #![allow(clippy::identity_op)]
+
         const LIMIT: usize = 1 * (1 << 20);
 
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Memory, gen_cgroup_name!()));
@@ -905,6 +916,8 @@ mod tests {
 
     #[test]
     fn test_parse_stat() -> Result<()> {
+        #![allow(clippy::unreadable_literal)]
+
         const CONTENT_OK: &str = "\
 cache 806506496
 rss 6950912
@@ -995,6 +1008,8 @@ total_unevictable 14004224
 
     #[test]
     fn test_parse_numa_stat() -> Result<()> {
+        #![allow(clippy::unreadable_literal)]
+
         const CONTENT_OK: &str = "\
 total=200910 N0=200910 N1=0
 file=199107 N0=199107 N1=1

@@ -757,6 +757,8 @@ invalid:0 65536
 
     #[test]
     fn test_parse_io_service() -> Result<()> {
+        #![allow(clippy::unreadable_literal)]
+
         const CONTENT_OK: &str = "\
 259:0 Read 5941
 259:0 Write 10350930

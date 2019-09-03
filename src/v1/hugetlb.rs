@@ -427,6 +427,8 @@ mod tests {
 
     #[test]
     fn test_bytes_to_pages() {
+        #![allow(clippy::identity_op)]
+
         assert_eq!(bytes_to_pages(1 * (1 << 20), Mb2), 0);
         assert_eq!(bytes_to_pages(1 * (1 << 21), Mb2), 1);
         assert_eq!(bytes_to_pages(4 * (1 << 21) - 1, Mb2), 3);
@@ -442,6 +444,8 @@ mod tests {
 
     #[test]
     fn test_pages_to_bytes() {
+        #![allow(clippy::identity_op)]
+
         assert_eq!(pages_to_bytes(0, Mb2), 0);
         assert_eq!(pages_to_bytes(1, Mb2), 1 * (1 << 21));
         assert_eq!(pages_to_bytes(4, Mb2), 4 * (1 << 21));

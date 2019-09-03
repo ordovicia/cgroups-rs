@@ -37,7 +37,8 @@ macro_rules! gen_cgroup_name {
 #[cfg(test)]
 macro_rules! hashmap {
     ( $( ( $k: expr, $v: expr $(, )? ) ),* $(, )? ) => { {
-        #[allow(unused_mut)]
+        #[allow(unused_mut, clippy::let_and_return)]
+
         let mut hashmap = std::collections::HashMap::new();
         $( hashmap.insert($k, $v); )*
         hashmap
@@ -55,7 +56,7 @@ mod tests {
     fn test_gen_cgroup_name() {
         assert_eq!(
             gen_cgroup_name!(),
-            std::path::PathBuf::from("cgroups_rs-macros-57")
+            std::path::PathBuf::from("cgroups_rs-macros-58")
         );
     }
 

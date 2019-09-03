@@ -904,7 +904,8 @@ mod tests {
     fn test_id_set_from_str() {
         macro_rules! hashset {
             ( $( $x: expr ),* $(, )? ) => {{
-                #![allow(unused_mut)]
+                #![allow(unused_mut, clippy::let_and_return)]
+
                 let mut s = HashSet::new();
                 $( s.insert($x); )*
                 s

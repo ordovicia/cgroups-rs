@@ -652,6 +652,8 @@ mod tests {
 
     #[test]
     fn test_builder() -> Result<()> {
+        #![allow(clippy::identity_op)]
+
         const GB: u64 = 1 << 30;
 
         let id_set = [0].iter().copied().collect::<cpuset::IdSet>();
@@ -693,7 +695,7 @@ mod tests {
             .freezer()
                 .freeze()
                 .done()
-            // .cpuacct()   
+            // .cpuacct()
             .perf_event()
             .skip_create(vec![SubsystemKind::NetPrio])
             .build()?;

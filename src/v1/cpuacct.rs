@@ -376,6 +376,8 @@ mod tests {
 
     #[test]
     fn tets_parse_stat() -> Result<()> {
+        #![allow(clippy::unreadable_literal)]
+
         const CONTENT_OK: &str = "\
 user 9434783
 system 2059970
@@ -431,6 +433,8 @@ user 9434783 256
 
     #[test]
     fn test_parse_usage_all() -> Result<()> {
+        #![allow(clippy::unreadable_literal)]
+
         const CONTENT_OK: &str = "\
 cpu user system
 0 29308474949876 365961153038

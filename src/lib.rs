@@ -9,6 +9,8 @@
     trivial_numeric_casts,
     unused
 )]
+// Clippy's suggestion causes many compile error
+#![allow(clippy::string_lit_as_bytes)]
 
 //! Native Rust crate for operating on cgroups.
 //!
@@ -488,15 +490,21 @@ impl<K, V> RefKv<K, V> for &(K, V) {
 // FIXME: consume system time
 #[cfg(test)]
 pub fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
-    use std::{sync, thread, time};
+    use std::{
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
+        thread, time,
+    };
 
-    let finished = sync::Arc::new(sync::Mutex::new(false));
+    let finished = Arc::new(AtomicBool::new(false));
 
     let handlers = (0..(num_cpus::get() - 1))
         .map(|_| {
-            let fin = finished.clone();
+            let f = finished.clone();
             thread::spawn(move || {
-                while !*fin.lock().unwrap() {
+                while !f.load(Ordering::Relaxed) {
                     // spin
                 }
             })
@@ -506,7 +514,7 @@ pub fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
     let start = time::Instant::now();
     while start.elapsed() < time::Duration::from_secs(timeout_secs) {
         if condition() {
-            *finished.lock().unwrap() = true;
+            finished.store(true, Ordering::Relaxed);
             for handler in handlers {
                 handler.join().expect("Failed to join a thread");
             }

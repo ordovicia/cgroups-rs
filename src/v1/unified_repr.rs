@@ -443,14 +443,10 @@ mod tests {
             let mut cgroups = UnifiedRepr::with_subsystems(name.clone(), &[]);
             cgroups.create()?;
 
-            let cpu = cpu::Subsystem::new(CgroupPath::new(
-                SubsystemKind::Cpu,
-                PathBuf::from(name.clone()),
-            ));
+            let cpu = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name.clone()));
             assert!(!cpu.path().exists());
 
-            let cpuset =
-                cpuset::Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(name)));
+            let cpuset = cpuset::Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, name));
             assert!(!cpuset.path().exists());
 
             cgroups.delete()?;
@@ -463,14 +459,10 @@ mod tests {
             let mut cgroups = UnifiedRepr::with_subsystems(name.clone(), &[SubsystemKind::Cpu]);
             cgroups.create()?;
 
-            let cpu = cpu::Subsystem::new(CgroupPath::new(
-                SubsystemKind::Cpu,
-                PathBuf::from(name.clone()),
-            ));
+            let cpu = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, name.clone()));
             assert!(cpu.path().exists());
 
-            let cpuset =
-                cpuset::Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from(name)));
+            let cpuset = cpuset::Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, name));
             assert!(!cpuset.path().exists());
 
             cgroups.delete()?;
@@ -567,6 +559,8 @@ mod tests {
 
     #[test]
     fn test_unified_repr_apply() -> Result<()> {
+        #![allow(clippy::identity_op)]
+
         const GB: u64 = 1 << 30;
 
         let mut cgroups = UnifiedRepr::new(gen_cgroup_name!());
