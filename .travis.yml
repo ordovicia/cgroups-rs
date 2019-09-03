@@ -3,6 +3,15 @@ rust:
   - stable
   - beta
   - nightly
+
+matrix:
+  include:
+    - rust: nightly
+      name: Clippy
+      script:
+        - rustup component add clippy || travis_terminate 0
+        - cargo clippy --tests -- -D clippy::all
+
 script:
   - cargo build --verbose --all
   - cargo test --verbose --all
