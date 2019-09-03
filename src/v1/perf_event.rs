@@ -8,9 +8,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::{path::PathBuf, process::Command};
-//! use cgroups::{Pid, v1::{perf_event, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{Pid, v1::{perf_event, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut perf_event_cgroup = perf_event::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::PerfEvent, PathBuf::from("students/charlie")));

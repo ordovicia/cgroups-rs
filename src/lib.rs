@@ -19,9 +19,9 @@
 //! ### Create a cgroup controlled by the CPU subsystem
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
+//! use controlgroup::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
 //!
 //! // Define and create a new cgroup controlled by the CPU subsystem.
 //! let mut cgroup = cpu::Subsystem::new(
@@ -61,9 +61,9 @@
 //! [`v1::Builder`] provides a way to configure cgroups in the builder pattern.
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::{collections::HashMap, path::PathBuf};
-//! use cgroups::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
+//! use controlgroup::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
 //!
 //! let mut cgroups =
 //!     // Start building a (set of) cgroup(s).
@@ -177,7 +177,7 @@ pub use error::{Error, ErrorKind, Result};
 /// `Pid` can be converted from [`u32`] and [`&std::process::Child`].
 ///
 /// ```
-/// use cgroups::Pid;
+/// use controlgroup::Pid;
 ///
 /// let pid = Pid::from(42_u32);
 ///
@@ -230,7 +230,7 @@ impl Display for Pid {
 /// versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if failed.
 ///
 /// ```
-/// use cgroups::Max;
+/// use controlgroup::Max;
 ///
 /// let max = "max".parse::<Max>().unwrap();
 /// assert_eq!(max, Max::Max);
@@ -245,7 +245,7 @@ impl Display for Pid {
 /// `Max` also implements [`Default`], which yields `Max::Max`.
 ///
 /// ```
-/// use cgroups::Max;
+/// use controlgroup::Max;
 ///
 /// assert_eq!(Max::default(), Max::Max);
 /// ```
@@ -302,7 +302,7 @@ impl Display for Max {
 /// vice versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if failed.
 ///
 /// ```
-/// use cgroups::{Device, DeviceNumber};
+/// use controlgroup::{Device, DeviceNumber};
 ///
 /// let dev = "8:16".parse::<Device>().unwrap();
 /// assert_eq!(dev, Device { major: DeviceNumber::Number(8), minor: DeviceNumber::Number(16) });
@@ -312,7 +312,7 @@ impl Display for Max {
 /// ```
 ///
 /// ```
-/// use cgroups::{Device, DeviceNumber};
+/// use controlgroup::{Device, DeviceNumber};
 ///
 /// let dev = Device { major: DeviceNumber::Number(8), minor: DeviceNumber::Number(16) };
 /// assert_eq!(dev.to_string(), "8:16");
@@ -324,7 +324,7 @@ impl Display for Max {
 /// `Device` also implements [`From`]`<[u16; 2]>` and `From<[DeviceNumber; 2]>`.
 ///
 /// ```
-/// use cgroups::{Device, DeviceNumber};
+/// use controlgroup::{Device, DeviceNumber};
 ///
 /// assert_eq!(
 ///     Device::from([8, 16]),
@@ -394,7 +394,7 @@ impl Display for Device {
 /// failed.
 ///
 /// ```
-/// use cgroups::DeviceNumber;
+/// use controlgroup::DeviceNumber;
 ///
 /// let n = "8".parse::<DeviceNumber>().unwrap();
 /// assert_eq!(n, DeviceNumber::Number(8));
@@ -404,7 +404,7 @@ impl Display for Device {
 /// ```
 ///
 /// ```
-/// use cgroups::DeviceNumber;
+/// use controlgroup::DeviceNumber;
 ///
 /// assert_eq!(DeviceNumber::Number(8).to_string(), "8");
 /// assert_eq!(DeviceNumber::Any.to_string(), "*");
@@ -413,7 +413,7 @@ impl Display for Device {
 /// `DeviceNumber` also implements [`From`]`<u16>`, which results in `DeviceNumber::Number`.
 ///
 /// ```
-/// use cgroups::DeviceNumber;
+/// use controlgroup::DeviceNumber;
 ///
 /// assert_eq!(DeviceNumber::from(8), DeviceNumber::Number(8));
 /// ```

@@ -8,9 +8,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::{Pid, v1::{self, blkio, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{Pid, v1::{self, blkio, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut blkio_cgroup = blkio::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::BlkIo, PathBuf::from("students/charlie")));
@@ -166,7 +166,13 @@ impl_cgroup! {
 }
 
 macro_rules! _gen_getter {
-    (map; $desc: literal, $field: ident $( : $link: ident )?, $ty: ty $(, $recursive: ident )?) => {
+    (
+        map;
+        $desc: literal,
+        $field: ident $( : $link: ident )?,
+        $ty: ty
+        $(, $recursive: ident )?
+    ) => {
         gen_getter!(blkio, $desc, $field $( : $link )?, HashMap<Device, $ty>, parse_map);
         $( _gen_getter!(_rec; $recursive, $field, HashMap<Device, $ty>, parse_map); )?
     };
@@ -725,7 +731,7 @@ invalid:0 65536
 ";
 
         const CONTENT_NG_MISSING_DATA: &str = "\
-7:26 
+7:26
 259:0 65536
 ";
 

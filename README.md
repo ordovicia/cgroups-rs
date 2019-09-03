@@ -10,7 +10,7 @@ Currently this crate supports only cgroup v1 hierarchy, implemented in `v1` modu
 
 ```rust
 use std::path::PathBuf;
-use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
+use controlgroup::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
 
 // Define and create a new cgroup controlled by the CPU subsystem.
 let mut cgroup = cpu::Subsystem::new(
@@ -49,7 +49,7 @@ cgroup.delete()?;
 
 ```rust
 use std::{collections::HashMap, path::PathBuf};
-use cgroups::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
+use controlgroup::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
 
 let mut cgroups =
     // Start building a (set of) cgroup(s).

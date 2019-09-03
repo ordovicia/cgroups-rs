@@ -8,9 +8,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::{collections::HashMap, path::PathBuf};
-//! use cgroups::{Pid, Max, v1::{self, rdma, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{Pid, Max, v1::{self, rdma, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut rdma_cgroup = rdma::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::Rdma, PathBuf::from("students/charlie")));
@@ -139,7 +139,7 @@ impl Subsystem {
             set_max,
             [(
                 "mlx4_0",
-                rdma::Limit { hca_handle: 3.into(), hca_object: cgroups::Max::Max }
+                rdma::Limit { hca_handle: 3.into(), hca_object: controlgroup::Max::Max }
             )].iter()
         )),
         pub fn set_max<I, T, K>(&mut self, limits: I) -> Result<()>

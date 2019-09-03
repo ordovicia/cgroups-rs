@@ -22,9 +22,9 @@ const RELEASE_AGENT: &str = "release_agent";
 /// # Examples
 ///
 /// ```no_run
-/// # fn main() -> cgroups::Result<()> {
+/// # fn main() -> controlgroup::Result<()> {
 /// use std::path::PathBuf;
-/// use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
+/// use controlgroup::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
 ///
 /// // Define and create a new cgroup controlled by the CPU subsystem.
 /// let mut cgroup = cpu::Subsystem::new(
@@ -68,7 +68,7 @@ pub trait Cgroup {
     ///
     /// ```
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -83,7 +83,7 @@ pub trait Cgroup {
     ///
     /// ```
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::with_subsystem_name("cpu_memory", PathBuf::from("students/charlie")));
@@ -102,7 +102,7 @@ pub trait Cgroup {
     ///
     /// ```
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -117,7 +117,7 @@ pub trait Cgroup {
     ///
     /// ```
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let root = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, PathBuf::new()));
     /// assert!(root.is_root());
@@ -134,7 +134,7 @@ pub trait Cgroup {
     ///
     /// ```
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -163,9 +163,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -191,9 +191,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, Resources, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, Resources, SubsystemKind};
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -224,9 +224,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -255,9 +255,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -281,9 +281,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    /// use controlgroup::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -308,9 +308,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    /// use controlgroup::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -338,9 +338,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -365,9 +365,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    /// use controlgroup::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -393,9 +393,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    /// use controlgroup::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -423,9 +423,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    /// use controlgroup::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -451,9 +451,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    /// use controlgroup::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -484,9 +484,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    /// use controlgroup::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -525,9 +525,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    /// use controlgroup::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -550,9 +550,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -575,9 +575,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -601,9 +601,9 @@ pub trait Cgroup {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -642,7 +642,7 @@ impl CgroupPath {
     ///
     /// ```
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{CgroupPath, SubsystemKind};
     ///
     /// let path = CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie"));
     /// ```
@@ -665,7 +665,7 @@ impl CgroupPath {
     ///
     /// ```
     /// use std::path::PathBuf;
-    /// use cgroups::v1::CgroupPath;
+    /// use controlgroup::v1::CgroupPath;
     ///
     /// let path = CgroupPath::with_subsystem_name(
     ///     "cpu_memory",

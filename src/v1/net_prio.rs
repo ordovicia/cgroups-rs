@@ -8,9 +8,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::{collections::HashMap, path::PathBuf};
-//! use cgroups::{Pid, v1::{self, net_prio, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{Pid, v1::{self, net_prio, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut net_prio_cgroup = net_prio::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::NetPrio, PathBuf::from("students/charlie")));

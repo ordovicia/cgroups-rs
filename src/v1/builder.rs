@@ -20,9 +20,9 @@ use crate::{
 /// you call only [`cpu`] method, only one cgroup directory is created for the CPU subsystem.
 ///
 /// ```no_run
-/// # fn main() -> cgroups::Result<()> {
+/// # fn main() -> controlgroup::Result<()> {
 /// use std::{collections::HashMap, path::PathBuf};
-/// use cgroups::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
+/// use controlgroup::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
 ///
 /// let mut cgroups =
 ///     // Start building a (set of) cgroup(s).
@@ -119,9 +119,9 @@ use crate::{
 /// configuration if set.
 ///
 /// ```no_run
-/// # fn main() -> cgroups::Result<()> {
+/// # fn main() -> controlgroup::Result<()> {
 /// # use std::path::PathBuf;
-/// # use cgroups::v1::Builder;
+/// # use controlgroup::v1::Builder;
 /// let mut cgroups = Builder::new(PathBuf::from("students/charlie"))
 ///     .cpu()
 ///         .shares(1000)
@@ -137,9 +137,9 @@ use crate::{
 /// But building the same subsystem twice does not reset the subsystem configuration.
 ///
 /// ```no_run
-/// # fn main() -> cgroups::Result<()> {
+/// # fn main() -> controlgroup::Result<()> {
 /// # use std::path::PathBuf;
-/// # use cgroups::v1::Builder;
+/// # use controlgroup::v1::Builder;
 /// let mut cgroups = Builder::new(PathBuf::from("students/charlie"))
 ///     .cpu()
 ///         .shares(1000)

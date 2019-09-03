@@ -8,9 +8,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::{Pid, v1::{self, cpuset, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{Pid, v1::{self, cpuset, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut cpuset_cgroup = cpuset::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::Cpuset, PathBuf::from("students/charlie")));
@@ -124,7 +124,7 @@ pub struct Resources {
 /// returns an error with kind [`ErrorKind::Parse`].
 ///
 /// ```
-/// use cgroups::v1::cpuset::IdSet;
+/// use controlgroup::v1::cpuset::IdSet;
 ///
 /// let id_set = "0,1,3-5,7".parse::<IdSet>().unwrap();
 /// assert_eq!(
@@ -139,7 +139,7 @@ pub struct Resources {
 /// `IdSet`.
 ///
 /// ```
-/// use cgroups::v1::cpuset::IdSet;
+/// use controlgroup::v1::cpuset::IdSet;
 ///
 /// let id_set = [0, 1, 3, 4, 5, 7].iter().copied().collect::<IdSet>();
 /// assert_eq!(
@@ -151,7 +151,7 @@ pub struct Resources {
 /// ### Use `new` to create an empty set and then `add` IDs one by one
 ///
 /// ```
-/// use cgroups::v1::cpuset::IdSet;
+/// use controlgroup::v1::cpuset::IdSet;
 ///
 /// let mut id_set = IdSet::new();
 /// id_set.add(0);
@@ -167,7 +167,7 @@ pub struct Resources {
 ///
 /// ```
 /// use std::string::ToString;
-/// use cgroups::v1::cpuset::IdSet;
+/// use controlgroup::v1::cpuset::IdSet;
 ///
 /// let id_set = "0,1,3-5,7".parse::<IdSet>().unwrap();
 /// assert_eq!(id_set.to_string(), "0,1,3-5,7");
@@ -635,7 +635,7 @@ impl IdSet {
     /// # Examples
     ///
     /// ```
-    /// use cgroups::v1::cpuset::IdSet;
+    /// use controlgroup::v1::cpuset::IdSet;
     ///
     /// let id_set = IdSet::new();
     /// assert!(id_set.to_hash_set().is_empty());
@@ -651,7 +651,7 @@ impl IdSet {
     ///
     /// ```
     /// use std::collections::HashSet;
-    /// use cgroups::v1::cpuset::IdSet;
+    /// use controlgroup::v1::cpuset::IdSet;
     ///
     /// let id_set = [1, 2, 3, 5, 6, 7].iter().copied().collect::<IdSet>();
     /// assert_eq!(
@@ -670,7 +670,7 @@ impl IdSet {
     /// # Examples
     ///
     /// ```
-    /// use cgroups::v1::cpuset::IdSet;
+    /// use controlgroup::v1::cpuset::IdSet;
     ///
     /// let mut id_set = IdSet::new();
     /// id_set.add(7);
@@ -685,8 +685,8 @@ impl IdSet {
     /// # Examples
     ///
     /// ```
-    /// # fn main() -> cgroups::Result<()> {
-    /// use cgroups::v1::cpuset::IdSet;
+    /// # fn main() -> controlgroup::Result<()> {
+    /// use controlgroup::v1::cpuset::IdSet;
     ///
     /// let mut id_set = "0,1,3-5,7".parse::<IdSet>()?;
     /// id_set.remove(0);

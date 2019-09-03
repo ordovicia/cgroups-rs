@@ -8,9 +8,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::{Pid, v1::{self, net_cls, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{Pid, v1::{self, net_cls, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut net_cls_cgroup = net_cls::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::NetCls, PathBuf::from("students/charlie")));
@@ -65,7 +65,7 @@ pub struct Resources {
 /// string. If failed, `parse` returns an error with kind [`ErrorKind::Parse`].
 ///
 /// ```
-/// use cgroups::v1::net_cls::ClassId;
+/// use controlgroup::v1::net_cls::ClassId;
 ///
 /// assert_eq!("0x100001".parse::<ClassId>().unwrap(), ClassId { major: 0x10, minor: 0x1});
 /// assert_eq!("0X0123ABCD".parse::<ClassId>().unwrap(), ClassId { major: 0x0123, minor: 0xABCD});
@@ -76,7 +76,7 @@ pub struct Resources {
 ///
 /// ```
 /// use std::string::ToString;
-/// use cgroups::v1::net_cls::ClassId;
+/// use controlgroup::v1::net_cls::ClassId;
 ///
 /// assert_eq!(ClassId { major: 0x10, minor: 0x1}.to_string(), "0x100001");
 /// assert_eq!(ClassId { major: 0x0123, minor: 0xABCD}.to_string(), "0x123ABCD");
@@ -85,7 +85,7 @@ pub struct Resources {
 /// `ClassId` also supports conversion from/into [`u32`] and from/into `[`[`u16`]`; 2]`.
 ///
 /// ```
-/// use cgroups::v1::net_cls::ClassId;
+/// use controlgroup::v1::net_cls::ClassId;
 ///
 /// assert_eq!(ClassId::from(0x10_0001), ClassId { major: 0x10, minor: 0x1});
 /// assert_eq!(ClassId::from(0x0123_ABCD), ClassId { major: 0x0123, minor: 0xABCD});
@@ -98,7 +98,7 @@ pub struct Resources {
 /// ```
 ///
 /// ```
-/// use cgroups::v1::net_cls::ClassId;
+/// use controlgroup::v1::net_cls::ClassId;
 ///
 /// assert_eq!(ClassId::from([0x10, 0x1]), ClassId { major: 0x10, minor: 0x1});
 /// assert_eq!(ClassId::from([0x0123, 0xABCD]), ClassId { major: 0x0123, minor: 0xABCD});

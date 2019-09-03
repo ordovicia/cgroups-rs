@@ -8,9 +8,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::{collections::HashMap, path::PathBuf};
-//! use cgroups::{Pid, v1::{self, devices::{self, Access}, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{Pid, v1::{self, devices::{self, Access}, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut devices_cgroup = devices::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::Devices, PathBuf::from("students/charlie")));
@@ -76,7 +76,7 @@ pub struct Resources {
 /// vice versa. `parse` returns an error with kind [`ErrorKind::Parse`] if failed.
 ///
 /// ```
-/// use cgroups::{Device, DeviceNumber, v1::devices::{Access, AccessType, DeviceType}};
+/// use controlgroup::{Device, DeviceNumber, v1::devices::{Access, AccessType, DeviceType}};
 ///
 /// let access = "c 1:3 mr".parse::<Access>().unwrap();
 /// assert_eq!(
@@ -110,7 +110,7 @@ pub struct Resources {
 /// ```
 ///
 /// ```
-/// use cgroups::{Device, DeviceNumber, v1::devices::{Access, AccessType, DeviceType}};
+/// use controlgroup::{Device, DeviceNumber, v1::devices::{Access, AccessType, DeviceType}};
 ///
 /// let access = Access {
 ///     device_type: DeviceType::Char,

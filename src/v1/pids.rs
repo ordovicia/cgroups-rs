@@ -8,9 +8,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::{Pid, Max, v1::{pids, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{Pid, Max, v1::{pids, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut pids_cgroup = pids::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::Pids, PathBuf::from("students/charlie")));
@@ -98,7 +98,7 @@ impl Subsystem {
         max: link,
         set_max,
         Max,
-        cgroups::Max::Limit(2)
+        controlgroup::Max::Limit(2)
     );
 
     gen_getter!(

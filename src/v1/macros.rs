@@ -72,9 +72,9 @@ macro_rules! gen_doc {
 "# Examples
 
 ```no_run
-# fn main() -> cgroups::Result<()> {
+# fn main() -> controlgroup::Result<()> {
 use std::path::PathBuf;
-use cgroups::v1::{", stringify!($subsystem), ", Cgroup, CgroupPath, SubsystemKind};
+use controlgroup::v1::{", stringify!($subsystem), ", Cgroup, CgroupPath, SubsystemKind};
 
 let cgroup = ", stringify!($subsystem), "::Subsystem::new(
     CgroupPath::new(SubsystemKind::", _kind!($subsystem), ", PathBuf::from(\"students/charlie\")));
@@ -88,9 +88,9 @@ let ", stringify!($field), " = cgroup.", stringify!($field), "(", stringify!($( 
 "# Examples
 
 ```no_run
-# fn main() -> cgroups::Result<()> {
+# fn main() -> controlgroup::Result<()> {
 use std::path::PathBuf;
-use cgroups::v1::{", stringify!($subsystem), ", Cgroup, CgroupPath, SubsystemKind};
+use controlgroup::v1::{", stringify!($subsystem), ", Cgroup, CgroupPath, SubsystemKind};
 
 let mut cgroup = ", stringify!($subsystem), "::Subsystem::new(
     CgroupPath::new(SubsystemKind::", _kind!($subsystem), ", PathBuf::from(\"students/charlie\")));

@@ -32,9 +32,9 @@ use v1::{$( $subsystem ),*};
 /// # Examples
 ///
 /// ```no_run
-/// # fn main() -> cgroups::Result<()> {
+/// # fn main() -> controlgroup::Result<()> {
 /// use std::path::PathBuf;
-/// use cgroups::{Pid, v1::{Resources, UnifiedRepr}};
+/// use controlgroup::{Pid, v1::{Resources, UnifiedRepr}};
 ///
 /// // Define and create a new unified representation of a set of cgroups.
 /// let mut cgroups = UnifiedRepr::new(PathBuf::from("students/charlie"));
@@ -85,7 +85,7 @@ impl UnifiedRepr {
     ///
     /// ```
     /// use std::path::PathBuf;
-    /// use cgroups::v1::UnifiedRepr;
+    /// use controlgroup::v1::UnifiedRepr;
     ///
     /// let cgroups = UnifiedRepr::new(PathBuf::from("students/charlie"));
     /// ```
@@ -104,7 +104,7 @@ impl UnifiedRepr {
     ///
     /// ```
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{SubsystemKind, UnifiedRepr};
+    /// use controlgroup::v1::{SubsystemKind, UnifiedRepr};
     ///
     /// let cgroups = UnifiedRepr::with_subsystems(
     ///     PathBuf::from("students/charlie"), &[SubsystemKind::Cpu]);
@@ -122,7 +122,7 @@ impl UnifiedRepr {
     ///
     /// ```
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{CgroupPath, SubsystemKind, UnifiedRepr};
+    /// use controlgroup::v1::{CgroupPath, SubsystemKind, UnifiedRepr};
     ///
     /// let name = PathBuf::from("students/charlie");
     /// let cgroups = UnifiedRepr::with_custom_name_subsystems(
@@ -158,7 +158,7 @@ impl UnifiedRepr {
     ///
     /// ```
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{SubsystemKind, UnifiedRepr};
+    /// use controlgroup::v1::{SubsystemKind, UnifiedRepr};
     ///
     /// let cgroups = UnifiedRepr::with_subsystems(
     ///     PathBuf::from("students/charlie"), &[SubsystemKind::Cpu]);
@@ -184,9 +184,9 @@ impl UnifiedRepr {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{CgroupPath, SubsystemKind, UnifiedRepr};
+    /// use controlgroup::v1::{CgroupPath, SubsystemKind, UnifiedRepr};
     ///
     /// let mut cgroups = UnifiedRepr::with_subsystems(
     ///     PathBuf::from("students/charlie"), &[SubsystemKind::Cpu, SubsystemKind::Cpuset]);

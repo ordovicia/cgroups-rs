@@ -8,9 +8,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::{path::PathBuf, process::Command};
-//! use cgroups::{Pid, v1::{freezer, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{Pid, v1::{freezer, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut freezer_cgroup = freezer::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::Freezer, PathBuf::from("students/charlie")));
@@ -73,7 +73,7 @@ pub struct Resources {
 /// `parse` returns an error with kind [`ErrorKind::Parse`].
 ///
 /// ```
-/// use cgroups::v1::freezer;
+/// use controlgroup::v1::freezer;
 ///
 /// let thawed = "THAWED".parse::<freezer::State>().unwrap();
 /// assert_eq!(thawed, freezer::State::Thawed);
@@ -90,7 +90,7 @@ pub struct Resources {
 ///
 /// ```
 /// use std::string::ToString;
-/// use cgroups::v1::freezer;
+/// use controlgroup::v1::freezer;
 ///
 /// assert_eq!(freezer::State::Thawed.to_string(), "THAWED");
 /// assert_eq!(freezer::State::Freezing.to_string(), "FREEZING");

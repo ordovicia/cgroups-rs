@@ -8,9 +8,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::{Pid, v1::{self, memory, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{Pid, v1::{self, memory, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut mem_cgroup = memory::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::Memory, PathBuf::from("students/charlie")));

@@ -8,9 +8,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::{Pid, v1::{self, hugetlb, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{Pid, v1::{self, hugetlb, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut hugetlb_cgroup = hugetlb::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::HugeTlb, PathBuf::from("students/charlie")));
@@ -141,9 +141,9 @@ impl Subsystem {
     /// # Example
     ///
     /// ```no_run
-    /// # fn main() -> cgroups::Result<()> {
+    /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use cgroups::v1::{hugetlb::{self, HugepageSize}, Cgroup, CgroupPath, SubsystemKind};
+    /// use controlgroup::v1::{hugetlb::{self, HugepageSize}, Cgroup, CgroupPath, SubsystemKind};
     ///
     /// let mut cgroup = hugetlb::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::HugeTlb, PathBuf::from("students/charlie")));

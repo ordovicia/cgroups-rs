@@ -9,9 +9,9 @@
 //! # Examples
 //!
 //! ```no_run
-//! # fn main() -> cgroups::Result<()> {
+//! # fn main() -> controlgroup::Result<()> {
 //! use std::path::PathBuf;
-//! use cgroups::{Pid, v1::{self, cpu, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{Pid, v1::{self, cpu, Cgroup, CgroupPath, SubsystemKind}};
 //!
 //! let mut cpu_cgroup = cpu::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));

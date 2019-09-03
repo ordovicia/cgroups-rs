@@ -73,7 +73,7 @@ const CGROUPFS_MOUNT_POINT: &str = "/sys/fs/cgroup";
 ///
 /// ```
 /// use std::path::Path;
-/// use cgroups::v1::SubsystemKind;
+/// use controlgroup::v1::SubsystemKind;
 ///
 /// assert_eq!(SubsystemKind::Cpu.as_ref(), Path::new("cpu"));
 /// assert_eq!(SubsystemKind::Memory.as_ref(), Path::new("memory"));
