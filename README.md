@@ -142,15 +142,20 @@ cgroups.delete()?;
 
 ## Disclaimer
 
-This crate is licensed under:
+This project was started as a fork of [levex/cgroups-rs], and developed by
+redesigning and reimplementing the whole project.
 
-- MIT License (see LICENSE-MIT); or
-- Apache 2.0 License (see LICENSE-Apache-2.0),
+[levex/cgroups-rs] was licensed under MIT OR Apache-2.0.
 
-at your option.
+See [LICENSE](LICENSE) for more information.
 
-Please note that this crate is under heavy development.
-We use sematic versioning; during the `0.*` phase, no guarantees are made about
-backwards compatibility.
+[levex/cgroups-rs]: https://github.com/levex/cgroups-rs
 
-Regardless, check back often and thanks for taking a look!
+## License
+
+Copyright 2019 Hidehito Yabuuchi \<hdht.ybuc@gmail.com\>
+
+Licensed under the MIT license <LICENSE-MIT or http://opensource.org/licenses/MIT>, or the Apache
+License, Version 2.0 <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> at your option.
+All files in the project carrying such notice may not be copied, modified, or distributed except
+according to those terms.
