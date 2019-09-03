@@ -818,7 +818,7 @@ mod tests {
 
         let mut child = Command::new("sleep").arg("1").spawn().unwrap();
         let child_pid = Pid::from(&child);
-        cgroup.add_task(child_pid)?; // TODO: really needed?
+        cgroup.add_task(child_pid)?; // FIXME: really needed?
         assert!(cgroup.tasks()? == vec![pid, child_pid] || cgroup.tasks()? == vec![child_pid, pid]);
 
         child.wait()?;

@@ -861,9 +861,18 @@ mod tests {
 
     #[test]
     fn test_subsystem_use_hierarchy() -> Result<()> {
-        // TODO: `set_use_hierarchy(false)` raises `io::Error` with kind `InvalidInput` on some
-        // systems?
-        gen_subsystem_test!(Memory, use_hierarchy, true)
+        let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Memory, gen_cgroup_name!()));
+        cgroup.create()?;
+
+        assert!(cgroup.use_hierarchy()?);
+
+        // Disabling fails if the parent cgroup has already enabled
+        if !cgroup.root_cgroup().use_hierarchy()? {
+            cgroup.set_use_hierarchy(false)?;
+            assert!(!cgroup.use_hierarchy()?);
+        }
+
+        cgroup.delete()
     }
 
     #[test]

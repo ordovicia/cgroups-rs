@@ -26,5 +26,5 @@ script:
   - cargo test --verbose -- --ignored cpuacct::tests::test_subsystem_stat_updated
   - cargo test --verbose -- --ignored pids::tests::test_subsystem_current
   # (temporarily) overrides the root cgroup
-  - cargo test --verbose -- --ignored release_agent
-  - cargo test --verbose -- --ignored memory_pressure_enabled
+  - cargo test --verbose -- --ignored release_agent # Cgroup
+  - cargo test --verbose -- --ignored memory_pressure_enabled # cpuset
