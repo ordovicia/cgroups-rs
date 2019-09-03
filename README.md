@@ -1,10 +1,10 @@
 # cgroups-rs ![Build](https://travis-ci.org/levex/cgroups-rs.svg?branch=master)
 
-Native Rust library for operating on cgroups.
+Native Rust crate for operating on cgroups.
 
 Currently this crate supports only cgroup v1 hierarchy, implemented in `v1` module.
 
-## Examples
+## Examples for v1 hierarchy
 
 ### Create a cgroup controlled by the CPU subsystem
 
@@ -139,6 +139,16 @@ cgroups.add_task(pid)?;
 cgroups.remove_task(pid)?;
 cgroups.delete()?;
 ```
+
+## MSRV (Minimum Supported Rust Version)
+
+```
+rustc 1.37.0 (eae3437df 2019-08-13)
+```
+
+If you want to use this crate with older Rust, please leave a comment on [issue #1].
+
+[issue #1]: https://github.com/ordovicia/controlgroup-rs/issues/1
 
 ## Disclaimer
 
