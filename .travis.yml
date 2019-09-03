@@ -1,8 +1,10 @@
 language: rust
+
 rust:
   - stable
   - beta
   - nightly
+  - 1.37.0
 
 matrix:
   include:
