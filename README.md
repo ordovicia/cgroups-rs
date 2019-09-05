@@ -157,7 +157,7 @@ redesigning and reimplementing the whole project.
 
 [levex/cgroups-rs] was licensed under MIT OR Apache-2.0.
 
-See [LICENSE](LICENSE) for more information.
+See [LICENSE](LICENSE) for detail.
 
 [levex/cgroups-rs]: https://github.com/levex/cgroups-rs
 
@@ -169,3 +169,8 @@ Licensed under the MIT license <LICENSE-MIT or http://opensource.org/licenses/MI
 License, Version 2.0 <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> at your option.
 All files in the project carrying such notice may not be copied, modified, or distributed except
 according to those terms.
+
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.
