@@ -1,11 +1,30 @@
 language: rust
+
 rust:
   - stable
   - beta
   - nightly
+  - 1.37.0
+
 matrix:
-  allow_failures:
+  include:
     - rust: nightly
-  fast_finish: true
+      name: Clippy
+      script:
+        - rustup component add clippy || travis_terminate 0
+        - cargo clippy --tests -- -D clippy::all
+
 script:
   - cargo build --verbose --all
+  - cargo test --verbose --all
+  # must not be executed in parallel
+  - cargo test --verbose -- --ignored --test-threads=1 add_get_remove_tasks # Cgroup, UnifiedRepr
+  - cargo test --verbose -- --ignored --test-threads=1 add_get_remove_procs # Cgroup, UnifiedRepr
+  - cargo test --verbose -- --ignored --test-threads=1 subsystem_stat_throttled # cpu, memory
+  - cargo test --verbose -- --ignored --test-threads=1 exclusive # cpuset
+  - cargo test --verbose -- --ignored cpuset::tests::test_subsystem_apply
+  - cargo test --verbose -- --ignored cpuacct::tests::test_subsystem_stat_updated
+  - cargo test --verbose -- --ignored pids::tests::test_subsystem_current
+  # (temporarily) overrides the root cgroup
+  - cargo test --verbose -- --ignored release_agent # Cgroup
+  - cargo test --verbose -- --ignored memory_pressure_enabled # cpuset

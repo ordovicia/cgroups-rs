@@ -1,581 +1,529 @@
-use log::*;
+#![cfg(target_os = "linux")]
+#![warn(
+    future_incompatible,
+    missing_docs,
+    missing_debug_implementations,
+    nonstandard_style,
+    rust_2018_idioms,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused
+)]
+// Clippy's suggestion causes many compile error
+#![allow(clippy::string_lit_as_bytes)]
 
-use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
-use std::path::{Path, PathBuf};
+//! Native Rust crate for operating on cgroups.
+//!
+//! Currently this crate supports only cgroup v1 hierarchy, implemented in [`v1`] module.
+//!
+//! ## Examples for v1 hierarchy
+//!
+//! ### Create a cgroup controlled by the CPU subsystem
+//!
+//! ```no_run
+//! # fn main() -> controlgroup::Result<()> {
+//! use std::path::PathBuf;
+//! use controlgroup::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
+//!
+//! // Define and create a new cgroup controlled by the CPU subsystem.
+//! let mut cgroup = cpu::Subsystem::new(
+//!     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+//! cgroup.create()?;
+//!
+//! // Attach the self process to the cgroup.
+//! let pid = Pid::from(std::process::id());
+//! cgroup.add_task(pid)?;
+//!
+//! // Define resource limits and constraints for this cgroup.
+//! // Here we just use the default for an example.
+//! let resources = Resources::default();
+//!
+//! // Apply the resource limits.
+//! cgroup.apply(&resources)?;
+//!
+//! // Low-level file operations are also supported.
+//! let stat_file = cgroup.open_file_read("cpu.stat")?;
+//!
+//! // Do something ...
+//!
+//! // Now, remove self process from the cgroup.
+//! cgroup.remove_task(pid)?;
+//!
+//! // ... and delete the cgroup.
+//! cgroup.delete()?;
+//!
+//! // Note that subsystem handlers does not implement `Drop` and therefore when the
+//! // handler is dropped, the cgroup will stay around.
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ### Create a set of cgroups controlled by multiple subsystems
+//!
+//! [`v1::Builder`] provides a way to configure cgroups in the builder pattern.
+//!
+//! ```no_run
+//! # fn main() -> controlgroup::Result<()> {
+//! use std::{collections::HashMap, path::PathBuf};
+//! use controlgroup::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
+//!
+//! let mut cgroups =
+//!     // Start building a (set of) cgroup(s).
+//!     Builder::new(PathBuf::from("students/charlie"))
+//!     // Start configuring the CPU resource limits.
+//!     .cpu()
+//!         .shares(1000)
+//!         .cfs_quota_us(500 * 1000)
+//!         .cfs_period_us(1000 * 1000)
+//!         // Finish configuring the CPU resource limits.
+//!         .done()
+//!     // Start configuring the cpuset resource limits.
+//!     .cpuset()
+//!         .cpus([0].iter().copied().collect())
+//!         .mems([0].iter().copied().collect())
+//!         .memory_migrate(true)
+//!         .done()
+//!     .memory()
+//!         .limit_in_bytes(4 * (1 << 30))
+//!         .soft_limit_in_bytes(3 * (1 << 30))
+//!         .use_hierarchy(true)
+//!         .done()
+//!     .hugetlb()
+//!         .limit_2mb(hugetlb::Limit::Pages(4))
+//!         .limit_1gb(hugetlb::Limit::Pages(2))
+//!         .done()
+//!     .devices()
+//!         .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
+//!         .allow(vec!["c 1:3 mr".parse::<devices::Access>().unwrap()])
+//!         .done()
+//!     .blkio()
+//!         .weight(1000)
+//!         .weight_device([([8, 0].into(), 100)].iter().copied().collect())
+//!         .read_bps_device([([8, 0].into(), 10 * (1 << 20))].iter().copied().collect())
+//!         .write_iops_device([([8, 0].into(), 100)].iter().copied().collect())
+//!         .done()
+//!     .rdma()
+//!         .max(
+//!             [(
+//!                 "mlx4_0".to_string(),
+//!                 rdma::Limit {
+//!                     hca_handle: 2.into(),
+//!                     hca_object: Max::Max,
+//!                 },
+//!             )]
+//!                 .iter()
+//!                 .cloned()
+//!                 .collect(),
+//!         )
+//!         .done()
+//!     .net_prio()
+//!         .ifpriomap(
+//!             [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)]
+//!                 .iter()
+//!                 .cloned()
+//!                 .collect(),
+//!         )
+//!         .done()
+//!     .net_cls()
+//!         .classid([0x10, 0x1].into())
+//!         .done()
+//!     .pids()
+//!         .max(42.into())
+//!         .done()
+//!     .freezer()
+//!         // Tasks in this cgroup will be frozen.
+//!         .freeze()
+//!         .done()
+//!     // Enable CPU accounting for this cgroup.
+//!     // cpuacct subsystem has no parameter, so this method does not return a subsystem builder,
+//!     // just enables the accounting.
+//!     .cpuacct()
+//!     // Enable monitoring this cgroup via `perf` tool.
+//!     // Like `cpuacct()` method, this method does not return a subsystem builder.
+//!     .perf_event()
+//!     // Skip creating directories for cpuacct subsystem and net_cls subsystem.
+//!     // This is useful when some subsystems share hierarchy with others.
+//!     .skip_create(vec![SubsystemKind::Cpuacct, SubsystemKind::NetCls])
+//!     // Actually build cgroups with the configuration.
+//!     .build()?;
+//!
+//! let pid = std::process::id().into();
+//! cgroups.add_task(pid)?;
+//!
+//! // Do something ...
+//!
+//! cgroups.remove_task(pid)?;
+//! cgroups.delete()?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! [`v1`]: v1/index.html
+//! [`v1::Builder`]: v1/builder/struct.Builder.html
 
-pub mod blkio;
-pub mod cgroup;
-pub mod cpu;
-pub mod cpuacct;
-pub mod cpuset;
-pub mod devices;
-pub mod error;
-pub mod freezer;
-pub mod hierarchies;
-pub mod hugetlb;
-pub mod memory;
-pub mod net_cls;
-pub mod net_prio;
-pub mod perf_event;
-pub mod pid;
-pub mod rdma;
-pub mod cgroup_builder;
+#[macro_use]
+mod macros;
+mod error;
+mod parse;
+pub mod v1;
 
-use crate::blkio::BlkIoController;
-use crate::cpu::CpuController;
-use crate::cpuacct::CpuAcctController;
-use crate::cpuset::CpuSetController;
-use crate::devices::DevicesController;
-use crate::error::*;
-use crate::freezer::FreezerController;
-use crate::hugetlb::HugeTlbController;
-use crate::memory::MemController;
-use crate::net_cls::NetClsController;
-use crate::net_prio::NetPrioController;
-use crate::perf_event::PerfEventController;
-use crate::pid::PidController;
-use crate::rdma::RdmaController;
+use std::{
+    fmt::{self, Display},
+    str::FromStr,
+};
 
-pub use crate::cgroup::Cgroup;
+pub use error::{Error, ErrorKind, Result};
 
-/// Contains all the subsystems that are available in this crate.
-#[derive(Debug)]
-pub enum Subsystem {
-    /// Controller for the `Pid` subsystem, see `PidController` for more information.
-    Pid(PidController),
-    /// Controller for the `Mem` subsystem, see `MemController` for more information.
-    Mem(MemController),
-    /// Controller for the `CpuSet subsystem, see `CpuSetController` for more information.
-    CpuSet(CpuSetController),
-    /// Controller for the `CpuAcct` subsystem, see `CpuAcctController` for more information.
-    CpuAcct(CpuAcctController),
-    /// Controller for the `Cpu` subsystem, see `CpuController` for more information.
-    Cpu(CpuController),
-    /// Controller for the `Devices` subsystem, see `DevicesController` for more information.
-    Devices(DevicesController),
-    /// Controller for the `Freezer` subsystem, see `FreezerController` for more information.
-    Freezer(FreezerController),
-    /// Controller for the `NetCls` subsystem, see `NetClsController` for more information.
-    NetCls(NetClsController),
-    /// Controller for the `BlkIo` subsystem, see `BlkIoController` for more information.
-    BlkIo(BlkIoController),
-    /// Controller for the `PerfEvent` subsystem, see `PerfEventController` for more information.
-    PerfEvent(PerfEventController),
-    /// Controller for the `NetPrio` subsystem, see `NetPrioController` for more information.
-    NetPrio(NetPrioController),
-    /// Controller for the `HugeTlb` subsystem, see `HugeTlbController` for more information.
-    HugeTlb(HugeTlbController),
-    /// Controller for the `Rdma` subsystem, see `RdmaController` for more information.
-    Rdma(RdmaController),
-}
-
-#[doc(hidden)]
-#[derive(Eq, PartialEq, Debug)]
-pub enum Controllers {
-    Pids,
-    Mem,
-    CpuSet,
-    CpuAcct,
-    Cpu,
-    Devices,
-    Freezer,
-    NetCls,
-    BlkIo,
-    PerfEvent,
-    NetPrio,
-    HugeTlb,
-    Rdma,
-}
-
-impl Controllers {
-    pub fn to_string(&self) -> String {
-        match self {
-            Controllers::Pids => return "pids".to_string(),
-            Controllers::Mem => return "memory".to_string(),
-            Controllers::CpuSet => return "cpuset".to_string(),
-            Controllers::CpuAcct => return "cpuacct".to_string(),
-            Controllers::Cpu => return "cpu".to_string(),
-            Controllers::Devices => return "devices".to_string(),
-            Controllers::Freezer => return "freezer".to_string(),
-            Controllers::NetCls => return "net_cls".to_string(),
-            Controllers::BlkIo => return "blkio".to_string(),
-            Controllers::PerfEvent => return "perf_event".to_string(),
-            Controllers::NetPrio => return "net_prio".to_string(),
-            Controllers::HugeTlb => return "hugetlb".to_string(),
-            Controllers::Rdma => return "rdma".to_string(),
-        }
-    }
-}
-
-mod sealed {
-    use super::*;
-
-    pub trait ControllerInternal {
-        fn apply(&self, res: &Resources) -> Result<()>;
-
-        // meta stuff
-        fn control_type(&self) -> Controllers;
-        fn get_path(&self) -> &PathBuf;
-        fn get_path_mut(&mut self) -> &mut PathBuf;
-        fn get_base(&self) -> &PathBuf;
-
-        fn verify_path(&self) -> Result<()> {
-            if self.get_path().starts_with(self.get_base()) {
-                Ok(())
-            } else {
-                Err(Error::new(ErrorKind::InvalidPath))
-            }
-        }
-
-        fn open_path(&self, p: &str, w: bool) -> Result<File> {
-            let mut path = self.get_path().clone();
-            path.push(p);
-
-            self.verify_path()?;
-
-            if w {
-                match File::create(&path) {
-                    Err(e) => return Err(Error::with_cause(ErrorKind::WriteFailed, e)),
-                    Ok(file) => return Ok(file),
-                }
-            } else {
-                match File::open(&path) {
-                    Err(e) => return Err(Error::with_cause(ErrorKind::ReadFailed, e)),
-                    Ok(file) => return Ok(file),
-                }
-            }
-        }
-
-        #[doc(hidden)]
-        fn path_exists(&self, p: &str) -> bool {
-            if let Err(_) = self.verify_path() {
-                return false;
-            }
-
-            std::path::Path::new(p).exists()
-        }
-
-    }
-}
-
-pub(crate) use crate::sealed::ControllerInternal;
-
-/// A Controller is a subsystem attached to the control group.
+/// PID or thread ID for attaching a task to a cgroup.
 ///
-/// Implementors are able to control certain aspects of a control group.
-pub trait Controller {
-    #[doc(hidden)]
-    fn control_type(&self) -> Controllers;
+/// `Pid` can be converted from [`u32`] and [`&std::process::Child`].
+///
+/// ```
+/// use controlgroup::Pid;
+///
+/// let pid = Pid::from(42_u32);
+///
+/// let child = std::process::Command::new("sleep").arg("1").spawn().unwrap();
+/// let pid = Pid::from(&child);
+/// ```
+///
+/// [`u32`]: https://doc.rust-lang.org/std/primitive.u32.html
+/// [`&std::process::Child`]: https://doc.rust-lang.org/std/process/struct.Child.html
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Pid(u32); // Max PID is 2^15 on 32-bit systems, 2^22 on 64-bit systems
+                     // FIXME: ^ also true for thread IDs?
 
-    /// The file system path to the controller.
-    fn path(&self) -> &Path;
-
-    /// Apply a set of resources to the Controller, invoking its internal functions to pass the
-    /// kernel the information.
-    fn apply(&self, res: &Resources) -> Result<()>;
-
-    /// Create this controller
-    fn create(&self);
-
-    /// Does this controller already exist?
-    fn exists(&self) -> bool;
-
-    /// Delete the controller.
-    fn delete(&self);
-
-    /// Attach a task to this controller.
-    fn add_task(&self, pid: &CgroupPid) -> Result<()>;
-
-    /// Get the list of tasks that this controller has.
-    fn tasks(&self) -> Vec<CgroupPid>;
+impl From<u32> for Pid {
+    fn from(pid: u32) -> Self {
+        Self(pid)
+    }
 }
 
-impl<T> Controller for T where T: ControllerInternal {
-    fn control_type(&self) -> Controllers {
-        ControllerInternal::control_type(self)
+impl From<&std::process::Child> for Pid {
+    fn from(child: &std::process::Child) -> Self {
+        Self(child.id())
     }
+}
 
-    fn path(&self) -> &Path {
-        self.get_path()
+impl Into<u32> for Pid {
+    fn into(self) -> u32 {
+        self.0
     }
+}
 
-    /// Apply a set of resources to the Controller, invoking its internal functions to pass the
-    /// kernel the information.
-    fn apply(&self, res: &Resources) -> Result<()> {
-        ControllerInternal::apply(self, res)
+impl FromStr for Pid {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let n = s.parse::<u32>()?;
+        Ok(Self(n))
     }
+}
 
-    /// Create this controller
-    fn create(&self) {
-        self.verify_path().expect("path should be valid");
+impl Display for Pid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
-        match ::std::fs::create_dir(self.get_path()) {
-            Ok(_) => (),
-            Err(e) => warn!("error create_dir {:?}", e),
+/// Limit the maximum number or amount of a resource, or not limit.
+///
+/// `Max` implements [`FromStr`] and [`Display`]. You can convert a string into a `Max` and vice
+/// versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if failed.
+///
+/// ```
+/// use controlgroup::Max;
+///
+/// let max = "max".parse::<Max>().unwrap();
+/// assert_eq!(max, Max::Max);
+///
+/// let num = "42".parse::<Max>().unwrap();
+/// assert_eq!(num, Max::Limit(42));
+///
+/// assert_eq!(Max::Max.to_string(), "max");
+/// assert_eq!(Max::Limit(42).to_string(), "42");
+/// ```
+///
+/// `Max` also implements [`Default`], which yields `Max::Max`.
+///
+/// ```
+/// use controlgroup::Max;
+///
+/// assert_eq!(Max::default(), Max::Max);
+/// ```
+///
+/// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
+/// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
+/// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
+/// [`ErrorKind::Parse`]: enum.ErrorKind.html#variant.Parse
+///
+/// [`Default`]: https://doc.rust-lang.org/std/default/trait.Default.html
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Max {
+    /// Not limit the maximum number or amount of a resource.
+    Max,
+    /// Limits the maximum number or amount of a resource to this value.
+    Limit(u32), // only `u32` is used for the integer type of `Max` in this crate
+}
+
+impl Default for Max {
+    fn default() -> Self {
+        Self::Max
+    }
+}
+
+impl From<u32> for Max {
+    fn from(n: u32) -> Self {
+        Self::Limit(n)
+    }
+}
+
+impl FromStr for Max {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "max" => Ok(Self::Max),
+            n => Ok(Self::Limit(n.parse()?)),
         }
     }
+}
 
-    /// Does this controller already exist?
-    fn exists(&self) -> bool {
-        self.get_path().exists()
-    }
-
-    /// Delete the controller.
-    fn delete(&self) {
-        if self.get_path().exists() {
-            let _ = ::std::fs::remove_dir(self.get_path());
+impl Display for Max {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Max => write!(f, "max"),
+            Self::Limit(n) => write!(f, "{}", n),
         }
     }
+}
 
-    /// Attach a task to this controller.
-    fn add_task(&self, pid: &CgroupPid) -> Result<()> {
-        self.open_path("tasks", true).and_then(|mut file| {
-            file.write_all(pid.pid.to_string().as_ref())
-                .map_err(|e| Error::with_cause(ErrorKind::WriteFailed, e))
-        })
+/// Linux device number.
+///
+/// `Device` implements [`FromStr`] and [`Display`]. You can convert a string into a `Device` and
+/// vice versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if failed.
+///
+/// ```
+/// use controlgroup::{Device, DeviceNumber};
+///
+/// let dev = "8:16".parse::<Device>().unwrap();
+/// assert_eq!(dev, Device { major: DeviceNumber::Number(8), minor: DeviceNumber::Number(16) });
+///
+/// let dev = "8:*".parse::<Device>().unwrap();
+/// assert_eq!(dev, Device { major: DeviceNumber::Number(8), minor: DeviceNumber::Any });
+/// ```
+///
+/// ```
+/// use controlgroup::{Device, DeviceNumber};
+///
+/// let dev = Device { major: DeviceNumber::Number(8), minor: DeviceNumber::Number(16) };
+/// assert_eq!(dev.to_string(), "8:16");
+///
+/// let dev = Device { major: DeviceNumber::Number(8), minor: DeviceNumber::Any };
+/// assert_eq!(dev.to_string(), "8:*");
+/// ```
+///
+/// `Device` also implements [`From`]`<[u16; 2]>` and `From<[DeviceNumber; 2]>`.
+///
+/// ```
+/// use controlgroup::{Device, DeviceNumber};
+///
+/// assert_eq!(
+///     Device::from([8, 16]),
+///     Device { major: DeviceNumber::Number(8), minor: DeviceNumber::Number(16) }
+/// );
+///
+/// assert_eq!(
+///     Device::from([DeviceNumber::Number(1), DeviceNumber::Any]),
+///     Device { major: DeviceNumber::Number(1), minor: DeviceNumber::Any }
+/// );
+/// ```
+///
+/// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
+/// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
+/// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
+/// [`ErrorKind::Parse`]: enum.ErrorKind.html#variant.Parse
+///
+/// [`From`]: https://doc.rust-lang.org/std/convert/trait.From.html
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Device {
+    /// Major number.
+    pub major: DeviceNumber,
+    /// Minor number.
+    pub minor: DeviceNumber,
+}
+
+impl From<[u16; 2]> for Device {
+    fn from(n: [u16; 2]) -> Self {
+        Self {
+            major: n[0].into(),
+            minor: n[1].into(),
+        }
     }
+}
 
-    /// Get the list of tasks that this controller has.
-    fn tasks(&self) -> Vec<CgroupPid> {
-        self.open_path("tasks", false)
-            .and_then(|file| {
-                let bf = BufReader::new(file);
-                let mut v = Vec::new();
-                for line in bf.lines() {
-                    if let Ok(line) = line {
-                        let n = line.trim().parse().unwrap_or(0u64);
-                        v.push(n);
-                    }
+impl From<[DeviceNumber; 2]> for Device {
+    fn from(n: [DeviceNumber; 2]) -> Self {
+        Self {
+            major: n[0],
+            minor: n[1],
+        }
+    }
+}
+
+impl FromStr for Device {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let mut parts = s.split(':');
+        let major = parse::parse_next(&mut parts)?;
+        let minor = parse::parse_next(&mut parts)?;
+
+        Ok(Device { major, minor })
+    }
+}
+
+impl Display for Device {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.major, self.minor)
+    }
+}
+
+/// Device major/minor number.
+///
+/// `DeviceNumber` implements [`FromStr`] and [`Display`]. You can convert a string into a
+/// `DeviceNumber` and vice versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if
+/// failed.
+///
+/// ```
+/// use controlgroup::DeviceNumber;
+///
+/// let n = "8".parse::<DeviceNumber>().unwrap();
+/// assert_eq!(n, DeviceNumber::Number(8));
+///
+/// let n = "*".parse::<DeviceNumber>().unwrap();
+/// assert_eq!(n, DeviceNumber::Any);
+/// ```
+///
+/// ```
+/// use controlgroup::DeviceNumber;
+///
+/// assert_eq!(DeviceNumber::Number(8).to_string(), "8");
+/// assert_eq!(DeviceNumber::Any.to_string(), "*");
+/// ```
+///
+/// `DeviceNumber` also implements [`From`]`<u16>`, which results in `DeviceNumber::Number`.
+///
+/// ```
+/// use controlgroup::DeviceNumber;
+///
+/// assert_eq!(DeviceNumber::from(8), DeviceNumber::Number(8));
+/// ```
+///
+/// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
+/// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
+/// [`parse`]: https://doc.rust-lang.org/std/primitive.str.html#method.parse
+/// [`ErrorKind::Parse`]: enum.ErrorKind.html#variant.Parse
+///
+/// [`From`]: https://doc.rust-lang.org/std/convert/trait.From.html
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DeviceNumber {
+    /// Any number matches.
+    Any,
+    /// Specific number.
+    Number(u16),
+}
+
+impl From<u16> for DeviceNumber {
+    fn from(n: u16) -> Self {
+        Self::Number(n)
+    }
+}
+
+impl FromStr for DeviceNumber {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        if s == "*" {
+            Ok(Self::Any)
+        } else {
+            let n = s.parse::<u16>()?;
+            Ok(Self::Number(n))
+        }
+    }
+}
+
+impl Display for DeviceNumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use fmt::Write;
+
+        match self {
+            Self::Any => f.write_char('*'),
+            Self::Number(n) => write!(f, "{}", n),
+        }
+    }
+}
+
+/// Yields a pair of a references, each of which points to a key and a value.
+///
+/// This trait is used to convert a reference to a pair `&(K, V)` into a pair of references
+/// `(&K, &V)`.
+pub trait RefKv<K, V> {
+    /// Yields a pair of a references, each of which points to a key and a value.
+    fn ref_kv(&self) -> (&K, &V);
+}
+
+impl<K, V> RefKv<K, V> for (&K, &V) {
+    fn ref_kv(&self) -> (&K, &V) {
+        *self
+    }
+}
+
+impl<K, V> RefKv<K, V> for &(K, V) {
+    fn ref_kv(&self) -> (&K, &V) {
+        (&self.0, &self.1)
+    }
+}
+
+// Consume CPU time on the all logical cores until a condition holds. Panics if the condition does
+// not hold in the given timeout.
+// FIXME: consume system time
+#[cfg(test)]
+pub fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
+    use std::{
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
+        thread, time,
+    };
+
+    let finished = Arc::new(AtomicBool::new(false));
+
+    let handlers = (0..(num_cpus::get() - 1))
+        .map(|_| {
+            let f = finished.clone();
+            thread::spawn(move || {
+                while !f.load(Ordering::Relaxed) {
+                    // spin
                 }
-                Ok(v.into_iter().map(CgroupPid::from).collect())
-            }).unwrap_or(vec![])
-    }
-}
+            })
+        })
+        .collect::<Vec<_>>();
 
-#[doc(hidden)]
-pub trait ControllIdentifier {
-    fn controller_type() -> Controllers;
-}
+    let start = time::Instant::now();
+    while start.elapsed() < time::Duration::from_secs(timeout_secs) {
+        if condition() {
+            finished.store(true, Ordering::Relaxed);
+            for handler in handlers {
+                handler.join().expect("Failed to join a thread");
+            }
 
-/// Control group hierarchy (right now, only V1 is supported, but in the future Unified will be
-/// implemented as well).
-pub trait Hierarchy {
-    /// Returns what subsystems are supported by the hierarchy.
-    fn subsystems(&self) -> Vec<Subsystem>;
-
-    /// Returns the root directory of the hierarchy.
-    fn root(&self) -> PathBuf;
-
-    /// Return a handle to the root control group in the hierarchy.
-    fn root_control_group(&self) -> Cgroup;
-
-    /// Checks whether a certain subsystem is supported in the hierarchy.
-    ///
-    /// This is an internal function and should not be used.
-    #[doc(hidden)]
-    fn check_support(&self, sub: Controllers) -> bool;
-}
-
-/// Resource limits for the memory subsystem.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct MemoryResources {
-    /// Whether values should be applied to the controller.
-    pub update_values: bool,
-    /// How much memory (in bytes) can the kernel consume.
-    pub kernel_memory_limit: u64,
-    /// Upper limit of memory usage of the control group's tasks.
-    pub memory_hard_limit: u64,
-    /// How much memory the tasks in the control group can use when the system is under memory
-    /// pressure.
-    pub memory_soft_limit: u64,
-    /// How much of the kernel's memory (in bytes) can be used for TCP-related buffers.
-    pub kernel_tcp_memory_limit: u64,
-    /// How much memory and swap together can the tasks in the control group use.
-    pub memory_swap_limit: u64,
-    /// Controls the tendency of the kernel to swap out parts of the address space of the tasks to
-    /// disk. Lower value implies less likely.
-    ///
-    /// Note, however, that a value of zero does not mean the process is never swapped out. Use the
-    /// traditional `mlock(2)` system call for that purpose.
-    pub swappiness: u64,
-}
-
-/// Resources limits on the number of processes.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct PidResources {
-    /// Whether values should be applied to the controller.
-    pub update_values: bool,
-    /// The maximum number of processes that can exist in the control group.
-    ///
-    /// Note that attaching processes to the control group will still succeed _even_ if the limit
-    /// would be violated, however forks/clones inside the control group will have with `EAGAIN` if
-    /// they would violate the limit set here.
-    pub maximum_number_of_processes: pid::PidMax,
-}
-
-/// Resources limits about how the tasks can use the CPU.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct CpuResources {
-    /// Whether values should be applied to the controller.
-    pub update_values: bool,
-    // cpuset
-    /// A comma-separated list of CPU IDs where the task in the control group can run. Dashes
-    /// between numbers indicate ranges.
-    pub cpus: String,
-    /// Same syntax as the `cpus` field of this structure, but applies to memory nodes instead of
-    /// processors.
-    pub mems: String,
-    // cpu
-    /// Weight of how much of the total CPU time should this control group get. Note that this is
-    /// hierarchical, so this is weighted against the siblings of this control group.
-    pub shares: u64,
-    /// In one `period`, how much can the tasks run in nanoseconds.
-    pub quota: i64,
-    /// Period of time in nanoseconds.
-    pub period: u64,
-    /// This is currently a no-operation.
-    pub realtime_runtime: i64,
-    /// This is currently a no-operation.
-    pub realtime_period: u64,
-}
-
-/// A device resource that can be allowed or denied access to.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct DeviceResource {
-    /// If true, access to the device is allowed, otherwise it's denied.
-    pub allow: bool,
-    /// `'c'` for character device, `'b'` for block device; or `'a'` for all devices.
-    pub devtype: crate::devices::DeviceType,
-    /// The major number of the device.
-    pub major: i64,
-    /// The minor number of the device.
-    pub minor: i64,
-    /// Sequence of `'r'`, `'w'` or `'m'`, each denoting read, write or mknod permissions.
-    pub access: Vec<crate::devices::DevicePermissions>,
-}
-
-/// Limit the usage of devices for the control group's tasks.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct DeviceResources {
-    /// Whether values should be applied to the controller.
-    pub update_values: bool,
-    /// For each device in the list, the limits in the structure are applied.
-    pub devices: Vec<DeviceResource>,
-}
-
-/// Assigned priority for a network device.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct NetworkPriority {
-    /// The name (as visible in `ifconfig`) of the interface.
-    pub name: String,
-    /// Assigned priority.
-    pub priority: u64,
-}
-
-/// Collections of limits and tags that can be imposed on packets emitted by the tasks in the
-/// control group.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct NetworkResources {
-    /// Whether values should be applied to the controller.
-    pub update_values: bool,
-    /// The networking class identifier to attach to the packets.
-    ///
-    /// This can then later be used in iptables and such to have special rules.
-    pub class_id: u64,
-    /// Priority of the egress traffic for each interface.
-    pub priorities: Vec<NetworkPriority>,
-}
-
-/// A hugepage type and its consumption limit for the control group.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct HugePageResource {
-    /// The size of the hugepage, i.e. `2MB`, `1GB`, etc.
-    pub size: String,
-    /// The amount of bytes (of memory consumed by the tasks) that are allowed to be backed by
-    /// hugepages.
-    pub limit: u64,
-}
-
-/// Provides the ability to set consumption limit on each type of hugepages.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct HugePageResources {
-    /// Whether values should be applied to the controller.
-    pub update_values: bool,
-    /// Set a limit of consumption for each hugepages type.
-    pub limits: Vec<HugePageResource>,
-}
-
-/// Weight for a particular block device.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct BlkIoDeviceResource {
-    /// The major number of the device.
-    pub major: u64,
-    /// The minor number of the device.
-    pub minor: u64,
-    /// The weight of the device against the descendant nodes.
-    pub weight: u16,
-    /// The weight of the device against the sibling nodes.
-    pub leaf_weight: u16,
-}
-
-/// Provides the ability to throttle a device (both byte/sec, and IO op/s)
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct BlkIoDeviceThrottleResource {
-    /// The major number of the device.
-    pub major: u64,
-    /// The minor number of the device.
-    pub minor: u64,
-    /// The rate.
-    pub rate: u64,
-}
-
-/// General block I/O resource limits.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct BlkIoResources {
-    /// Whether values should be applied to the controller.
-    pub update_values: bool,
-    /// The weight of the control group against descendant nodes.
-    pub weight: u16,
-    /// The weight of the control group against sibling nodes.
-    pub leaf_weight: u16,
-    /// For each device, a separate weight (both normal and leaf) can be provided.
-    pub weight_device: Vec<BlkIoDeviceResource>,
-    /// Throttled read bytes/second can be provided for each device.
-    pub throttle_read_bps_device: Vec<BlkIoDeviceThrottleResource>,
-    /// Throttled read IO operations per second can be provided for each device.
-    pub throttle_read_iops_device: Vec<BlkIoDeviceThrottleResource>,
-    /// Throttled written bytes/second can be provided for each device.
-    pub throttle_write_bps_device: Vec<BlkIoDeviceThrottleResource>,
-    /// Throttled write IO operations per second can be provided for each device.
-    pub throttle_write_iops_device: Vec<BlkIoDeviceThrottleResource>,
-}
-
-/// The resource limits and constraints that will be set on the control group.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct Resources {
-    /// Memory usage related limits.
-    pub memory: MemoryResources,
-    /// Process identifier related limits.
-    pub pid: PidResources,
-    /// CPU related limits.
-    pub cpu: CpuResources,
-    /// Device related limits.
-    pub devices: DeviceResources,
-    /// Network related tags and limits.
-    pub network: NetworkResources,
-    /// Hugepages consumption related limits.
-    pub hugepages: HugePageResources,
-    /// Block device I/O related limits.
-    pub blkio: BlkIoResources,
-}
-
-/// A structure representing a `pid`. Currently implementations exist for `u64` and
-/// `std::process::Child`.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct CgroupPid {
-    /// The process identifier
-    pub pid: u64,
-}
-
-impl From<u64> for CgroupPid {
-    fn from(u: u64) -> CgroupPid {
-        CgroupPid { pid: u }
-    }
-}
-
-impl<'a> From<&'a std::process::Child> for CgroupPid {
-    fn from(u: &std::process::Child) -> CgroupPid {
-        CgroupPid { pid: u.id() as u64 }
-    }
-}
-
-impl Subsystem {
-    fn enter(self, path: &Path) -> Self {
-        match self {
-            Subsystem::Pid(cont) => Subsystem::Pid({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
-            Subsystem::Mem(cont) => Subsystem::Mem({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
-            Subsystem::CpuSet(cont) => Subsystem::CpuSet({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
-            Subsystem::CpuAcct(cont) => Subsystem::CpuAcct({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
-            Subsystem::Cpu(cont) => Subsystem::Cpu({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
-            Subsystem::Devices(cont) => Subsystem::Devices({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
-            Subsystem::Freezer(cont) => Subsystem::Freezer({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
-            Subsystem::NetCls(cont) => Subsystem::NetCls({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
-            Subsystem::BlkIo(cont) => Subsystem::BlkIo({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
-            Subsystem::PerfEvent(cont) => Subsystem::PerfEvent({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
-            Subsystem::NetPrio(cont) => Subsystem::NetPrio({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
-            Subsystem::HugeTlb(cont) => Subsystem::HugeTlb({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
-            Subsystem::Rdma(cont) => Subsystem::Rdma({
-                let mut c = cont.clone();
-                c.get_path_mut().push(path);
-                c
-            }),
+            return;
         }
+
+        // spin
     }
 
-    fn to_controller(&self) -> &dyn Controller {
-        match self {
-            Subsystem::Pid(cont) => cont,
-            Subsystem::Mem(cont) => cont,
-            Subsystem::CpuSet(cont) => cont,
-            Subsystem::CpuAcct(cont) => cont,
-            Subsystem::Cpu(cont) => cont,
-            Subsystem::Devices(cont) => cont,
-            Subsystem::Freezer(cont) => cont,
-            Subsystem::NetCls(cont) => cont,
-            Subsystem::BlkIo(cont) => cont,
-            Subsystem::PerfEvent(cont) => cont,
-            Subsystem::NetPrio(cont) => cont,
-            Subsystem::HugeTlb(cont) => cont,
-            Subsystem::Rdma(cont) => cont,
-        }
-    }
+    panic!("consume_cpu_until timeout")
 }

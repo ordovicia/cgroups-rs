@@ -1,56 +1,176 @@
-# cgroups-rs ![Build](https://travis-ci.org/levex/cgroups-rs.svg?branch=master)
-Native Rust library for managing control groups under Linux
+# controlgroup-rs [![Build Status](https://travis-ci.com/ordovicia/controlgroup-rs.svg?branch=master)](https://travis-ci.com/ordovicia/controlgroup-rs)
 
-Right now the crate only support the original, V1 hierarchy, however support
-is planned for the Unified hierarchy.
+Native Rust crate for operating on cgroups.
 
-# Examples
+Currently this crate supports only cgroup v1 hierarchy, implemented in `v1` module.
 
-## Create a control group using the builder pattern
+## Examples for v1 hierarchy
 
-``` rust
-// Acquire a handle for the V1 cgroup hierarchy.
-let hier = ::hierarchies::V1::new();
+### Create a cgroup controlled by the CPU subsystem
 
-// Use the builder pattern (see the documentation to create the control group)
-//
-// This creates a control group named "example" in the V1 hierarchy.
-let cg: Cgroup = CgroupBuilder::new("example", &v1)
-	.cpu()
-		.shares(85)
-		.done()
-	.build();
+```rust
+use std::path::PathBuf;
+use controlgroup::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind, Resources}};
 
-// Now `cg` is a control group that gets 85% of the CPU time in relative to
-// other control groups.
+// Define and create a new cgroup controlled by the CPU subsystem.
+let mut cgroup = cpu::Subsystem::new(
+    CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+cgroup.create()?;
 
-// Get a handle to the CPU controller.
-let cpus: &CpuController = cg.controller_of().unwrap();
-cpus.add_task(1234u64);
+// Attach the self process to the cgroup.
+let pid = Pid::from(std::process::id());
+cgroup.add_task(pid)?;
 
-// [...]
+// Define resource limits and constraints for this cgroup.
+// Here we just use the default for an example.
+let resources = Resources::default();
 
-// Finally, clean up and delete the control group.
-cg.delete();
+// Apply the resource limits.
+cgroup.apply(&resources)?;
 
-// Note that `Cgroup` does not implement `Drop` and therefore when the
-// structure is dropped, the Cgroup will stay around. This is because, later
-// you can then re-create the `Cgroup` using `load()`. We aren't too set on
-// this behavior, so it might change in the feature. Rest assured, it will be a
-// major version change.
+// Low-level file operations are also supported.
+let stat_file = cgroup.open_file_read("cpu.stat")?;
+
+// Do something ...
+
+// Now, remove self process from the cgroup.
+cgroup.remove_task(pid)?;
+
+// ... and delete the cgroup.
+cgroup.delete()?;
+
+// Note that subsystem handlers does not implement `Drop` and therefore when the
+// handler is dropped, the cgroup will stay around.
 ```
 
-# Disclaimer
+### Create a set of cgroups controlled by multiple subsystems
 
-This crate is licensed under:
+`v1::Builder` provides a way to configure cgroups in the builder pattern.
 
-- MIT License (see LICENSE-MIT); or
-- Apache 2.0 License (see LICENSE-Apache-2.0),
+```rust
+use std::{collections::HashMap, path::PathBuf};
+use controlgroup::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
 
-at your option.
+let mut cgroups =
+    // Start building a (set of) cgroup(s).
+    Builder::new(PathBuf::from("students/charlie"))
+    // Start configuring the CPU resource limits.
+    .cpu()
+        .shares(1000)
+        .cfs_quota_us(500 * 1000)
+        .cfs_period_us(1000 * 1000)
+        // Finish configuring the CPU resource limits.
+        .done()
+    // Start configuring the cpuset resource limits.
+    .cpuset()
+        .cpus([0].iter().copied().collect())
+        .mems([0].iter().copied().collect())
+        .memory_migrate(true)
+        .done()
+    .memory()
+        .limit_in_bytes(4 * (1 << 30))
+        .soft_limit_in_bytes(3 * (1 << 30))
+        .use_hierarchy(true)
+        .done()
+    .hugetlb()
+        .limit_2mb(hugetlb::Limit::Pages(4))
+        .limit_1gb(hugetlb::Limit::Pages(2))
+        .done()
+    .devices()
+        .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
+        .allow(vec!["c 1:3 mr".parse::<devices::Access>().unwrap()])
+        .done()
+    .blkio()
+        .weight(1000)
+        .weight_device([([8, 0].into(), 100)].iter().copied().collect())
+        .read_bps_device([([8, 0].into(), 10 * (1 << 20))].iter().copied().collect())
+        .write_iops_device([([8, 0].into(), 100)].iter().copied().collect())
+        .done()
+    .rdma()
+        .max(
+            [(
+                "mlx4_0".to_string(),
+                rdma::Limit {
+                    hca_handle: 2.into(),
+                    hca_object: Max::Max,
+                },
+            )]
+                .iter()
+                .cloned()
+                .collect(),
+        )
+        .done()
+    .net_prio()
+        .ifpriomap(
+            [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)]
+                .iter()
+                .cloned()
+                .collect(),
+        )
+        .done()
+    .net_cls()
+        .classid([0x10, 0x1].into())
+        .done()
+    .pids()
+        .max(42.into())
+        .done()
+    .freezer()
+        // Tasks in this cgroup will be frozen.
+        .freeze()
+        .done()
+    // Enable CPU accounting for this cgroup.
+    // cpuacct subsystem has no parameter, so this method does not return a subsystem builder,
+    // just enables the accounting.
+    .cpuacct()
+    // Enable monitoring this cgroup via `perf` tool.
+    // Like `cpuacct()` method, this method does not return a subsystem builder.
+    .perf_event()
+    // Skip creating directories for cpuacct subsystem and net_cls subsystem.
+    // This is useful when some subsystems share hierarchy with others.
+    .skip_create(vec![SubsystemKind::Cpuacct, SubsystemKind::NetCls])
+    // Actually build cgroups with the configuration.
+    .build()?;
 
-Please note that this crate is under heavy development, we will use sematic
-versioning, but during the `0.0.*` phase, no guarantees are made about
-backwards compatibility.
+let pid = std::process::id().into();
+cgroups.add_task(pid)?;
 
-Regardless, check back often and thanks for taking a look!
+// Do something ...
+
+cgroups.remove_task(pid)?;
+cgroups.delete()?;
+```
+
+## MSRV (Minimum Supported Rust Version)
+
+```
+rustc 1.37.0 (eae3437df 2019-08-13)
+```
+
+If you want to use this crate with older Rust, please leave a comment on [issue #1].
+
+[issue #1]: https://github.com/ordovicia/controlgroup-rs/issues/1
+
+## Disclaimer
+
+This project was started as a fork of [levex/cgroups-rs], and developed by
+redesigning and reimplementing the whole project.
+
+[levex/cgroups-rs] was licensed under MIT OR Apache-2.0.
+
+See [LICENSE](LICENSE) for detail.
+
+[levex/cgroups-rs]: https://github.com/levex/cgroups-rs
+
+## License
+
+Copyright 2019 Hidehito Yabuuchi \<hdht.ybuc@gmail.com\>
+
+Licensed under the MIT license <LICENSE-MIT or http://opensource.org/licenses/MIT>, or the Apache
+License, Version 2.0 <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> at your option.
+All files in the project carrying such notice may not be copied, modified, or distributed except
+according to those terms.
+
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.

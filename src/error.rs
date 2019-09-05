@@ -1,87 +1,132 @@
-use std::error::Error as StdError;
-use std::fmt;
+use std::{error::Error as StdError, fmt};
 
-/// The different types of errors that can occur while manipulating control groups.
-#[derive(Debug, Eq, PartialEq)]
-pub enum ErrorKind {
-    /// An error occured while writing to a control group file.
-    WriteFailed,
+/// Result type returned from this crate.
+pub type Result<T> = std::result::Result<T, Error>;
 
-    /// An error occured while trying to read from a control group file.
-    ReadFailed,
-
-    /// An error occured while trying to parse a value from a control group file.
-    ///
-    /// In the future, there will be some information attached to this field.
-    ParseError,
-
-    /// You tried to do something invalid.
-    ///
-    /// This could be because you tried to set a value in a control group that is not a root
-    /// control group. Or, when using unified hierarchy, you tried to add a task in a leaf node.
-    InvalidOperation,
-
-    /// The path of the control group was invalid.
-    ///
-    /// This could be caused by trying to escape the control group filesystem via a string of "..".
-    /// This crate checks against this and operations will fail with this error.
-    InvalidPath,
-
-    /// An unknown error has occured.
-    Other,
-}
-
+/// Error type that can be returned from this crate, in the [`Result::Err`] variant. The kind and
+/// lower-level source of this error can be obtained via [`kind`] and [`source`] methods,
+/// respectively.
+///
+/// [`Result::Err`]: https://doc.rust-lang.org/std/result/enum.Result.html#variant.Err
+/// [`kind`]: #method.kind
+/// [`source`]: https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.source
 #[derive(Debug)]
 pub struct Error {
     kind: ErrorKind,
-    cause: Option<Box<StdError + Send>>,
+    source: Option<Box<dyn StdError + Sync + Send + 'static>>,
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let msg = match self.kind {
-            ErrorKind::WriteFailed => "unable to write to a control group file",
-            ErrorKind::ReadFailed => "unable to read a control group file",
-            ErrorKind::ParseError => "unable to parse control group file",
-            ErrorKind::InvalidOperation => "the requested operation is invalid",
-            ErrorKind::InvalidPath => "the given path is invalid",
-            ErrorKind::Other => "an unknown error",
-        };
+/// Kinds of errors that can occur while operating on cgroups.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ErrorKind {
+    /// Failed to do an I/O operation on a cgroup file system.
+    Io,
 
-        write!(f, "{}", msg)
-    }
+    /// Failed to parse a content of a cgroup file into a value.
+    ///
+    /// In a future version, there will be some information attached to this variant.
+    Parse,
+
+    /// You passed an invalid argument.
+    ///
+    /// In a future version, this variant may have some information attached, or be replaced with
+    /// more fine-grained variants.
+    ///
+    /// Note that this crate catches not all errors caused by an invalid argument. In some cases,
+    /// the system (kernel) raises an lower-level error, and this crate returns an [`Error`] with
+    /// other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
+    /// [`Error::source`] method.
+    ///
+    /// [`Error`]: struct.Error.html
+    /// [`Error::source`]: https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.source
+    InvalidArgument,
+
+    /// You tried to do something invalid.
+    ///
+    /// In a future version, this variant may have some information attached, or be replaced with
+    /// more fine-grained variants.
+    ///
+    /// Note that this crate catches not all errors caused by an invalid operation. In some cases,
+    /// the system (kernel) raises an lower-level error, and this crate returns an [`Error`] with
+    /// other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
+    /// [`Error::source`] method.
+    ///
+    /// [`Error`]: struct.Error.html
+    /// [`Error::source`]: https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.source
+    InvalidOperation,
 }
 
 impl StdError for Error {
-    fn cause(&self) -> Option<&StdError> {
-        match self.cause {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self.source {
             Some(ref x) => Some(&**x),
             None => None,
         }
     }
 }
 
-impl Error {
-    pub(crate) fn new(kind: ErrorKind) -> Self {
-        Self {
-            kind,
-            cause: None,
-        }
-    }
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self.kind {
+            ErrorKind::Io => "Unable to do an I/O operation on a cgroup file system",
+            ErrorKind::Parse => "Unable to parse a content of a cgroup file",
+            ErrorKind::InvalidArgument => "Invalid argument",
+            ErrorKind::InvalidOperation => "Invalid operation",
+        })?;
 
-    pub(crate) fn with_cause<E>(kind: ErrorKind, cause: E) -> Self
-    where
-        E: 'static + Send + StdError,
-    {
-        Self {
-            kind,
-            cause: Some(Box::new(cause)),
+        if let Some(ref source) = self.source {
+            write!(f, ": {}", source)?;
         }
-    }
 
-    pub fn kind(&self) -> &ErrorKind {
-        &self.kind
+        Ok(())
     }
 }
 
-pub type Result<T> = ::std::result::Result<T, Error>;
+impl Error {
+    pub(crate) fn new(kind: ErrorKind) -> Self {
+        Self { kind, source: None }
+    }
+
+    pub(crate) fn with_source<E>(kind: ErrorKind, source: E) -> Self
+    where
+        E: StdError + Sync + Send + 'static,
+    {
+        Self {
+            kind,
+            source: Some(Box::new(source)),
+        }
+    }
+
+    pub(crate) fn parse<E>(source: E) -> Self
+    where
+        E: StdError + Sync + Send + 'static,
+    {
+        Self::with_source(ErrorKind::Parse, source)
+    }
+
+    /// Returns the kind of this error.
+    pub fn kind(&self) -> ErrorKind {
+        self.kind
+    }
+}
+
+macro_rules! impl_from {
+    ($source: ty, $kind: ident) => {
+        impl From<$source> for Error {
+            fn from(e: $source) -> Self {
+                Self::with_source(ErrorKind::$kind, e)
+            }
+        }
+    };
+}
+
+impl_from!(std::io::Error, Io);
+impl_from!(std::num::ParseIntError, Parse);
+
+#[cfg(test)]
+#[allow(unreachable_code, dead_code)]
+fn error_impl_sync_send() {
+    let _e: Error = unimplemented!();
+    let _: &dyn Sync = &_e;
+    let _: &dyn Send = &_e;
+}
