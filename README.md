@@ -4,6 +4,8 @@ Native Rust crate for operating on cgroups.
 
 Currently this crate supports only cgroup v1 hierarchy, implemented in `v1` module.
 
+This crate is tested on Ubuntu 16.04 (Xenial) and 18.04 (Bionic).
+
 ## Examples for v1 hierarchy
 
 ### Create a cgroup controlled by the CPU subsystem
