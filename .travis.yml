@@ -1,15 +1,29 @@
 language: rust
 
-rust:
-  - stable
-  - beta
-  - nightly
-  - 1.37.0
-
 matrix:
   include:
-    - rust: nightly
-      name: Clippy
+    - name: Xenial-stable
+      os: linux
+      dist: xenial  # 16.04
+      rust: stable
+    - name: Xenial-beta
+      os: linux
+      dist: xenial  # 16.04
+      rust: beta
+    - name: Xenial-nightly
+      os: linux
+      dist: xenial  # 16.04
+      rust: nightly
+    - name: Xenial-msrv
+      os: linux
+      dist: xenial  # 16.04
+      rust: 1.37.0
+    - name: Bionic-stable
+      os: linux
+      dist: bionic  # 18.04
+      rust: stable
+    - name: Clippy
+      rust: nightly
       script:
         - rustup component add clippy || travis_terminate 0
         - cargo clippy --tests -- -D clippy::all
