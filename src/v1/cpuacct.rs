@@ -330,7 +330,7 @@ mod tests {
         let pid = crate::Pid::from(std::process::id());
         cgroup.add_proc(pid)?;
 
-        crate::consume_cpu_until(|| cgroup.usage().unwrap() > 0, 10);
+        crate::consume_cpu_until(|| cgroup.usage().unwrap() > 0, 30);
         wait(100);
         // dbg!(cgroup.max_usage_all()?);
 

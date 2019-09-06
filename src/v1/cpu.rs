@@ -269,7 +269,7 @@ mod tests {
 
         cgroup.set_cfs_quota_us(1000)?; // 1%
 
-        crate::consume_cpu_until(|| cgroup.stat().unwrap().nr_throttled > 0, 10);
+        crate::consume_cpu_until(|| cgroup.stat().unwrap().nr_throttled > 0, 30);
         // dbg!(cgroup.stat()?);
 
         let stat = cgroup.stat()?;
@@ -342,7 +342,7 @@ throttled_time 32
 
         const CONTENT_NG_EXTRA_ROW: &str = "\
 nr_periods 256
-nr_throttled 8 
+nr_throttled 8
 throttled_time 32
 invalid 256
 ";
