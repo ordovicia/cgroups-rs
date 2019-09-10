@@ -9,6 +9,7 @@
         "classid",
         "clippy",
         "concat",
+        "controlgroup",
         "cpuacct",
         "cpus",
         "cpuset",
