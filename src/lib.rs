@@ -64,7 +64,7 @@
 //!
 //! ```no_run
 //! # fn main() -> controlgroup::Result<()> {
-//! use std::{collections::HashMap, path::PathBuf};
+//! use std::path::PathBuf;
 //! use controlgroup::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
 //!
 //! let mut cgroups =
@@ -98,9 +98,9 @@
 //!         .done()
 //!     .blkio()
 //!         .weight(1000)
-//!         .weight_device([([8, 0].into(), 100)].iter().copied().collect())
-//!         .read_bps_device([([8, 0].into(), 10 * (1 << 20))].iter().copied().collect())
-//!         .write_iops_device([([8, 0].into(), 100)].iter().copied().collect())
+//!         .weight_device([([8, 0].into(), 100)].iter().copied())
+//!         .read_bps_device([([8, 0].into(), 10 * (1 << 20))].iter().copied())
+//!         .write_iops_device([([8, 0].into(), 100)].iter().copied())
 //!         .done()
 //!     .rdma()
 //!         .max(
@@ -110,18 +110,12 @@
 //!                     hca_handle: 2.into(),
 //!                     hca_object: Max::Max,
 //!                 },
-//!             )]
-//!                 .iter()
-//!                 .cloned()
-//!                 .collect(),
+//!             )].iter().cloned(),
 //!         )
 //!         .done()
 //!     .net_prio()
 //!         .ifpriomap(
-//!             [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)]
-//!                 .iter()
-//!                 .cloned()
-//!                 .collect(),
+//!             [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)].iter().cloned(),
 //!         )
 //!         .done()
 //!     .net_cls()

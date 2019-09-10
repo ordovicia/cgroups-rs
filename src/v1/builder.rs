@@ -4,7 +4,7 @@
 //!
 //! [`Builder`]: struct.Builder.html
 
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 
 use crate::{
     v1::{cpuset, devices, freezer, hugetlb, net_cls, rdma, Resources, SubsystemKind, UnifiedRepr},
@@ -21,7 +21,7 @@ use crate::{
 ///
 /// ```no_run
 /// # fn main() -> controlgroup::Result<()> {
-/// use std::{collections::HashMap, path::PathBuf};
+/// use std::path::PathBuf;
 /// use controlgroup::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
 ///
 /// let mut cgroups =
@@ -55,9 +55,9 @@ use crate::{
 ///         .done()
 ///     .blkio()
 ///         .weight(1000)
-///         .weight_device([([8, 0].into(), 100)].iter().copied().collect())
-///         .read_bps_device([([8, 0].into(), 10 * (1 << 20))].iter().copied().collect())
-///         .write_iops_device([([8, 0].into(), 100)].iter().copied().collect())
+///         .weight_device([([8, 0].into(), 100)].iter().copied())
+///         .read_bps_device([([8, 0].into(), 10 * (1 << 20))].iter().copied())
+///         .write_iops_device([([8, 0].into(), 100)].iter().copied())
 ///         .done()
 ///     .rdma()
 ///         .max(
@@ -67,18 +67,12 @@ use crate::{
 ///                     hca_handle: 2.into(),
 ///                     hca_object: Max::Max,
 ///                 },
-///             )]
-///                 .iter()
-///                 .cloned()
-///                 .collect(),
+///             )].iter().cloned(),
 ///         )
 ///         .done()
 ///     .net_prio()
 ///         .ifpriomap(
-///             [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)]
-///                 .iter()
-///                 .cloned()
-///                 .collect(),
+///             [("lo".to_string(), 0), ("wlp1s0".to_string(), 1)].iter().cloned(),
 ///         )
 ///         .done()
 ///     .net_cls()
@@ -197,8 +191,8 @@ impl Builder {
     /// times.
     ///
     /// [`build`]: #method.build
-    pub fn skip_create(mut self, skip_subsystems: Vec<SubsystemKind>) -> Self {
-        self.skips = skip_subsystems;
+    pub fn skip_create(mut self, skip_subsystems: impl IntoIterator<Item = SubsystemKind>) -> Self {
+        self.skips = skip_subsystems.into_iter().collect();
         self
     }
 
@@ -279,6 +273,18 @@ macro_rules! gen_subsystem_builder {
 }
 
 macro_rules! gen_setter {
+    ($subsystem: ident, $desc: literal, $field: ident, $ty: ty) => {
+        gen_setter!($subsystem, $desc, $field, $field, $ty);
+    };
+
+    ($subsystem: ident, $desc: literal, $field: ident, $arg: ident, $ty: ty) => { with_doc! {
+        gen_setter!(_doc; $desc, $subsystem, $field),
+        pub fn $field(mut self, $arg: $ty) -> Self {
+            self.builder.resources.$subsystem.$field = $arg;
+            self
+        }
+    } };
+
     (some; $subsystem: ident, $desc: literal, $field: ident, $ty: ty $( as $as: ty )?) => {
         gen_setter!(some; $subsystem, $desc, $field, $field, $ty $( as $as )?);
     };
@@ -298,17 +304,15 @@ macro_rules! gen_setter {
         }
     } };
 
-    ($subsystem: ident, $desc: literal, $field: ident, $ty: ty) => {
-        gen_setter!($subsystem, $desc, $field, $field, $ty);
-    };
-
-    ($subsystem: ident, $desc: literal, $field: ident, $arg: ident, $ty: ty) => { with_doc! {
-        gen_setter!(_doc; $desc, $subsystem, $field),
-        pub fn $field(mut self, $arg: $ty) -> Self {
-            self.builder.resources.$subsystem.$field = $arg;
-            self
+    (into_iter; $subsystem: ident, $desc: literal, $field: ident, $arg: ident, $ty: ty) => {
+        with_doc! {
+            gen_setter!(_doc; $desc, $subsystem, $field),
+            pub fn $field(mut self, $arg: impl IntoIterator<Item = $ty>) -> Self {
+                self.builder.resources.$subsystem.$field = $arg.into_iter().collect();
+                self
+            }
         }
-    } };
+    };
 
     (_doc; $desc: literal, $sub: ident, $field: ident) => { concat!(
         "Sets ", $desc, ".\n\n",
@@ -515,17 +519,19 @@ gen_subsystem_builder! {
     devices, DevicesBuilder, "devices",
 
     gen_setter!(
-        devices,
+        into_iter; devices,
         "a list of allowed device accesses. `deny` list is applied first, and then `allow` list is",
         allow,
-        Vec<devices::Access>
+        allowed_devices,
+        devices::Access
     );
 
     gen_setter!(
-        devices,
+        into_iter; devices,
         "a list of denied device accesses. `deny` list is applied first, and then `allow` list is",
         deny,
-        Vec<devices::Access>
+        denied_devices,
+        devices::Access
     );
 }
 
@@ -538,7 +544,14 @@ gen_subsystem_builder! {
         weight,
         u16
     );
-    gen_setter!(blkio, "overriding weights for each device", weight_device, HashMap<Device, u16>);
+
+    gen_setter!(
+        into_iter; blkio,
+        "overriding weights for each device",
+        weight_device,
+        weight_map,
+        (Device, u16)
+    );
 
     gen_setter!(
         some; blkio,
@@ -546,40 +559,42 @@ gen_subsystem_builder! {
         leaf_weight,
         u16
     );
+
     gen_setter!(
-        blkio,
+        into_iter; blkio,
         "overriding leaf weights for each device",
         leaf_weight_device,
-        HashMap<Device, u16>
+        weight_map,
+        (Device, u16)
     );
 
     gen_setter!(
-        blkio,
+        into_iter; blkio,
         "a throttling on read access in terms of bytes/s for each device",
         read_bps_device,
-        bps,
-        HashMap<Device, u64>
+        bps_map,
+        (Device, u64)
     );
     gen_setter!(
-        blkio,
+        into_iter; blkio,
         "a throttling on write access in terms of bytes/s for each device",
         write_bps_device,
-        bps,
-        HashMap<Device, u64>
+        bps_map,
+        (Device, u64)
     );
     gen_setter!(
-        blkio,
+        into_iter; blkio,
         "a throttling on read access in terms of ops/s for each device",
         read_iops_device,
-        iops,
-        HashMap<Device, u64>
+        iops_map,
+        (Device, u64)
     );
     gen_setter!(
-        blkio,
+        into_iter; blkio,
         "a throttling on write access in terms of ops/s for each device",
         write_iops_device,
-        iops,
-        HashMap<Device, u64>
+        iops_map,
+        (Device, u64)
     );
 }
 
@@ -587,10 +602,11 @@ gen_subsystem_builder! {
     rdma, RdmaBuilder, "RDMA",
 
     gen_setter!(
-        rdma,
+        into_iter; rdma,
         "limits on the usage of RDMA/IB devices",
         max,
-        HashMap<String, rdma::Limit>
+        max_map,
+        (String, rdma::Limit)
     );
 }
 
@@ -598,10 +614,11 @@ gen_subsystem_builder! {
     net_prio, NetPrioBuilder, "net_prio",
 
     gen_setter!(
-        net_prio,
+        into_iter; net_prio,
         "a map of priorities assigned to traffic originating from this cgroup",
         ifpriomap,
-        HashMap<String, u32>
+        if_prio_map,
+        (String, u32)
     );
 }
 
@@ -684,7 +701,7 @@ mod tests {
                 // .max()
                 .done()
             .net_prio()
-                .ifpriomap(hashmap! {("lo".to_string(), 1)})
+                .ifpriomap([("lo".to_string(), 1)].iter().cloned())
                 .done()
             .net_cls()
                 .classid(class_id)
