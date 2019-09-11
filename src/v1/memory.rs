@@ -896,7 +896,7 @@ mod tests {
             .arg("-c")
             .arg(&format!(
                 "sleep 1; ary=(); for ((i=0; i<{}; i++)); do ary+=(0); done",
-                LIMIT / 64
+                LIMIT / 8
             ))
             .spawn()
             .unwrap();
