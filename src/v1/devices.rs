@@ -1,4 +1,4 @@
-//! Operations on a devices subsystem.
+//! Operations on a Devices subsystem.
 //!
 //! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
@@ -53,7 +53,7 @@ use crate::{
     Error, Result,
 };
 
-/// Handler of a devices subsystem.
+/// Handler of a Devices subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,

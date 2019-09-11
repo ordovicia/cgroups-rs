@@ -129,13 +129,13 @@
 //!         .freeze()
 //!         .done()
 //!     // Enable CPU accounting for this cgroup.
-//!     // cpuacct subsystem has no parameter, so this method does not return a subsystem builder,
+//!     // Cpuacct subsystem has no parameter, so this method does not return a subsystem builder,
 //!     // just enables the accounting.
 //!     .cpuacct()
 //!     // Enable monitoring this cgroup via `perf` tool.
 //!     // Like `cpuacct()` method, this method does not return a subsystem builder.
 //!     .perf_event()
-//!     // Skip creating directories for cpuacct subsystem and net_cls subsystem.
+//!     // Skip creating directories for Cpuacct subsystem and net_cls subsystem.
 //!     // This is useful when some subsystems share hierarchy with others.
 //!     .skip_create(vec![SubsystemKind::Cpuacct, SubsystemKind::NetCls])
 //!     // Actually build cgroups with the configuration.

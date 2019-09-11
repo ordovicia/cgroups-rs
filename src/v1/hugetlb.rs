@@ -1,4 +1,4 @@
-//! Operations on a hugetlb subsystem.
+//! Operations on a HugeTLB subsystem.
 //!
 //! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
@@ -50,7 +50,7 @@ use crate::{
     Result,
 };
 
-/// Handler of a hugetlb subsystem.
+/// Handler of a HugeTLB subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,

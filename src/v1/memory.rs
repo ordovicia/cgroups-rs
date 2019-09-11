@@ -1,4 +1,4 @@
-//! Operations on a memory subsystem.
+//! Operations on a Memory subsystem.
 //!
 //! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
@@ -59,7 +59,7 @@ use crate::{
     Error, ErrorKind, Result,
 };
 
-/// Handler of a memory subsystem.
+/// Handler of a Memory subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,

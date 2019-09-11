@@ -89,17 +89,17 @@ const CGROUPFS_MOUNT_POINT: &str = "/sys/fs/cgroup";
 pub enum SubsystemKind {
     /// CPU subsystem.
     Cpu,
-    /// cpuset subsystem.
+    /// Cpuset subsystem.
     Cpuset,
-    /// cpuacct (CPU accounting) subsystem.
+    /// Cpuacct (CPU accounting) subsystem.
     Cpuacct,
-    /// memory subsystem.
+    /// Memory subsystem.
     Memory,
-    /// hugetlb subsystem.
+    /// HugeTLB subsystem.
     HugeTlb,
-    /// devices subsystem.
+    /// Devices subsystem.
     Devices,
-    /// blkio subsystem.
+    /// BlkIo subsystem.
     BlkIo,
     /// RDMA subsystem.
     Rdma,
@@ -107,9 +107,9 @@ pub enum SubsystemKind {
     NetPrio,
     /// net_cls subsystem.
     NetCls,
-    /// pids subsystem.
+    /// Pids subsystem.
     Pids,
-    /// freezer subsystem.
+    /// Freezer subsystem.
     Freezer,
     /// perf_event subsystem.
     PerfEvent,

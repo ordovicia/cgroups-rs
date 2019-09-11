@@ -1,4 +1,4 @@
-//! Operations on a blkio subsystem.
+//! Operations on a BlkIO subsystem.
 //!
 //! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
@@ -60,7 +60,7 @@ use crate::{
     Device, Error, ErrorKind, Result,
 };
 
-/// Handler of a blkio subsystem.
+/// Handler of a BlkIO subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,

@@ -1,4 +1,4 @@
-//! Operations on a freezer subsystem.
+//! Operations on a Freezer subsystem.
 //!
 //! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
@@ -51,7 +51,7 @@ use crate::{
     Error, ErrorKind, Result,
 };
 
-/// Handler of a freezer subsystem.
+/// Handler of a Freezer subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,

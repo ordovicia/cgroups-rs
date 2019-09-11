@@ -1,4 +1,4 @@
-//! Operations on a pids subsystem.
+//! Operations on a Pids subsystem.
 //!
 //! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
@@ -47,7 +47,7 @@ use crate::{
     Max, Result,
 };
 
-/// Handler of a pids subsystem.
+/// Handler of a Pids subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,

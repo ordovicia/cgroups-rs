@@ -1,4 +1,4 @@
-//! Operations on a cpuset subsystem.
+//! Operations on a Cpuset subsystem.
 //!
 //! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
@@ -54,7 +54,7 @@ use crate::{
     Error, ErrorKind, Result,
 };
 
-/// Handler of a cpuset subsystem.
+/// Handler of a Cpuset subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,

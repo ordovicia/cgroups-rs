@@ -419,7 +419,7 @@ mod tests {
     #[test]
     fn test_unified_repr_create_delete() -> Result<()> {
         {
-            // with CPU and cpuset subsystems
+            // with CPU and Cpuset subsystems
 
             let mut cgroups = UnifiedRepr::with_subsystems(
                 gen_cgroup_name!(),
