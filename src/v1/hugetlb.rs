@@ -1,4 +1,4 @@
-//! Operations on a hugetlb subsystem.
+//! Operations on a HugeTLB subsystem.
 //!
 //! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
@@ -50,7 +50,7 @@ use crate::{
     Result,
 };
 
-/// Handler of a hugetlb subsystem.
+/// Handler of a HugeTLB subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,
@@ -89,10 +89,6 @@ impl_cgroup! {
     Subsystem, HugeTlb,
 
     /// Applies the `Some` fields in `resources.hugetlb`.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         if let Some(limit) = resources.hugetlb.limit_2mb {
             self.set_limit(HugepageSize::Mb2, limit)?;
@@ -405,8 +401,6 @@ mod tests {
 
         cgroup.delete()
     }
-
-    // TODO: test adding tasks
 
     #[test]
     fn test_subsystem_usage() -> Result<()> {

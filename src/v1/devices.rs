@@ -1,4 +1,4 @@
-//! Operations on a devices subsystem.
+//! Operations on a Devices subsystem.
 //!
 //! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
@@ -53,7 +53,7 @@ use crate::{
     Error, Result,
 };
 
-/// Handler of a devices subsystem.
+/// Handler of a Devices subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,
@@ -166,10 +166,6 @@ impl_cgroup! {
     Subsystem, Devices,
 
     /// Applies `resources.devices`. `deny` list is applied first, and then `allow` list is.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         for denied in &resources.devices.deny {
             self.deny(denied)?;

@@ -9,12 +9,17 @@ description = "Native Rust crate for operating on cgroups"
 repository = "https://github.com/orgovicia/controlgroup-rs"
 readme = "README.md"
 
-exclude = [".gitignore", ".travis.yml"]
+categories = ["os", "api-bindings", "os::unix-apis"]
+keywords = ["cgroup", "controlgroup", "linux", "container"]
+
+exclude = ["/.gitignore", "/.travis.yml", "/.vscode"]
 
 [badges]
 travis-ci = { repository = "ordovicia/controlgroup-rs" }
 
 [dependencies]
+# none
 
 [dev-dependencies]
 num_cpus = "1.10.1"
+version-sync = "0.8.1"

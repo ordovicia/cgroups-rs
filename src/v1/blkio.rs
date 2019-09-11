@@ -1,4 +1,4 @@
-//! Operations on a blkio subsystem.
+//! Operations on a BlkIO subsystem.
 //!
 //! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
@@ -60,7 +60,7 @@ use crate::{
     Device, Error, ErrorKind, Result,
 };
 
-/// Handler of a blkio subsystem.
+/// Handler of a BlkIO subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,
@@ -131,10 +131,6 @@ impl_cgroup! {
     Subsystem, BlkIo,
 
     /// Applies `resources.blkio`.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         let res = &resources.blkio;
 
@@ -524,8 +520,6 @@ mod tests {
         )
     }
 
-    // TODO: test setting device weights
-
     #[test]
     fn test_subsystem_apply() -> Result<()> {
         gen_subsystem_test!(
@@ -606,8 +600,6 @@ mod tests {
             (InvalidArgument, device, WEIGHT_MAX + 1),
         )
     }
-
-    // TODO: test throttling
 
     #[test]
     fn test_subsystem_time() -> Result<()> {

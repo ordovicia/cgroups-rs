@@ -75,7 +75,6 @@ pub struct Resources {
     pub cfs_quota_us: Option<i64>,
     /// Length of a period (in microseconds).
     pub cfs_period_us: Option<u64>,
-    // TODO: realtime support
     // pub realtime_runtime: Option<i64>,
     // pub realtime_period: Option<u64>,
 }
@@ -97,10 +96,6 @@ impl_cgroup! {
     Subsystem, Cpu,
 
     /// Applies the `Some` fields in `resources.cpu`.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         let res: &self::Resources = &resources.cpu;
 

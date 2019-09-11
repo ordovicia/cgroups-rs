@@ -1,4 +1,4 @@
-//! Operations on a cpuset subsystem.
+//! Operations on a Cpuset subsystem.
 //!
 //! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
@@ -54,7 +54,7 @@ use crate::{
     Error, ErrorKind, Result,
 };
 
-/// Handler of a cpuset subsystem.
+/// Handler of a Cpuset subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,
@@ -188,10 +188,6 @@ impl_cgroup! {
     Subsystem, Cpuset,
 
     /// Applies the `Some` fields in `resources.cpuset`.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         let res: &self::Resources = &resources.cpuset;
 
@@ -817,7 +813,6 @@ mod tests {
 
     #[test]
     fn test_subsystem_memory_pressure() -> Result<()> {
-        // TODO: test adding tasks
         gen_subsystem_test!(Cpuset, memory_pressure, 0)
     }
 
@@ -881,7 +876,7 @@ mod tests {
     #[test]
     fn test_subsystem_sched_relax_domain_level() -> Result<()> {
         // NOTE: `set_sched_relax_domain_level()` raises `io::Error` with kind `InvalidInput` on
-        // (at least) Travis-CI xenial environment
+        //       Xenial and Bionic on Travis-CI
         gen_subsystem_test!(Cpuset, sched_relax_domain_level, DOMAIN_LEVEL_MIN)
     }
 

@@ -97,10 +97,6 @@ impl_cgroup! {
     Subsystem, Rdma,
 
     /// Applies `resources.rdma.max` if it is not empty.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         let max = &resources.rdma.max;
 
@@ -241,8 +237,6 @@ impl fmt::Display for Limit {
 mod tests {
     use super::*;
     use v1::SubsystemKind;
-
-    // TODO: test on systems with RDMA/IB devices
 
     #[test]
     #[ignore] // some systems have no RDMA/IB devices

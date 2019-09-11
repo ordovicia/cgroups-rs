@@ -51,7 +51,7 @@ use crate::{
     Error, Result,
 };
 
-/// Handler of a cpuacct subsystem.
+/// Handler of a Cpuacct subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,
@@ -69,11 +69,7 @@ pub struct Stat {
 impl_cgroup! {
     Subsystem, Cpuacct,
 
-    /// Does nothing as a cpuacct subsystem is basically read-only.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
+    /// Does nothing as a Cpuacct subsystem is basically read-only.
     fn apply(&mut self, _resources: &v1::Resources) -> Result<()> {
         Ok(())
     }

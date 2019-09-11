@@ -1,4 +1,4 @@
-//! Operations on a pids subsystem.
+//! Operations on a Pids subsystem.
 //!
 //! [`Subsystem`] implements [`Cgroup`] trait and subsystem-specific operations.
 //!
@@ -47,7 +47,7 @@ use crate::{
     Max, Result,
 };
 
-/// Handler of a pids subsystem.
+/// Handler of a Pids subsystem.
 #[derive(Debug)]
 pub struct Subsystem {
     path: CgroupPath,
@@ -70,10 +70,6 @@ impl_cgroup! {
     Subsystem, Pids,
 
     /// Applies `resources.pids.max` if it is `Some`.
-    ///
-    /// See [`Cgroup::apply`] method for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         if let Some(max) = resources.pids.max {
             self.set_max(max)?;
