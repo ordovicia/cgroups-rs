@@ -242,8 +242,6 @@ mod tests {
     use super::*;
     use v1::SubsystemKind;
 
-    // TODO: test on systems with RDMA/IB devices
-
     #[test]
     #[ignore] // some systems have no RDMA/IB devices
     fn test_subsystem_create_file_exists() -> Result<()> {

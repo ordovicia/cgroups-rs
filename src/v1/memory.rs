@@ -462,7 +462,7 @@ impl Subsystem {
         }
     }
 
-    // TODO: kmem.slabinfo
+    // kmem.slabinfo
 }
 
 impl Into<v1::Resources> for Resources {
@@ -742,8 +742,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_numa_stat() -> Result<()> {
-        // tested on a non-NUMA system
-        // TODO: test on NUMA systems
+        // Assuming non-NUMA systems
 
         gen_subsystem_test!(
             Memory,

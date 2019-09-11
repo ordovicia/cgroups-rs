@@ -4,7 +4,31 @@ Native Rust crate for operating on cgroups.
 
 Currently this crate supports only cgroup v1 hierarchy, implemented in `v1` module.
 
-This crate is tested on Ubuntu 16.04 (Xenial) and 18.04 (Bionic).
+## Support
+
+### Not implemented features
+
+* CPU subsystem: Realtime thread support
+* Memory subsystem: Operation on `memory.kmem.slabinfo` file
+
+### Tested distributions
+
+This crate is tested on
+
+* Ubuntu 16.04 (Xenial)
+* Ubuntu 18.04 (Bionic)
+
+on Travis-CI.
+
+### Not tested features
+
+* Cpuset subsystem: Getting memory pressure faced by a cgroup
+* Memory subsystem: Getting per-NUMA-node statistics on NUMA systems
+* HugeTLB subsystem: Monitoring hugepage TLB usage by a cgroup
+* BlkIO subsystem:
+    * Setting weights for devices
+    * Monitoring blkio throughput consumed by a cgroup
+* RDMA subsystem
 
 ## Examples for v1 hierarchy
 

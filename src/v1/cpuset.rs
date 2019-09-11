@@ -817,7 +817,6 @@ mod tests {
 
     #[test]
     fn test_subsystem_memory_pressure() -> Result<()> {
-        // TODO: test adding tasks
         gen_subsystem_test!(Cpuset, memory_pressure, 0)
     }
 

@@ -524,8 +524,6 @@ mod tests {
         )
     }
 
-    // TODO: test setting device weights
-
     #[test]
     fn test_subsystem_apply() -> Result<()> {
         gen_subsystem_test!(
@@ -606,8 +604,6 @@ mod tests {
             (InvalidArgument, device, WEIGHT_MAX + 1),
         )
     }
-
-    // TODO: test throttling
 
     #[test]
     fn test_subsystem_time() -> Result<()> {

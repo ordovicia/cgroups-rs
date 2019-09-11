@@ -75,7 +75,6 @@ pub struct Resources {
     pub cfs_quota_us: Option<i64>,
     /// Length of a period (in microseconds).
     pub cfs_period_us: Option<u64>,
-    // TODO: realtime support
     // pub realtime_runtime: Option<i64>,
     // pub realtime_period: Option<u64>,
 }

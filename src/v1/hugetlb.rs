@@ -406,8 +406,6 @@ mod tests {
         cgroup.delete()
     }
 
-    // TODO: test adding tasks
-
     #[test]
     fn test_subsystem_usage() -> Result<()> {
         gen_test!(usage_in_bytes, 0, 0)?;
