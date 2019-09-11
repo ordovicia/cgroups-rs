@@ -9,6 +9,9 @@ description = "Native Rust crate for operating on cgroups"
 repository = "https://github.com/orgovicia/controlgroup-rs"
 readme = "README.md"
 
+categories = ["os", "api-bindings", "os::unix-apis"]
+keywords = ["cgroup", "controlgroup", "linux", "container"]
+
 exclude = [".gitignore", ".travis.yml"]
 
 [badges]
