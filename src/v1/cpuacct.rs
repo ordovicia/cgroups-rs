@@ -338,28 +338,65 @@ mod tests {
         let usage_sys = cgroup.usage_sys()?;
         let usage_user = cgroup.usage_user()?;
 
-        let usage_all_sys_sum = usage_all.iter().map(|u| u.system).sum();
-        let usage_all_user_sum = usage_all.iter().map(|u| u.user).sum();
+        let usage_all_sys_sum = usage_all.iter().map(|u| u.system).sum::<u64>();
+        let usage_all_user_sum = usage_all.iter().map(|u| u.user).sum::<u64>();
 
-        // FIXME: more permissive assertion?
-        assert_eq!(usage, usage_all_sys_sum + usage_all_user_sum);
-        assert_eq!(usage_sys, usage_all_sys_sum);
-        assert_eq!(usage_user, usage_all_user_sum);
-        assert_eq!(
+        let mut failed = false;
+
+        macro_rules! assert_sign {
+            ($left: expr, $right: expr) => {{
+                let line = line!();
+                match ($left, $right) {
+                    (left, right) if (left == 0) != (right == 0) => {
+                        eprintln!("sign-assertion failed at line {}", line);
+                        eprintln!("{}: {}", stringify!($left), left);
+                        eprintln!("{}: {}", stringify!($right), right);
+                        failed = true;
+                    }
+                    _ => {}
+                }
+            }};
+
+            (vec; $left: expr, $right: expr) => {
+                let line = line!();
+                match ($left, $right) {
+                    (left, right) => {
+                        if left.iter().all(|e| *e == 0) != right.iter().all(|e| *e == 0) {
+                            eprintln!("sign-assertion failed at line {}", line);
+                            eprintln!("{}: {:?}", stringify!($left), left);
+                            eprintln!("{}: {:?}", stringify!($right), right);
+                            failed = true;
+                        }
+                    }
+                }
+            };
+        }
+
+        assert_sign!(usage, usage_all_sys_sum + usage_all_user_sum);
+        assert_sign!(usage_sys, usage_all_sys_sum);
+        assert_sign!(usage_user, usage_all_user_sum);
+        assert_sign!(
+            vec;
             usage_percpu_sys,
             usage_all.iter().map(|u| u.system).collect::<Vec<_>>()
         );
-        assert_eq!(
+        assert_sign!(
+            vec;
             usage_percpu_user,
             usage_all.iter().map(|u| u.user).collect::<Vec<_>>()
         );
-        assert_eq!(
+        assert_sign!(
+            vec;
             usage_percpu,
             usage_all
                 .iter()
                 .map(|u| u.system + u.user)
                 .collect::<Vec<_>>()
         );
+
+        if failed {
+            panic!("sign-assertion failed");
+        }
 
         wait(100);
         cgroup.remove_proc(pid)?;
