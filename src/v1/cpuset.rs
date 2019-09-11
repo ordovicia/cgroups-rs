@@ -880,7 +880,7 @@ mod tests {
     #[test]
     fn test_subsystem_sched_relax_domain_level() -> Result<()> {
         // NOTE: `set_sched_relax_domain_level()` raises `io::Error` with kind `InvalidInput` on
-        // (at least) Travis-CI xenial environment
+        //       Xenial and Bionic on Travis-CI
         gen_subsystem_test!(Cpuset, sched_relax_domain_level, DOMAIN_LEVEL_MIN)
     }
 
