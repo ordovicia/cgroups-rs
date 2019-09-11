@@ -6,8 +6,9 @@ authors = ["Hidehito Yabuuchi <hdht.ybuc@gmail.com>"]
 license = "MIT OR Apache-2.0"
 
 description = "Native Rust crate for operating on cgroups"
-repository = "https://github.com/ordovicia/controlgroup-rs"
 readme = "README.md"
+repository = "https://github.com/ordovicia/controlgroup-rs"
+documentation = "https://docs.rs/controlgroup"
 
 categories = ["os", "api-bindings", "os::unix-apis"]
 keywords = ["cgroup", "controlgroup", "linux", "container"]
