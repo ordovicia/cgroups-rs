@@ -1,4 +1,7 @@
-# controlgroup-rs [![Build Status](https://travis-ci.com/ordovicia/controlgroup-rs.svg?branch=master)](https://travis-ci.com/ordovicia/controlgroup-rs)
+# controlgroup-rs
+
+[![Build Status](https://travis-ci.com/ordovicia/controlgroup-rs.svg?branch=master)](https://travis-ci.com/ordovicia/controlgroup-rs)
+[![Docs](https://docs.rs/mio/badge.svg)](https://docs.rs/controlgroup)
 
 Native Rust crate for operating on cgroups.
 
