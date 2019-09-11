@@ -221,7 +221,7 @@ impl Display for Pid {
     }
 }
 
-/// Limit the maximum number or amount of a resource, or not limit.
+/// Limits the maximum number or amount of a resource, or not limits.
 ///
 /// `Max` implements [`FromStr`] and [`Display`]. You can convert a string into a `Max` and vice
 /// versa. [`parse`] returns an error with kind [`ErrorKind::Parse`] if failed.
