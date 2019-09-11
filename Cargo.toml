@@ -12,7 +12,7 @@ readme = "README.md"
 categories = ["os", "api-bindings", "os::unix-apis"]
 keywords = ["cgroup", "controlgroup", "linux", "container"]
 
-exclude = [".gitignore", ".travis.yml"]
+exclude = ["/.gitignore", "/.travis.yml", "/.vscode"]
 
 [badges]
 travis-ci = { repository = "ordovicia/controlgroup-rs" }
