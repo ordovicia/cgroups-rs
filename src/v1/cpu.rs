@@ -96,10 +96,6 @@ impl_cgroup! {
     Subsystem, Cpu,
 
     /// Applies the `Some` fields in `resources.cpu`.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         let res: &self::Resources = &resources.cpu;
 

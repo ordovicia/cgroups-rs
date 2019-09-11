@@ -129,10 +129,6 @@ impl_cgroup! {
     Subsystem, NetCls,
 
     /// Applies `resources.net_cls.classid` if it is `Some`.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         if let Some(id) = resources.net_cls.classid {
             self.set_classid(id)?;

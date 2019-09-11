@@ -188,10 +188,6 @@ impl_cgroup! {
     Subsystem, Cpuset,
 
     /// Applies the `Some` fields in `resources.cpuset`.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         let res: &self::Resources = &resources.cpuset;
 

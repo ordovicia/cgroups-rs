@@ -174,10 +174,6 @@ impl_cgroup! {
 
     /// Applies the `Some` fields in `resources.memory`. `limit_in_bytes` field is set before
     /// `memsw_limit_in_bytes` is.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         macro_rules! a {
             ($field: ident, $setter: ident) => {

@@ -65,10 +65,6 @@ impl_cgroup! {
     Subsystem, NetPrio,
 
     /// Applies `resources.net_prio.ifpriomap` if it is not empty.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         let prio_map = &resources.net_prio.ifpriomap;
 
@@ -236,12 +232,12 @@ wlp1s0 invalid
 ";
 
         const CONTENT_NG_MISSING_DATA: &str = "\
-lo 
+lo
 wlp1s0 1
 ";
 
         const CONTENT_NG_EXTRA_DATA: &str = "\
-lo 
+lo
 wlp1s0 1 invalid
 ";
 

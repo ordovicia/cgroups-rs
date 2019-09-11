@@ -97,10 +97,6 @@ impl_cgroup! {
     Subsystem, Rdma,
 
     /// Applies `resources.rdma.max` if it is not empty.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         let max = &resources.rdma.max;
 

@@ -89,10 +89,6 @@ impl_cgroup! {
     Subsystem, HugeTlb,
 
     /// Applies the `Some` fields in `resources.hugetlb`.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         if let Some(limit) = resources.hugetlb.limit_2mb {
             self.set_limit(HugepageSize::Mb2, limit)?;

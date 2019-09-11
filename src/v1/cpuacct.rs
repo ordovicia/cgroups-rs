@@ -70,10 +70,6 @@ impl_cgroup! {
     Subsystem, Cpuacct,
 
     /// Does nothing as a Cpuacct subsystem is basically read-only.
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
     fn apply(&mut self, _resources: &v1::Resources) -> Result<()> {
         Ok(())
     }

@@ -230,10 +230,6 @@ impl UnifiedRepr {
     }
 
     /// Applies resource limits and constraints to each cgroup of the all supported subsystems.
-    ///
-    /// See [`Cgroup::apply`] for more information.
-    ///
-    /// [`Cgroup::apply`]: trait.Cgroup.html#tymethod.apply
     pub fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {

@@ -118,12 +118,7 @@ impl_cgroup! {
     /// Freezes or thaws tasks in this cgroup according to `resources.freezer.state`.
     ///
     /// Note that only `State::Frozen` and `State::Thawed` are valid. Applying `State::Freezing`
-    /// will return an error with kind [`ErrorKind::InvalidArgument`].
-    ///
-    /// See [`Cgroup::apply`] for general information.
-    ///
-    /// [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument
-    /// [`Cgroup::apply`]: ../trait.Cgroup.html#tymethod.apply
+    /// will return an error with kind `ErrorKind::InvalidArgument`.
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         match resources.freezer.state {
             Some(State::Frozen) => self.freeze(),
