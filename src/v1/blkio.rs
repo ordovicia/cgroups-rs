@@ -179,9 +179,9 @@ macro_rules! _gen_getter {
     };
 
     (throttle; $desc: literal, $field: ident : link) => { with_doc! { concat!(
-        gen_doc!(reads; "blkio.throttle", $desc, $field),
+        gen_doc!(reads; subsystem_file!("blkio.throttle", $field), $desc),
         gen_doc!(see; $field),
-        gen_doc!(err_read; "blkio.throttle", $field),
+        gen_doc!(err_read; subsystem_file!("blkio.throttle", $field)),
         gen_doc!(eg_read; blkio, $field)),
         pub fn $field(&self) -> Result<HashMap<Device, u64>> {
             self.open_file_read(subsystem_file!("blkio.throttle", $field)).and_then(parse_map)
@@ -189,7 +189,7 @@ macro_rules! _gen_getter {
     } };
 
     (_rec; $recursive: ident, $field: ident, $ty: ty, $parser: ident) => { with_doc! {
-        gen_doc!(reads_see; blkio, $recursive, $field),
+        gen_doc!(reads_see; subsystem_file!(blkio, $recursive), $field),
         pub fn $recursive(&self) -> Result<$ty> {
             self.open_file_read(subsystem_file!(blkio, $recursive))
                 .and_then($parser)
@@ -230,9 +230,9 @@ macro_rules! _gen_setter {
 
     (throttle; $desc: literal, $field: ident : link, $setter: ident, $arg: ident, $ty: ty) => {
         with_doc! { concat!(
-            gen_doc!(sets; "blkio.throttle", $desc, $field),
+            gen_doc!(sets; subsystem_file!("blkio.throttle", $field), $desc),
             gen_doc!(see; $field),
-            gen_doc!(err_write; "blkio.throttle", $field),
+            gen_doc!(err_write; subsystem_file!("blkio.throttle", $field)),
             gen_doc!(eg_write; blkio, $setter, [8, 0].into(), 100)),
             pub fn $setter(&mut self, device: Device, $arg: $ty) -> Result<()> {
                 use io::Write;
@@ -246,7 +246,9 @@ macro_rules! _gen_setter {
 
     (_sets_see_err_weight; $desc: literal, $field: ident) => { concat!(
         gen_doc!(
-            sets; blkio, $desc : "The value must be between 10 and 1,000 (inclusive).", $field
+            sets;
+            subsystem_file!(blkio, $field),
+            $desc : "The value must be between 10 and 1,000 (inclusive)."
         ),
         gen_doc!(see; $field),
 "# Errors
@@ -376,7 +378,7 @@ impl Subsystem {
         "Resets all statistics about block I/O performed by this cgroup,",
         " by writing to `blkio.reset_stats` file.\n\n",
         gen_doc!(see),
-        gen_doc!(err_write; blkio, reset_stats),
+        gen_doc!(err_write; subsystem_file!(blkio, reset_stats)),
         gen_doc!(eg_write; blkio, reset_stats)),
         pub fn reset_stats(&mut self) -> Result<()> {
             self.write_file("blkio.reset_stats", 0)

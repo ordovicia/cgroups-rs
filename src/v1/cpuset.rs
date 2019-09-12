@@ -351,8 +351,8 @@ impl Subsystem {
     with_doc! { concat!(
         gen_doc!(
             reads;
-            cpuset, "whether the kernel computes the memory pressure of this cgroup,",
-            memory_pressure_enabled
+            subsystem_file!(cpuset, memory_pressure_enabled),
+            "whether the kernel computes the memory pressure of this cgroup,"
          ),
         gen_doc!(see; memory_pressure_enabled),
 "# Errors
@@ -376,8 +376,8 @@ failed to read and parse `cpuset.memory_pressure_enabled` file.
     with_doc! { concat!(
         gen_doc!(
             sets;
-            cpuset, "whether the kernel computes the memory pressure of this cgroup,",
-            memory_pressure_enabled
+            subsystem_file!(cpuset, memory_pressure_enabled),
+            "whether the kernel computes the memory pressure of this cgroup,"
         ),
         gen_doc!(see; memory_pressure_enabled),
 "# Errors
@@ -451,10 +451,10 @@ failed to write to `cpuset.memory_pressure_enabled` file.
 
     with_doc! { concat!(
         gen_doc!(
-            sets; cpuset,
+            sets;
+            subsystem_file!(cpuset, sched_relax_domain_level),
             "how much work the kernel do to balance the load on this cgroup,"
-            : "The value must be between -1 and 5 (inclusive).",
-            sched_relax_domain_level
+            : "The value must be between -1 and 5 (inclusive)."
         ),
         gen_doc!(see; sched_relax_domain_level),
 "# Errors
@@ -476,12 +476,11 @@ error if failed to write to `cpuset.sched_relax_domain_level` file of this cgrou
     with_doc! { concat!(
         gen_doc!(
             reads;
-            cgroup,
-            "whether a new cpuset cgroup will copy the configuration from its parent cgroup,",
-            clone_children
+            subsystem_file!(cgroup, clone_children),
+            "whether a new cpuset cgroup will copy the configuration from its parent cgroup,"
         ),
         gen_doc!(see),
-        gen_doc!(err_read; cgroup, clone_children),
+        gen_doc!(err_read; subsystem_file!(cgroup, clone_children)),
         gen_doc!(eg_read; cpuset, clone_children)),
         pub fn clone_children(&self) -> Result<bool> {
             self.open_file_read(CLONE_CHILDREN).and_then(parse_01_bool)
@@ -491,12 +490,11 @@ error if failed to write to `cpuset.sched_relax_domain_level` file of this cgrou
     with_doc! { concat!(
         gen_doc!(
             sets;
-            cgroup,
-            "whether a new cpuset cgroup will copy the configuration from its parent cgroup,",
-            clone_children
+            subsystem_file!(cgroup, clone_children),
+            "whether a new cpuset cgroup will copy the configuration from its parent cgroup,"
         ),
         gen_doc!(see),
-        gen_doc!(err_write; cgroup, clone_children),
+        gen_doc!(err_write; subsystem_file!(cgroup, clone_children)),
         gen_doc!(eg_write; cpuset, set_clone_children, true)),
         pub fn set_clone_children(&mut self, clone: bool) -> Result<()> {
             self.write_file(CLONE_CHILDREN, clone as i32)

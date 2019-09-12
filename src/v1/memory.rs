@@ -212,21 +212,21 @@ macro_rules! _gen_getter {
         _gen_getter!($desc, $field $( : $link )?, $ty, parse);
 
         with_doc! {
-            gen_doc!(reads_see; "memory.memsw", $field, $field),
+            gen_doc!(reads_see; subsystem_file!("memory.memsw", $field), $field),
             pub fn $memsw(&self) -> Result<$ty> {
                 self.open_file_read(concat!("memory.memsw.", stringify!($field))).and_then(parse)
             }
         }
 
         with_doc! {
-            gen_doc!(reads_see; "memory.kmem", $field, $field),
+            gen_doc!(reads_see; subsystem_file!("memory.kmem", $field), $field),
             pub fn $kmem(&self) -> Result<$ty> {
                 self.open_file_read(concat!("memory.kmem.", stringify!($field))).and_then(parse)
             }
         }
 
         with_doc! {
-            gen_doc!(reads_see; "memory.kmem.tcp", $field, $field),
+            gen_doc!(reads_see; subsystem_file!("memory.kmem.tcp", $field), $field),
             pub fn $tcp(&self) -> Result<$ty> {
                 self.open_file_read(concat!("memory.kmem.tcp.", stringify!($field))).and_then(parse)
             }
@@ -302,18 +302,11 @@ impl Subsystem {
         u64
     );
 
-    _gen_getter!(
-        "the soft limit on memory usage of this cgroup",
-        soft_limit_in_bytes: link,
-        u64,
-        parse
-    );
-
     with_doc! { concat!(
         gen_doc!(
-            sets; memory,
-            "a limit on memory usage of this cgroup," : "Setting -1 removes the current limit.",
-            limit_in_bytes
+            sets;
+            subsystem_file!(memory, limit_in_bytes),
+            "a limit on memory usage of this cgroup," : "Setting -1 removes the current limit."
         ),
         gen_doc!(see; limit_in_bytes),
         _gen_setter!(err_invalid; limit_in_bytes),
@@ -360,12 +353,18 @@ impl Subsystem {
         }
     }
 
+    _gen_getter!(
+        "the soft limit on memory usage of this cgroup",
+        soft_limit_in_bytes: link,
+        u64,
+        parse
+    );
+
     with_doc! { concat!(
         gen_doc!(
-            sets; memory,
-            "a soft limit on memory usage of this cgroup,"
-            : "Setting -1 removes the current limit.",
-            soft_limit_in_bytes
+            sets;
+            subsystem_file!(memory, soft_limit_in_bytes),
+            "a soft limit on memory usage of this cgroup," : "Setting -1 removes the current limit."
         ),
         gen_doc!(see; soft_limit_in_bytes),
         _gen_setter!(err_invalid; soft_limit_in_bytes),
@@ -451,7 +450,7 @@ impl Subsystem {
     with_doc! { concat!(
         "Makes this cgroup's memory usage empty, by writing to `memory.force_empty` file.\n\n",
         gen_doc!(see),
-        gen_doc!(err_write; memory, force_empty),
+        gen_doc!(err_write; subsystem_file!(memory, force_empty)),
         gen_doc!(eg_write; memory, force_empty)),
         pub fn force_empty(&mut self) -> Result<()> {
             self.write_file("memory.force_empty", 0)

@@ -134,7 +134,7 @@ macro_rules! _gen_setter {
         with_doc! { concat!(
             $desc, " tasks in this cgroup by writing to `freezer.state` file.\n\n",
             gen_doc!(see),
-            gen_doc!(err_write; freezer, state),
+            gen_doc!(err_write; subsystem_file!(freezer, state)),
             gen_doc!(eg_write; freezer, $setter)),
             pub fn $setter(&mut self) -> Result<()> {
                 self.write_file("freezer.state", $val)
