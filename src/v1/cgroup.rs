@@ -9,9 +9,6 @@ use crate::{
     Error, ErrorKind, Pid, Result,
 };
 
-const TASKS: &str = "tasks";
-const PROCS: &str = "cgroup.procs";
-
 const NOTIFY_ON_RELEASE: &str = "notify_on_release";
 const RELEASE_AGENT: &str = "release_agent";
 
@@ -281,7 +278,7 @@ pub trait Cgroup {
         gen_doc!(err_write; "tasks"),
         gen_doc!(eg_write; cpu, add_task, std::process::id())),
         fn add_task(&mut self, pid: impl Into<Pid>) -> Result<()> {
-            fs::write(self.path().join(TASKS), format!("{}", pid.into())).map_err(Into::into)
+            fs::write(self.path().join("tasks"), format!("{}", pid.into())).map_err(Into::into)
         }
     }
 
@@ -332,7 +329,7 @@ pub trait Cgroup {
         gen_doc!(err_write; subsys_file!(cgroup, procs)),
         gen_doc!(eg_write; cpu, add_proc, std::process::id())),
         fn add_proc(&mut self, pid: impl Into<Pid>) -> Result<()> {
-            fs::write(self.path().join(PROCS), format!("{}", pid.into())).map_err(Into::into)
+            fs::write(self.path().join(subsys_file!(cgroup, procs)), format!("{}", pid.into())).map_err(Into::into)
         }
     }
 
@@ -842,18 +839,18 @@ mod tests {
         // root
         let root = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, PathBuf::new()));
         assert!([
-            TASKS,
-            PROCS,
+            "tasks",
+            subsys_file!(cgroup, procs),
             NOTIFY_ON_RELEASE,
             RELEASE_AGENT,
-            "cgroup.sane_behavior",
+            subsys_file!(cgroup, sane_behavior),
         ]
         .iter()
         .all(|f| root.file_exists(f)));
         assert!(!root.file_exists("does_not_exist"));
 
         // non-root
-        let files = [TASKS, PROCS, NOTIFY_ON_RELEASE];
+        let files = ["tasks", subsys_file!(cgroup, procs), NOTIFY_ON_RELEASE];
         let mut cgroup =
             cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;
