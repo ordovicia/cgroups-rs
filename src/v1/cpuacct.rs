@@ -110,7 +110,7 @@ impl Subsystem {
 
     _gen_getter!(
         "the per-CPU total CPU times consumed by this cgroup
-        in the system (kernel) mode (in nanoseconds)",
+         in the system (kernel) mode (in nanoseconds)",
         usage_percpu_sys,
         Vec<u64>,
         parse_vec

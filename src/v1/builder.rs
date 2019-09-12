@@ -352,7 +352,7 @@ gen_subsystem_builder! {
     gen_setter!(
         some; cpuset,
         "whether the memory used by this cgroup
-        should be migrated when memory selection is updated",
+         should be migrated when memory selection is updated",
         memory_migrate,
         enable,
         bool

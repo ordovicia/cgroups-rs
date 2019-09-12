@@ -281,7 +281,7 @@ impl Subsystem {
 
     _gen_getter!(
         "whether the memory used by this cgroup should be migrated
-        when memory selection is updated,",
+         when memory selection is updated,",
         memory_migrate: link,
         bool,
         parse_01_bool
@@ -289,7 +289,7 @@ impl Subsystem {
 
     _gen_setter!(
         "whether the memory used by this cgroup should be migrated
-        when memory selection is updated,",
+         when memory selection is updated,",
         memory_migrate: link,
         set_memory_migrate,
         enable: bool as i32,

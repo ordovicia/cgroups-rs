@@ -108,7 +108,7 @@ impl Subsystem {
     gen_getter!(
         pids,
         "the event counter, i.e. a pair of the maximum number of processes,
-        and the number of times fork failed due to the limit",
+         and the number of times fork failed due to the limit",
         events,
         (Max, u64),
         parse_events
