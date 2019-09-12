@@ -93,13 +93,13 @@ impl Subsystem {
     with_doc! { concat!(
         gen_doc!(
             sets;
-            subsystem_file!(net_prio, ifpriomap),
+            subsys_file!(net_prio, ifpriomap),
             "a map of priorities assigned to traffic originating from this cgroup,"
             : "The first element of the iterator item is traffic name,
                and the second is its priority."
         ),
         gen_doc!(see; ifpriomap),
-        gen_doc!(err_write; subsystem_file!(net_prio, ifpriomap)),
+        gen_doc!(err_write; subsys_file!(net_prio, ifpriomap)),
         gen_doc!(eg_write; net_prio, set_ifpriomap, [("lo", 0), ("wlp1s", 1)].iter())),
         pub fn set_ifpriomap<I, T, K>(&mut self, prio_map: I) -> Result<()>
         where

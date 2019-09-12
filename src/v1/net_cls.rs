@@ -144,11 +144,11 @@ impl Subsystem {
     with_doc! { concat!(
         gen_doc!(
             reads;
-            subsystem_file!(net_cls, classid),
+            subsys_file!(net_cls, classid),
             "the class ID of network packets from this cgroup,"
         ),
         gen_doc!(see; classid),
-        gen_doc!(err_read; subsystem_file!(net_cls, classid)),
+        gen_doc!(err_read; subsys_file!(net_cls, classid)),
         gen_doc!(eg_read; net_cls, classid)),
         pub fn classid(&self) -> Result<ClassId> {
             let raw: u32 = self.open_file_read(CLASSID).and_then(parse)?;
@@ -159,11 +159,11 @@ impl Subsystem {
     with_doc! { concat!(
         gen_doc!(
             sets;
-            subsystem_file!(net_cls, classid),
+            subsys_file!(net_cls, classid),
             "a class ID to network packets from this cgroup,"
         ),
         gen_doc!(see; classid),
-        gen_doc!(err_write; subsystem_file!(net_cls, classid)),
+        gen_doc!(err_write; subsys_file!(net_cls, classid)),
         gen_doc!(eg_write; net_cls, set_classid, [0x10, 0x1].into())),
         pub fn set_classid(&mut self, id: ClassId) -> Result<()> {
             let raw: u32 = id.into();

@@ -13,7 +13,7 @@ macro_rules! gen_doc {
         $( " ", $detail, )? "\n\n",
     ) };
     (sets_see; $file_prefix: literal, $field: ident, $method: ident) => { concat!(
-        "Writes to `", subsystem_file!($file_prefix, $field), "` file.",
+        "Writes to `", subsys_file!($file_prefix, $field), "` file.",
         gen_doc!(_see_method; $method)
     ) };
 
@@ -79,12 +79,12 @@ macro_rules! gen_getter {
         $ty: ty,
         $parser: ident
     ) => { with_doc! { concat!(
-        gen_doc!(reads; subsystem_file!($subsystem, $field), $desc $( : $detail )?),
+        gen_doc!(reads; subsys_file!($subsystem, $field), $desc $( : $detail )?),
         _link!($field $( : $link )?),
-        gen_doc!(err_read; subsystem_file!($subsystem, $field)),
+        gen_doc!(err_read; subsys_file!($subsystem, $field)),
         gen_doc!(eg_read; $subsystem, $field)),
         pub fn $field(&self) -> Result<$ty> {
-            self.open_file_read(subsystem_file!($subsystem, $field)).and_then($parser)
+            self.open_file_read(subsys_file!($subsystem, $field)).and_then($parser)
         }
     } };
 }
@@ -107,7 +107,7 @@ macro_rules! gen_setter {
             $( $val ),*
         ),
         pub fn $setter(&mut self, $field: $ty) -> Result<()> {
-            self.write_file(subsystem_file!($subsystem, $field), $field)
+            self.write_file(subsys_file!($subsystem, $field), $field)
         }
     } };
 
@@ -128,7 +128,7 @@ macro_rules! gen_setter {
             $( $val ),*
         ),
         pub fn $setter(&mut self, $arg: $ty) -> Result<()> {
-            self.write_file(subsystem_file!($subsystem, $field), $arg $( as $as )?)
+            self.write_file(subsys_file!($subsystem, $field), $arg $( as $as )?)
         }
     } };
 
@@ -140,9 +140,9 @@ macro_rules! gen_setter {
         $setter: ident,
         $( $val: expr ),*
     ) => { concat!(
-        gen_doc!(sets; subsystem_file!($subsystem, $field), $desc $( : $detail )?),
+        gen_doc!(sets; subsys_file!($subsystem, $field), $desc $( : $detail )?),
         _link!($field $( : $link )?),
-        gen_doc!(err_write; subsystem_file!($subsystem, $field)),
+        gen_doc!(err_write; subsys_file!($subsystem, $field)),
         gen_doc!(eg_write; $subsystem, $setter, $( $val ),*)
     ) };
 }

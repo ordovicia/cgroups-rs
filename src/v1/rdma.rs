@@ -121,13 +121,13 @@ impl Subsystem {
 
     with_doc! { concat!(
         gen_doc!(
-            sets; subsystem_file!(rdma, max),
+            sets; subsys_file!(rdma, max),
             "usage limits on RDMA/IB devices"
              : "The first element of the iterator item is device name,
                 and the second is limit for the device."
         ),
         gen_doc!(see; max),
-        gen_doc!(err_write; subsystem_file!(rdma, max)),
+        gen_doc!(err_write; subsys_file!(rdma, max)),
         gen_doc!(
             eg_write;
             rdma,

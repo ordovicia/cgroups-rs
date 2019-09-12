@@ -184,10 +184,10 @@ macro_rules! _gen_setter {
         $desc, " this cgroup to perform a type of access to devices with specific type and number,",
         " by writing to `devices.", stringify!($field), "` file.\n\n",
         gen_doc!(see; $field),
-        gen_doc!(err_write; subsystem_file!(devices, $field)),
+        gen_doc!(err_write; subsys_file!(devices, $field)),
         gen_doc!(eg_write; devices, $field, &"c 8:0 rm".parse::<devices::Access>()?)),
         pub fn $field(&mut self, access: &Access) -> Result<()> {
-            self.write_file(subsystem_file!(devices, $field), access)
+            self.write_file(subsys_file!(devices, $field), access)
         }
     } };
 }
