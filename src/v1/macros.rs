@@ -87,6 +87,23 @@ macro_rules! gen_getter {
             self.open_file_read(subsys_file!($subsys, $field)).and_then($parser)
         }
     } };
+
+    (
+        cgroup;
+        $file: expr,
+        $desc: literal $( : $detail: literal )?,
+        $getter: ident,
+        $ty: ty,
+        $parser: ident
+    ) => { with_doc! { concat!(
+        gen_doc!(reads; $file, $desc $( : $detail )?),
+        gen_doc!(see),
+        gen_doc!(err_read; $file),
+        gen_doc!(eg_read; cpu, $getter)),
+        fn $getter(&self) -> Result<$ty> {
+            self.open_file_read($file).and_then($parser)
+        }
+    } };
 }
 
 macro_rules! gen_setter {
