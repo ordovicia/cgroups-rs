@@ -14,6 +14,7 @@ const PROCS: &str = "cgroup.procs";
 
 const NOTIFY_ON_RELEASE: &str = "notify_on_release";
 const RELEASE_AGENT: &str = "release_agent";
+const SANE_BEHAVIOR: &str = "cgroup.sane_behavior";
 
 // NOTE: Keep the example below in sync with README.md and lib.rs
 
@@ -545,6 +546,41 @@ pub trait Cgroup {
         fs::write(self.path().join(RELEASE_AGENT), agent_path.as_ref()).map_err(Into::into)
     }
 
+    /// Reads whether the subsystem of this cgroup is forced to follow "sane behavior", from
+    /// `cgroup.sane_behavior` file.
+    ///
+    /// See the kernel's documentation for more information about this field.
+    ///
+    /// # Errors
+    ///
+    /// This file is present only in the root cgroup. If you call this method on a non-root cgroup,
+    /// an error is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup, returns
+    /// an error if failed to read `cgroup.sane_behavior` file.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> controlgroup::Result<()> {
+    /// use std::path::PathBuf;
+    /// use controlgroup::{v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
+    ///
+    /// let cgroup = cpu::Subsystem::new(
+    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+    ///
+    /// let sane_behavior = cgroup.sane_behavior()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation
+    fn sane_behavior(&self) -> Result<bool> {
+        if !self.is_root() {
+            return Err(Error::new(ErrorKind::InvalidOperation));
+        }
+
+        self.open_file_read(SANE_BEHAVIOR).and_then(parse_01_bool)
+    }
+
     /// Returns whether a file with the given name exists in this cgroup.
     ///
     /// # Examples
@@ -904,12 +940,40 @@ mod tests {
     }
 
     #[test]
+    fn test_cgroup_sane_behavior() -> Result<()> {
+        let root = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, PathBuf::new()));
+        assert_eq!(root.sane_behavior()?, false);
+
+        Ok(())
+    }
+
+    #[test]
+    fn err_cgroup_sane_behavior() -> Result<()> {
+        let mut cgroup =
+            cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
+        cgroup.create()?;
+
+        assert_eq!(
+            cgroup.sane_behavior().unwrap_err().kind(),
+            ErrorKind::InvalidOperation
+        );
+
+        cgroup.delete()
+    }
+
+    #[test]
     fn test_cgroup_file_exists() -> Result<()> {
         // root
         let root = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, PathBuf::new()));
-        assert!([TASKS, PROCS, NOTIFY_ON_RELEASE, RELEASE_AGENT]
-            .iter()
-            .all(|f| root.file_exists(f)));
+        assert!([
+            TASKS,
+            PROCS,
+            NOTIFY_ON_RELEASE,
+            RELEASE_AGENT,
+            SANE_BEHAVIOR
+        ]
+        .iter()
+        .all(|f| root.file_exists(f)));
         assert!(!root.file_exists("does_not_exist"));
 
         // non-root
