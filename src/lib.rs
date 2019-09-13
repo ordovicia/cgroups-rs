@@ -522,16 +522,3 @@ pub fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
 
     panic!("consume_cpu_until timeout")
 }
-
-#[cfg(test)]
-mod tests {
-    // #[test]
-    // fn test_readme_deps() {
-    //     version_sync::assert_markdown_deps_updated!("README.md");
-    // }
-
-    #[test]
-    fn test_html_root_url() {
-        version_sync::assert_html_root_url_updated!("src/lib.rs");
-    }
-}
