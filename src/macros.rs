@@ -5,7 +5,7 @@ macro_rules! with_doc {
     };
 }
 
-macro_rules! subsystem_file {
+macro_rules! subsys_file {
     ($subsystem: ident, $field: ident) => {
         concat!(stringify!($subsystem), ".", stringify!($field))
     };
@@ -48,8 +48,8 @@ macro_rules! hashmap {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_subsystem_file() {
-        assert_eq!(subsystem_file!(cgroup, procs), "cgroup.procs");
+    fn test_subsys_file() {
+        assert_eq!(subsys_file!(cgroup, procs), "cgroup.procs");
     }
 
     #[test]

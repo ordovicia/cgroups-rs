@@ -179,19 +179,19 @@ macro_rules! _gen_getter {
     };
 
     (throttle; $desc: literal, $field: ident : link) => { with_doc! { concat!(
-        gen_doc!(reads; "blkio.throttle", $desc, $field),
+        gen_doc!(reads; subsys_file!("blkio.throttle", $field), $desc),
         gen_doc!(see; $field),
-        gen_doc!(err_read; "blkio.throttle", $field),
+        gen_doc!(err_read; subsys_file!("blkio.throttle", $field)),
         gen_doc!(eg_read; blkio, $field)),
         pub fn $field(&self) -> Result<HashMap<Device, u64>> {
-            self.open_file_read(subsystem_file!("blkio.throttle", $field)).and_then(parse_map)
+            self.open_file_read(subsys_file!("blkio.throttle", $field)).and_then(parse_map)
         }
     } };
 
     (_rec; $recursive: ident, $field: ident, $ty: ty, $parser: ident) => { with_doc! {
-        gen_doc!(reads_see; blkio, $recursive, $field),
+        gen_doc!(reads_see; subsys_file!(blkio, $recursive), $field),
         pub fn $recursive(&self) -> Result<$ty> {
-            self.open_file_read(subsystem_file!(blkio, $recursive))
+            self.open_file_read(subsys_file!(blkio, $recursive))
                 .and_then($parser)
         }
     } };
@@ -209,7 +209,7 @@ macro_rules! _gen_setter {
                 return Err(Error::new(ErrorKind::InvalidArgument));
             }
 
-            self.write_file(subsystem_file!(blkio, $field), weight)
+            self.write_file(subsys_file!(blkio, $field), weight)
         }
     } };
 
@@ -223,21 +223,21 @@ macro_rules! _gen_setter {
                 return Err(Error::new(ErrorKind::InvalidArgument));
             }
 
-            let mut file = self.open_file_write(subsystem_file!(blkio, $field))?;
+            let mut file = self.open_file_write(subsys_file!(blkio, $field))?;
             write!(file, "{} {}", device, weight).map_err(Into::into)
         }
     } };
 
     (throttle; $desc: literal, $field: ident : link, $setter: ident, $arg: ident, $ty: ty) => {
         with_doc! { concat!(
-            gen_doc!(sets; "blkio.throttle", $desc, $field),
+            gen_doc!(sets; subsys_file!("blkio.throttle", $field), $desc),
             gen_doc!(see; $field),
-            gen_doc!(err_write; "blkio.throttle", $field),
+            gen_doc!(err_write; subsys_file!("blkio.throttle", $field)),
             gen_doc!(eg_write; blkio, $setter, [8, 0].into(), 100)),
             pub fn $setter(&mut self, device: Device, $arg: $ty) -> Result<()> {
                 use io::Write;
 
-                let mut file = self.open_file_write(subsystem_file!("blkio.throttle", $field))?;
+                let mut file = self.open_file_write(subsys_file!("blkio.throttle", $field))?;
                 // write!(file, "{} {}", device, $arg).map_err(Into::into) // not work
                 file.write_all(format!("{} {}", device, $arg).as_bytes()).map_err(Into::into)
             }
@@ -246,13 +246,15 @@ macro_rules! _gen_setter {
 
     (_sets_see_err_weight; $desc: literal, $field: ident) => { concat!(
         gen_doc!(
-            sets; blkio, $desc : "The value must be between 10 and 1,000 (inclusive).", $field
+            sets;
+            subsys_file!(blkio, $field),
+            $desc : "The value must be between 10 and 1,000 (inclusive)."
         ),
         gen_doc!(see; $field),
 "# Errors
 
 Returns an error with kind [`ErrorKind::InvalidArgument`] if the weight is out-of-range. Returns an
-error if failed to write to `", subsystem_file!(blkio, $field), "` file of this cgroup.
+error if failed to write to `", subsys_file!(blkio, $field), "` file of this cgroup.
 
 [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument\n\n",
     ) };
@@ -376,7 +378,7 @@ impl Subsystem {
         "Resets all statistics about block I/O performed by this cgroup,",
         " by writing to `blkio.reset_stats` file.\n\n",
         gen_doc!(see),
-        gen_doc!(err_write; blkio, reset_stats),
+        gen_doc!(err_write; subsys_file!(blkio, reset_stats)),
         gen_doc!(eg_write; blkio, reset_stats)),
         pub fn reset_stats(&mut self) -> Result<()> {
             self.write_file("blkio.reset_stats", 0)

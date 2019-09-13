@@ -104,9 +104,9 @@ impl_cgroup! {
 macro_rules! _gen_getter {
     ($desc: literal, $in_bytes: ident, $in_pages: ident) => {
         with_doc! { concat!(
-            gen_doc!(reads; "hugetlb.<hugepage size>", $desc, $in_bytes),
+            gen_doc!(reads; subsys_file!("hugetlb.<hugepage size>", $in_bytes), $desc),
             gen_doc!(see),
-            gen_doc!(err_read; "hugetlb.<hugepage size>", $in_bytes),
+            gen_doc!(err_read; subsys_file!("hugetlb.<hugepage size>", $in_bytes)),
             gen_doc!(eg_read; hugetlb, $in_bytes, hugetlb::HugepageSize::Mb2)),
             pub fn $in_bytes(&self, size: HugepageSize) -> Result<u64> {
                 self.open_file_read(&format!("hugetlb.{}.{}", size, stringify!($in_bytes)))
@@ -164,9 +164,13 @@ impl Subsystem {
     );
 
     with_doc! { concat!(
-        gen_doc!(sets; "hugetlb.<hugepage size>", "a limit of hugepage TLB usage", limit_in_bytes),
+        gen_doc!(
+            sets;
+            subsys_file!("hugetlb.<hugepage size>", limit_in_bytes),
+            "a limit of hugepage TLB usage"
+        ),
         gen_doc!(see),
-        gen_doc!(err_write; "hugetlb.<hugepage size>", limit_in_bytes),
+        gen_doc!(err_write; subsys_file!("hugetlb.<hugepage size>", limit_in_bytes)),
         gen_doc!(
             eg_write; hugetlb,
             set_limit, hugetlb::HugepageSize::Mb2, hugetlb::Limit::Pages(4)
@@ -208,12 +212,11 @@ impl Subsystem {
     with_doc! { concat!(
         gen_doc!(
             reads;
-            "hugetlb.<hugepage size>",
-            "the number of allocation failure due to the limit,",
-            failcnt
+            subsys_file!("hugetlb.<hugepage size>", failcnt),
+            "the number of allocation failure due to the limit,"
         ),
         gen_doc!(see),
-        gen_doc!(err_read; "hugetlb.<hugepage size>", failcnt),
+        gen_doc!(err_read; subsys_file!("hugetlb.<hugepage size>", failcnt)),
         gen_doc!(eg_read; hugetlb, failcnt, hugetlb::HugepageSize::Mb2)),
         pub fn failcnt(&self, size: HugepageSize) -> Result<u64> {
             self.open_file_read(&format!("hugetlb.{}.{}", size, FAILCNT))
