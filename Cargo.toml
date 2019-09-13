@@ -1,6 +1,6 @@
 [package]
 name = "controlgroup"
-version = "0.2.0" # NOTE: Update `html_root_url` attribute in lib.rs
+version = "0.2.1" # NOTE: Update `html_root_url` attribute in lib.rs
 edition = "2018"
 authors = ["Hidehito Yabuuchi <hdht.ybuc@gmail.com>"]
 license = "MIT OR Apache-2.0"

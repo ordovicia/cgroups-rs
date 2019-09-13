@@ -11,7 +11,7 @@
 )]
 // Clippy's suggestion causes many compile error
 #![allow(clippy::string_lit_as_bytes)]
-#![doc(html_root_url = "https://docs.rs/controlgroup/0.2.0")]
+#![doc(html_root_url = "https://docs.rs/controlgroup/0.2.1")]
 
 //! Native Rust crate for operating on cgroups.
 //!
