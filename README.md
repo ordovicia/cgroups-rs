@@ -11,6 +11,9 @@ Currently this crate supports only cgroup v1 hierarchy, implemented in `v1` modu
 
 ### Not implemented features
 
+These features are not yet implemented in a convenient way, but you can read and write cgroup files
+directly via low-level APIs.
+
 * CPU subsystem: Realtime thread support
 * Memory subsystem: Operation on `memory.kmem.slabinfo` file
 
@@ -175,9 +178,8 @@ If you want to use this crate with older Rust, please leave a comment on [issue 
 
 ## Disclaimer
 
-This project was started as a fork of [levex/cgroups-rs], and developed by
-redesigning and reimplementing the whole project.
-
+This project was started as a fork of [levex/cgroups-rs], and developed by redesigning and
+reimplementing the whole project.
 [levex/cgroups-rs] was licensed under MIT OR Apache-2.0.
 
 See [LICENSE](LICENSE) for detail.

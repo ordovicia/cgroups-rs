@@ -11,7 +11,7 @@
 )]
 // Clippy's suggestion causes many compile error
 #![allow(clippy::string_lit_as_bytes)]
-#![doc(html_root_url = "https://docs.rs/controlgroup/0.2.0")]
+#![doc(html_root_url = "https://docs.rs/controlgroup/0.2.1")]
 
 //! Native Rust crate for operating on cgroups.
 //!
@@ -521,17 +521,4 @@ pub fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
     }
 
     panic!("consume_cpu_until timeout")
-}
-
-#[cfg(test)]
-mod tests {
-    // #[test]
-    // fn test_readme_deps() {
-    //     version_sync::assert_markdown_deps_updated!("README.md");
-    // }
-
-    #[test]
-    fn test_html_root_url() {
-        version_sync::assert_html_root_url_updated!("src/lib.rs");
-    }
 }
