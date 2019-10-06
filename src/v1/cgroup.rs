@@ -222,6 +222,7 @@ pub trait Cgroup {
     ///             shares: Some(1024),
     ///             cfs_quota_us: Some(500 * 1000),
     ///             cfs_period_us: Some(1000 * 1000),
+    ///             ..cpu::Resources::default()
     ///         },
     ///         ..Resources::default()
     ///     };

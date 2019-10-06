@@ -14,8 +14,7 @@ Currently this crate supports only cgroup v1 hierarchy, implemented in `v1` modu
 These features are not yet implemented in a convenient way, but you can read and write cgroup files
 directly via low-level APIs.
 
-* CPU subsystem: Realtime thread support
-* Memory subsystem: Operation on `memory.kmem.slabinfo` file
+* Memory subsystem: Reading `memory.kmem.slabinfo` file
 
 ### Tested distributions
 
@@ -28,6 +27,7 @@ on Travis-CI.
 
 ### Not tested features
 
+* CPU subsystem: Reading and writing parameters for scheduling realtime tasks
 * Cpuset subsystem: Getting memory pressure faced by a cgroup
 * Memory subsystem: Getting per-NUMA-node statistics on NUMA systems
 * HugeTLB subsystem: Monitoring hugepage TLB usage by a cgroup

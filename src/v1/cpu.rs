@@ -22,6 +22,7 @@
 //!     shares: Some(1024),
 //!     cfs_quota_us: Some(500_000),
 //!     cfs_period_us: Some(1_000_000),
+//!     ..cpu::Resources::default()
 //! };
 //!
 //! // Apply the resource limit to this cgroup.
@@ -75,8 +76,13 @@ pub struct Resources {
     pub cfs_quota_us: Option<i64>,
     /// Length of a period (in microseconds).
     pub cfs_period_us: Option<u64>,
-    // pub realtime_runtime: Option<i64>,
-    // pub realtime_period: Option<u64>,
+
+    /// Total available CPU time for realtime tasks in this cgroup within a period (in microseconds).
+    ///
+    /// Setting -1 removes the current limit.
+    pub rt_runtime_us: Option<i64>,
+    /// Length of a period for realtime tasks (in microseconds).
+    pub rt_period_us: Option<u64>,
 }
 
 /// Throttling statistics of a cgroup.
@@ -108,8 +114,10 @@ impl_cgroup! {
         }
 
         a!(shares, set_shares);
-        a!(cfs_period_us, set_cfs_period_us);
         a!(cfs_quota_us, set_cfs_quota_us);
+        a!(cfs_period_us, set_cfs_period_us);
+        a!(rt_runtime_us, set_rt_runtime_us);
+        a!(rt_period_us, set_rt_period_us);
 
         Ok(())
     }
@@ -135,9 +143,13 @@ impl Subsystem {
         parse
     );
     gen_setter!(
-        cpu, "total available CPU time within a period (in microseconds)"
-        : "Setting -1 removes the current limit.",
-        cfs_quota_us : link, set_cfs_quota_us, quota: i64, 500 * 1000
+        cpu,
+        "total available CPU time within a period (in microseconds)"
+            : "Setting -1 removes the current limit.",
+        cfs_quota_us : link,
+        set_cfs_quota_us,
+        quota: i64,
+        500 * 1000
     );
 
     gen_getter!(
@@ -152,6 +164,39 @@ impl Subsystem {
         "length of period (in microseconds)",
         cfs_period_us: link,
         set_cfs_period_us,
+        period: u64,
+        1000 * 1000
+    );
+
+    gen_getter!(
+        cpu,
+        "the total available CPU time for realtime tasks within a period (in microseconds)",
+        rt_runtime_us: link,
+        i64,
+        parse
+    );
+    gen_setter!(
+        cpu,
+        "total available CPU time for realtime tasks within a period (in microseconds)"
+            : "Setting -1 removes the current limit.",
+        rt_runtime_us : link,
+        set_rt_runtime_us,
+        runtime: i64,
+        500 * 1000
+    );
+
+    gen_getter!(
+        cpu,
+        "the length of period for realtime tasks (in microseconds)",
+        rt_period_us: link,
+        u64,
+        parse
+    );
+    gen_setter!(
+        cpu,
+        "the length of period for realtime tasks (in microseconds)",
+        rt_period_us: link,
+        set_rt_period_us,
         period: u64,
         1000 * 1000
     );
@@ -232,6 +277,8 @@ mod tests {
                 shares: Some(1024),
                 cfs_quota_us: Some(100_000),
                 cfs_period_us: Some(1_000_000),
+                rt_runtime_us: None,
+                rt_period_us: None,
             },
             (shares, 1024),
             (cfs_quota_us, 100_000),
