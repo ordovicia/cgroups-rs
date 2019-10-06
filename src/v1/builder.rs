@@ -333,9 +333,21 @@ gen_subsystem_builder! {
     cpu, CpuBuilder, "CPU",
 
     gen_setter!(some; cpu, "CPU time shares", shares, u64);
-    gen_setter!(some; cpu, "length of period (in microseconds)", cfs_period_us, u64);
+
     gen_setter!(
         some; cpu, "total available CPU time within a period (in microseconds)", cfs_quota_us, i64
+    );
+    gen_setter!(some; cpu, "length of period (in microseconds)", cfs_period_us, u64);
+
+    gen_setter!(
+        some;
+        cpu,
+        "total available CPU time for realtime tasks within a period (in microseconds)",
+        rt_runtime_us,
+        i64
+     );
+    gen_setter!(
+        some; cpu, "length of period for realtime tasks (in microseconds)", rt_period_us, u64
     );
 }
 
