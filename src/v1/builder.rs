@@ -22,7 +22,10 @@ use crate::{
 /// ```no_run
 /// # fn main() -> controlgroup::Result<()> {
 /// use std::path::PathBuf;
-/// use controlgroup::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
+/// use controlgroup::{
+///     Max,
+///     v1::{devices, hugetlb::{self, HugepageSize}, net_cls, rdma, Builder, SubsystemKind},
+/// };
 ///
 /// let mut cgroups =
 ///     // Start building a (set of) cgroup(s).
@@ -46,8 +49,12 @@ use crate::{
 ///         .use_hierarchy(true)
 ///         .done()
 ///     .hugetlb()
-///         .limit_2mb(hugetlb::Limit::Pages(4))
-///         .limit_1gb(hugetlb::Limit::Pages(2))
+///         .limits(
+///             [
+///                 (HugepageSize::Mb2, hugetlb::Limit::Pages(4)),
+///                 (HugepageSize::Gb1, hugetlb::Limit::Pages(2)),
+///             ].iter().copied()
+///         )
 ///         .done()
 ///     .devices()
 ///         .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
@@ -496,23 +503,13 @@ gen_subsystem_builder! {
 gen_subsystem_builder! {
     hugetlb, HugeTlbBuilder, "hugetlb",
 
-    /// Sets a limit on usage of 2 MB hugepage TLB.
-    ///
-    /// See [`hugetlb::Subsystem::set_limit`](../hugetlb/struct.Subsystem.html#method.set_limit) for
-    /// more information.
-    pub fn limit_2mb(mut self, limit: hugetlb::Limit) -> Self {
-        self.builder.resources.hugetlb.limit_2mb = Some(limit);
-        self
-    }
-
-    /// Sets a limit on usage of 1 GB hugepage TLB.
-    ///
-    /// See [`hugetlb::Subsystem::set_limit`](../hugetlb/struct.Subsystem.html#method.set_limit) for
-    /// more information.
-    pub fn limit_1gb(mut self, limit: hugetlb::Limit) -> Self {
-        self.builder.resources.hugetlb.limit_1gb = Some(limit);
-        self
-    }
+    gen_setter!(
+        into_iter; hugetlb,
+        "a map of limits on hugepage TLB usage",
+        limits,
+        limits,
+        (hugetlb::HugepageSize, hugetlb::Limit)
+    );
 }
 
 gen_subsystem_builder! {
@@ -671,6 +668,8 @@ mod tests {
     fn test_builder() -> Result<()> {
         #![allow(clippy::identity_op)]
 
+        use crate::v1::hugetlb::HugepageSize;
+
         const GB: u64 = 1 << 30;
 
         let id_set = [0].iter().copied().collect::<cpuset::IdSet>();
@@ -689,7 +688,12 @@ mod tests {
                 .soft_limit_in_bytes(1 * GB)
                 .done()
             .hugetlb()
-                .limit_1gb(hugetlb::Limit::Pages(1))
+                .limits(
+                    [
+                        (HugepageSize::Mb2, hugetlb::Limit::Pages(4)),
+                        (HugepageSize::Gb1, hugetlb::Limit::Pages(2)),
+                    ].iter().copied()
+                )
                 .done()
             .devices()
                 .deny(vec!["a".parse::<devices::Access>().unwrap()])
@@ -724,8 +728,15 @@ mod tests {
             cgroups
                 .hugetlb()
                 .unwrap()
+                .limit_in_pages(hugetlb::HugepageSize::Mb2)?,
+            4,
+        );
+        assert_eq!(
+            cgroups
+                .hugetlb()
+                .unwrap()
                 .limit_in_pages(hugetlb::HugepageSize::Gb1)?,
-            1
+            2,
         );
         assert!(cgroups.devices().unwrap().list()?.is_empty());
         assert_eq!(cgroups.blkio().unwrap().leaf_weight()?, 1000);

@@ -10,7 +10,10 @@
 //! ```no_run
 //! # fn main() -> controlgroup::Result<()> {
 //! use std::path::PathBuf;
-//! use controlgroup::{Pid, v1::{self, hugetlb, Cgroup, CgroupPath, SubsystemKind}};
+//! use controlgroup::{
+//!     Pid,
+//!     v1::{self, hugetlb::{self, HugepageSize, Limit}, Cgroup, CgroupPath, SubsystemKind},
+//! };
 //!
 //! let mut hugetlb_cgroup = hugetlb::Subsystem::new(
 //!     CgroupPath::new(SubsystemKind::HugeTlb, PathBuf::from("students/charlie")));
@@ -18,8 +21,10 @@
 //!
 //! // Define a resource limit about how many hugepage TLB a cgroup can use.
 //! let resources = hugetlb::Resources {
-//!     limit_2mb: Some(hugetlb::Limit::Pages(1)),
-//!     limit_1gb: Some(hugetlb::Limit::Pages(1)),
+//!     limits: [
+//!         (hugetlb::HugepageSize::Mb2, Limit::Pages(1)),
+//!         (hugetlb::HugepageSize::Gb1, Limit::Pages(1)),
+//!     ].iter().copied().collect(),
 //! };
 //!
 //! // Apply the resource limit.
@@ -42,7 +47,7 @@
 //!
 //! [Documentation/cgroup-v1/hugetlb.txt]: https://www.kernel.org/doc/Documentation/cgroup-v1/hugetlb.txt
 
-use std::{fmt, path::PathBuf};
+use std::{collections::HashMap, fmt, path::PathBuf};
 
 use crate::{
     parse::parse,
@@ -61,10 +66,8 @@ pub struct Subsystem {
 /// See the kernel's documentation for more information about the fields.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
-    /// How many 2 MB size hugepage TLBs this cgroup can use.
-    pub limit_2mb: Option<Limit>,
-    /// How many 1 GB size hugepage TLBs this cgroup can use.
-    pub limit_1gb: Option<Limit>,
+    /// How many hugepage TLBs this cgroup can use for each hugepage size.
+    pub limits: HashMap<HugepageSize, Limit>,
 }
 
 /// Limit on hugepage TLB usage in different units.
@@ -76,11 +79,25 @@ pub enum Limit {
     Pages(u64),
 }
 
-/// Supported hugepage sizes.
+/// Hugepage sizes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum HugepageSize {
+    /// 8 KB hugepage.
+    Kb8,
+    /// 64 KB hugepage.
+    Kb64,
+    /// 256 KB hugepage.
+    Kb256,
+    /// 1 MB hugepage.
+    Mb1,
     /// 2 MB hugepage.
     Mb2,
+    /// 4 MB hugepage.
+    Mb4,
+    /// 16 MB hugepage.
+    Mb16,
+    /// 256 MB hugepage.
+    Mb256,
     /// 1 GB hugepage.
     Gb1,
 }
@@ -88,13 +105,10 @@ pub enum HugepageSize {
 impl_cgroup! {
     Subsystem, HugeTlb,
 
-    /// Applies the `Some` fields in `resources.hugetlb`.
+    /// Applies `resources.hugetlb.limits` if it is not empty.
     fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
-        if let Some(limit) = resources.hugetlb.limit_2mb {
-            self.set_limit(HugepageSize::Mb2, limit)?;
-        }
-        if let Some(limit) = resources.hugetlb.limit_1gb {
-            self.set_limit(HugepageSize::Gb1, limit)?;
+        for (&size, &limit) in &resources.hugetlb.limits {
+            self.set_limit(size, limit)?;
         }
 
         Ok(())
@@ -118,7 +132,7 @@ macro_rules! _gen_getter {
             "Reads ", $desc, " in pages. See [`", stringify!($in_bytes), "`](#method.",
             stringify!($in_bytes), ") method for more information."),
             pub fn $in_pages(&self, size: HugepageSize) -> Result<u64> {
-                self.$in_bytes(size).map(|b| bytes_to_pages(b, size))
+                self.$in_bytes(size).map(|b| size.bytes_to_pages(b))
             }
         }
     };
@@ -194,7 +208,7 @@ impl Subsystem {
     ///
     /// [`set_limit`]: #method.set_limit
     pub fn set_limit_in_pages(&mut self, size: HugepageSize, pages: u64) -> Result<()> {
-        self.set_limit_in_bytes(size, pages_to_bytes(pages, size))
+        self.set_limit_in_bytes(size, size.pages_to_bytes(pages))
     }
 
     _gen_getter!(
@@ -225,23 +239,6 @@ impl Subsystem {
     }
 }
 
-const MB2_BYTES_PER_PAGE: u64 = 2 << 20;
-const GB1_BYTES_PER_PAGE: u64 = 1 << 30;
-
-fn bytes_to_pages(bytes: u64, size: HugepageSize) -> u64 {
-    match size {
-        HugepageSize::Mb2 => bytes / MB2_BYTES_PER_PAGE,
-        HugepageSize::Gb1 => bytes / GB1_BYTES_PER_PAGE,
-    }
-}
-
-fn pages_to_bytes(pages: u64, size: HugepageSize) -> u64 {
-    match size {
-        HugepageSize::Mb2 => pages * MB2_BYTES_PER_PAGE,
-        HugepageSize::Gb1 => pages * GB1_BYTES_PER_PAGE,
-    }
-}
-
 impl Into<v1::Resources> for Resources {
     fn into(self) -> v1::Resources {
         v1::Resources {
@@ -251,12 +248,57 @@ impl Into<v1::Resources> for Resources {
     }
 }
 
+impl HugepageSize {
+    fn bytes_to_pages(self, bytes: u64) -> u64 {
+        match self {
+            Self::Kb8 => bytes / (8 << 10),
+            Self::Kb64 => bytes / (64 << 10),
+            Self::Kb256 => bytes / (256 << 10),
+
+            Self::Mb1 => bytes / (1 << 20),
+            Self::Mb2 => bytes / (2 << 20),
+            Self::Mb4 => bytes / (4 << 20),
+            Self::Mb16 => bytes / (16 << 20),
+            Self::Mb256 => bytes / (256 << 20),
+
+            Self::Gb1 => bytes / (1 << 30),
+        }
+    }
+
+    fn pages_to_bytes(self, pages: u64) -> u64 {
+        match self {
+            Self::Kb8 => pages * (8 << 10),
+            Self::Kb64 => pages * (64 << 10),
+            Self::Kb256 => pages * (256 << 10),
+
+            Self::Mb1 => pages * (1 << 20),
+            Self::Mb2 => pages * (2 << 20),
+            Self::Mb4 => pages * (4 << 20),
+            Self::Mb16 => pages * (16 << 20),
+            Self::Mb256 => pages * (256 << 20),
+
+            Self::Gb1 => pages * (1 << 30),
+        }
+    }
+}
+
 impl fmt::Display for HugepageSize {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Mb2 => write!(f, "2MB"),
-            Self::Gb1 => write!(f, "1GB"),
-        }
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Kb8 => "8KB",
+                Self::Kb64 => "64KB",
+                Self::Kb256 => "256KB",
+                Self::Mb1 => "1MB",
+                Self::Mb2 => "2MB",
+                Self::Mb4 => "4MB",
+                Self::Mb16 => "16MB",
+                Self::Mb256 => "256MB",
+                Self::Gb1 => "1GB",
+            }
+        )
     }
 }
 
@@ -291,8 +333,10 @@ mod tests {
 
         cgroup.apply(
             &Resources {
-                limit_2mb: Some(Limit::Pages(4)),
-                limit_1gb: Some(Limit::Pages(2)),
+                limits: [(Mb2, Limit::Pages(4)), (Gb1, Limit::Pages(2))]
+                    .iter()
+                    .copied()
+                    .collect(),
             }
             .into(),
         )?;
@@ -426,29 +470,29 @@ mod tests {
     fn test_bytes_to_pages() {
         #![allow(clippy::identity_op)]
 
-        assert_eq!(bytes_to_pages(1 * (1 << 20), Mb2), 0);
-        assert_eq!(bytes_to_pages(1 * (1 << 21), Mb2), 1);
-        assert_eq!(bytes_to_pages(4 * (1 << 21) - 1, Mb2), 3);
-        assert_eq!(bytes_to_pages(4 * (1 << 21), Mb2), 4);
-        assert_eq!(bytes_to_pages(4 * (1 << 21) + 1, Mb2), 4);
+        assert_eq!(Mb2.bytes_to_pages(1 * (1 << 20)), 0);
+        assert_eq!(Mb2.bytes_to_pages(1 * (1 << 21)), 1);
+        assert_eq!(Mb2.bytes_to_pages(4 * (1 << 21) - 1), 3);
+        assert_eq!(Mb2.bytes_to_pages(4 * (1 << 21)), 4);
+        assert_eq!(Mb2.bytes_to_pages(4 * (1 << 21) + 1), 4);
 
-        assert_eq!(bytes_to_pages(1 * (1 << 29), Gb1), 0);
-        assert_eq!(bytes_to_pages(1 * (1 << 30), Gb1), 1);
-        assert_eq!(bytes_to_pages(4 * (1 << 30) - 1, Gb1), 3);
-        assert_eq!(bytes_to_pages(4 * (1 << 30), Gb1), 4);
-        assert_eq!(bytes_to_pages(4 * (1 << 30) + 1, Gb1), 4);
+        assert_eq!(Gb1.bytes_to_pages(1 * (1 << 29)), 0);
+        assert_eq!(Gb1.bytes_to_pages(1 * (1 << 30)), 1);
+        assert_eq!(Gb1.bytes_to_pages(4 * (1 << 30) - 1), 3);
+        assert_eq!(Gb1.bytes_to_pages(4 * (1 << 30)), 4);
+        assert_eq!(Gb1.bytes_to_pages(4 * (1 << 30) + 1), 4);
     }
 
     #[test]
     fn test_pages_to_bytes() {
         #![allow(clippy::identity_op)]
 
-        assert_eq!(pages_to_bytes(0, Mb2), 0);
-        assert_eq!(pages_to_bytes(1, Mb2), 1 * (1 << 21));
-        assert_eq!(pages_to_bytes(4, Mb2), 4 * (1 << 21));
+        assert_eq!(Mb2.pages_to_bytes(0), 0);
+        assert_eq!(Mb2.pages_to_bytes(1), 1 * (1 << 21));
+        assert_eq!(Mb2.pages_to_bytes(4), 4 * (1 << 21));
 
-        assert_eq!(pages_to_bytes(0, Gb1), 0);
-        assert_eq!(pages_to_bytes(1, Gb1), 1 * (1 << 30));
-        assert_eq!(pages_to_bytes(4, Gb1), 4 * (1 << 30));
+        assert_eq!(Gb1.pages_to_bytes(0), 0);
+        assert_eq!(Gb1.pages_to_bytes(1), 1 * (1 << 30));
+        assert_eq!(Gb1.pages_to_bytes(4), 4 * (1 << 30));
     }
 }
