@@ -571,7 +571,10 @@ mod tests {
         resources.cpu.shares = Some(1000);
         resources.cpuset.cpus = Some(id_set.clone());
         resources.memory.limit_in_bytes = Some(1 * GB as i64);
-        resources.hugetlb.limit_2mb = Some(hugetlb::Limit::Pages(1));
+        resources.hugetlb.limits = [(hugetlb::HugepageSize::Mb2, hugetlb::Limit::Pages(1))]
+            .iter()
+            .copied()
+            .collect();
         resources.devices.deny = vec!["a".parse::<devices::Access>().unwrap()];
         resources.blkio.weight = Some(1000);
         // resources.rdma.max =

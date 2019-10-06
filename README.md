@@ -81,7 +81,10 @@ cgroup.delete()?;
 
 ```rust
 use std::path::PathBuf;
-use controlgroup::{Max, v1::{devices, hugetlb, net_cls, rdma, Builder, SubsystemKind}};
+use controlgroup::{
+    Max,
+    v1::{devices, hugetlb::{self, HugepageSize}, net_cls, rdma, Builder, SubsystemKind},
+};
 
 let mut cgroups =
     // Start building a (set of) cgroup(s).
@@ -105,8 +108,12 @@ let mut cgroups =
         .use_hierarchy(true)
         .done()
     .hugetlb()
-        .limit_2mb(hugetlb::Limit::Pages(4))
-        .limit_1gb(hugetlb::Limit::Pages(2))
+        .limits(
+            [
+                (HugepageSize::Mb2, hugetlb::Limit::Pages(4)),
+                (HugepageSize::Gb1, hugetlb::Limit::Pages(2)),
+            ].iter().copied()
+        )
         .done()
     .devices()
         .deny(vec!["a *:* rwm".parse::<devices::Access>().unwrap()])
