@@ -82,12 +82,6 @@ mod tests {
             ErrorKind::Parse
         );
 
-        let none: Option<&str> = None;
-        assert_eq!(
-            parse_next::<i32, _, _>(none.iter()).unwrap_err().kind(),
-            ErrorKind::Parse
-        );
-
         assert_eq!(
             parse_next::<i32, _, &str>(iter::empty())
                 .unwrap_err()
@@ -99,14 +93,11 @@ mod tests {
     #[test]
     fn test_parse_vec() {
         assert_eq!(parse_vec::<i32, _>("".as_bytes()).unwrap(), vec![]);
-
         assert_eq!(parse_vec::<i32, _>("0".as_bytes()).unwrap(), vec![0]);
-
         assert_eq!(
             parse_vec::<i32, _>("0 1 2 3".as_bytes()).unwrap(),
             vec![0, 1, 2, 3]
         );
-
         assert_eq!(
             parse_vec::<bool, _>("true false true".as_bytes()).unwrap(),
             vec![true, false, true]
@@ -129,6 +120,7 @@ mod tests {
             parse_01_bool("2".as_bytes()).unwrap_err().kind(),
             ErrorKind::Parse
         );
+
         assert_eq!(
             parse_01_bool("invalid".as_bytes()).unwrap_err().kind(),
             ErrorKind::Parse

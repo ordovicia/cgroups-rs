@@ -489,6 +489,7 @@ impl<K, V> RefKv<K, V> for &(K, V) {
 
 // Consume CPU time on the all logical cores until a condition holds. Panics if the condition does
 // not hold in the given timeout.
+//
 // FIXME: consume system time
 #[cfg(test)]
 pub fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
@@ -504,9 +505,9 @@ pub fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
 
     let handlers = (0..(num_cpus::get() - 1))
         .map(|_| {
-            let f = finished.clone();
+            let fin = finished.clone();
             thread::spawn(move || {
-                while !f.load(Ordering::Relaxed) {
+                while !fin.load(Ordering::Relaxed) {
                     // spin
                 }
             })
