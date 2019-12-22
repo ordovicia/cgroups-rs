@@ -5,7 +5,7 @@
 //! [devices], [blkio], [RDMA], [net_prio], [net_cls], [pids], [freezer], and [perf_event]
 //! subsystems.
 //!
-//! [`Cgroup`] trait defines the common operations on a cgroup. Each subsystem handler implements
+//! [`Cgroup`] trait defines the common operations on a cgroup. All subsystem handlers implement
 //! this trait and subsystem-specific operations.
 //!
 //! [`UnifiedRepr`] provides an access to a set of cgroups in the v1 hierarchies as if it is in a v2
@@ -115,7 +115,7 @@ pub enum SubsystemKind {
     PerfEvent,
 }
 
-/// Compound of resource limits and constraints for each subsystem.
+/// Compound of resource limits and constraints for all subsystems.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Resources {
     /// Resource limit on how much CPU time this cgroup can use.

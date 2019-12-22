@@ -125,7 +125,7 @@ impl_from!(std::num::ParseIntError, Parse);
 
 #[cfg(test)]
 #[allow(unreachable_code, dead_code)]
-fn error_impl_sync_send() {
+fn test_error_impl_sync_send() {
     let _e: Error = unimplemented!();
     let _: &dyn Sync = &_e;
     let _: &dyn Send = &_e;

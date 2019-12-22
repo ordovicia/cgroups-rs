@@ -11,7 +11,7 @@ use crate::{
     Device, Result,
 };
 
-// NOTE: Keep the example below in sync with README.md and lib.rs
+// NOTE: Keep the example below in sync with `README.md` and `lib.rs`
 
 /// Cgroup builder.
 ///
@@ -279,13 +279,13 @@ macro_rules! gen_subsystem_builder {
     };
 }
 
-macro_rules! gen_setter {
+macro_rules! _gen_setter {
     ($subsystem: ident, $desc: literal, $field: ident, $ty: ty) => {
-        gen_setter!($subsystem, $desc, $field, $field, $ty);
+        _gen_setter!($subsystem, $desc, $field, $field, $ty);
     };
 
     ($subsystem: ident, $desc: literal, $field: ident, $arg: ident, $ty: ty) => { with_doc! {
-        gen_setter!(_doc; $desc, $subsystem, $field),
+        _gen_setter!(_doc; $desc, $subsystem, $field),
         pub fn $field(mut self, $arg: $ty) -> Self {
             self.builder.resources.$subsystem.$field = $arg;
             self
@@ -293,7 +293,7 @@ macro_rules! gen_setter {
     } };
 
     (some; $subsystem: ident, $desc: literal, $field: ident, $ty: ty $( as $as: ty )?) => {
-        gen_setter!(some; $subsystem, $desc, $field, $field, $ty $( as $as )?);
+        _gen_setter!(some; $subsystem, $desc, $field, $field, $ty $( as $as )?);
     };
 
     (
@@ -304,7 +304,7 @@ macro_rules! gen_setter {
         $arg: ident,
         $ty: ty $( as $as: ty )?
     ) => { with_doc! {
-        gen_setter!(_doc; $desc, $subsystem, $field),
+        _gen_setter!(_doc; $desc, $subsystem, $field),
         pub fn $field(mut self, $arg: $ty) -> Self {
             self.builder.resources.$subsystem.$field = Some($arg $( as $as )*);
             self
@@ -313,7 +313,7 @@ macro_rules! gen_setter {
 
     (into_iter; $subsystem: ident, $desc: literal, $field: ident, $arg: ident, $ty: ty) => {
         with_doc! {
-            gen_setter!(_doc; $desc, $subsystem, $field),
+            _gen_setter!(_doc; $desc, $subsystem, $field),
             pub fn $field(mut self, $arg: impl IntoIterator<Item = $ty>) -> Self {
                 self.builder.resources.$subsystem.$field = $arg.into_iter().collect();
                 self
@@ -332,21 +332,21 @@ macro_rules! gen_setter {
 gen_subsystem_builder! {
     cpu, CpuBuilder, "CPU",
 
-    gen_setter!(some; cpu, "CPU time shares", shares, u64);
+    _gen_setter!(some; cpu, "CPU time shares", shares, u64);
 
-    gen_setter!(
+    _gen_setter!(
         some; cpu, "total available CPU time within a period (in microseconds)", cfs_quota_us, i64
     );
-    gen_setter!(some; cpu, "length of period (in microseconds)", cfs_period_us, u64);
+    _gen_setter!(some; cpu, "length of period (in microseconds)", cfs_period_us, u64);
 
-    gen_setter!(
+    _gen_setter!(
         some;
         cpu,
         "total available CPU time for realtime tasks within a period (in microseconds)",
         rt_runtime_us,
         i64
      );
-    gen_setter!(
+    _gen_setter!(
         some; cpu, "length of period for realtime tasks (in microseconds)", rt_period_us, u64
     );
 }
@@ -354,21 +354,21 @@ gen_subsystem_builder! {
 gen_subsystem_builder! {
     cpuset, CpusetBuilder, "cpuset",
 
-    gen_setter!(
+    _gen_setter!(
         some; cpuset,
         "a set of CPUs this cgroup can run",
         cpus,
         cpuset::IdSet
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; cpuset,
         "a set of memory nodes this cgroup can use",
         mems,
         cpuset::IdSet
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; cpuset,
         "whether the memory used by this cgroup
          should be migrated when memory selection is updated",
@@ -377,7 +377,7 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; cpuset,
         "whether the selected CPUs should be exclusive to this cgroup",
         cpu_exclusive,
@@ -385,7 +385,7 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; cpuset,
         "whether the selected memory nodes should be exclusive to this cgroup",
         mem_exclusive,
@@ -393,7 +393,7 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; cpuset,
         "whether this cgroup is \"hardwalled\"",
         mem_hardwall,
@@ -412,7 +412,7 @@ gen_subsystem_builder! {
         self
     }
 
-    gen_setter!(
+    _gen_setter!(
         some; cpuset,
         "whether file system buffers are spread across the selected memory nodes",
         memory_spread_page,
@@ -420,7 +420,7 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; cpuset,
         "whether file system buffers are spread across the selected memory nodes",
         memory_spread_slab,
@@ -428,7 +428,7 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; cpuset,
         "whether the kernel balances the load across the selected CPUs",
         sched_load_balance,
@@ -436,7 +436,7 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; cpuset,
         "how much work the kernel do to balance the load on this cgroup",
         sched_relax_domain_level,
@@ -448,7 +448,7 @@ gen_subsystem_builder! {
 gen_subsystem_builder! {
     memory, MemoryBuilder, "memory",
 
-    gen_setter!(
+    _gen_setter!(
         some; memory,
         "limit on memory usage by this cgroup",
         limit_in_bytes,
@@ -456,7 +456,7 @@ gen_subsystem_builder! {
         u64 as i64 // not i64 because setting -1 to a new cgroup does not make sense
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; memory,
         "limit on total of memory and swap usage by this cgroup",
         memsw_limit_in_bytes,
@@ -464,7 +464,7 @@ gen_subsystem_builder! {
         u64 as i64
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; memory,
         "limit on kernel memory usage by this cgroup",
         kmem_limit_in_bytes,
@@ -472,7 +472,7 @@ gen_subsystem_builder! {
         u64 as i64
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; memory,
         "limit on kernel memory usage for TCP by this cgroup",
         kmem_tcp_limit_in_bytes,
@@ -480,7 +480,7 @@ gen_subsystem_builder! {
         u64 as i64
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; memory,
         "soft limit on memory usage by this cgroup",
         soft_limit_in_bytes,
@@ -488,7 +488,7 @@ gen_subsystem_builder! {
         u64 as i64
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; memory,
         "whether pages may be recharged to the new cgroup when a task is moved",
         move_charge_at_immigrate,
@@ -496,14 +496,14 @@ gen_subsystem_builder! {
         bool
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; memory,
         "the kernel's tendency to swap out pages consumed by this cgroup",
         swappiness,
         u64
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; memory,
         "whether the OOM killer tries to reclaim memory from the self and descendant cgroups",
         use_hierarchy,
@@ -515,7 +515,7 @@ gen_subsystem_builder! {
 gen_subsystem_builder! {
     hugetlb, HugeTlbBuilder, "hugetlb",
 
-    gen_setter!(
+    _gen_setter!(
         into_iter; hugetlb,
         "a map of limits on hugepage TLB usage",
         limits,
@@ -527,7 +527,7 @@ gen_subsystem_builder! {
 gen_subsystem_builder! {
     devices, DevicesBuilder, "devices",
 
-    gen_setter!(
+    _gen_setter!(
         into_iter; devices,
         "a list of allowed device accesses. `deny` list is applied first, and then `allow` list is",
         allow,
@@ -535,7 +535,7 @@ gen_subsystem_builder! {
         devices::Access
     );
 
-    gen_setter!(
+    _gen_setter!(
         into_iter; devices,
         "a list of denied device accesses. `deny` list is applied first, and then `allow` list is",
         deny,
@@ -547,14 +547,14 @@ gen_subsystem_builder! {
 gen_subsystem_builder! {
     blkio, BlkIoBuilder, "blkio",
 
-    gen_setter!(
+    _gen_setter!(
         some; blkio,
         "a relative weight of block I/O performed by this cgroup",
         weight,
         u16
     );
 
-    gen_setter!(
+    _gen_setter!(
         into_iter; blkio,
         "overriding weights for each device",
         weight_device,
@@ -562,14 +562,14 @@ gen_subsystem_builder! {
         (Device, u16)
     );
 
-    gen_setter!(
+    _gen_setter!(
         some; blkio,
         "a weight this cgroup has while competing against descendant cgroups",
         leaf_weight,
         u16
     );
 
-    gen_setter!(
+    _gen_setter!(
         into_iter; blkio,
         "overriding leaf weights for each device",
         leaf_weight_device,
@@ -577,28 +577,28 @@ gen_subsystem_builder! {
         (Device, u16)
     );
 
-    gen_setter!(
+    _gen_setter!(
         into_iter; blkio,
         "a throttling on read access in terms of bytes/s for each device",
         read_bps_device,
         bps_map,
         (Device, u64)
     );
-    gen_setter!(
+    _gen_setter!(
         into_iter; blkio,
         "a throttling on write access in terms of bytes/s for each device",
         write_bps_device,
         bps_map,
         (Device, u64)
     );
-    gen_setter!(
+    _gen_setter!(
         into_iter; blkio,
         "a throttling on read access in terms of ops/s for each device",
         read_iops_device,
         iops_map,
         (Device, u64)
     );
-    gen_setter!(
+    _gen_setter!(
         into_iter; blkio,
         "a throttling on write access in terms of ops/s for each device",
         write_iops_device,
@@ -610,7 +610,7 @@ gen_subsystem_builder! {
 gen_subsystem_builder! {
     rdma, RdmaBuilder, "RDMA",
 
-    gen_setter!(
+    _gen_setter!(
         into_iter; rdma,
         "limits on the usage of RDMA/IB devices",
         max,
@@ -622,7 +622,7 @@ gen_subsystem_builder! {
 gen_subsystem_builder! {
     net_prio, NetPrioBuilder, "net_prio",
 
-    gen_setter!(
+    _gen_setter!(
         into_iter; net_prio,
         "a map of priorities assigned to traffic originating from this cgroup",
         ifpriomap,
@@ -647,7 +647,7 @@ gen_subsystem_builder! {
 gen_subsystem_builder! {
     pids, PidsBuilder, "pids",
 
-    gen_setter!(
+    _gen_setter!(
         some; pids,
         "a maximum number of tasks this cgroup can have",
         max,

@@ -116,12 +116,7 @@ macro_rules! gen_setter {
         $( $val: expr ),*
     ) => { with_doc! {
         gen_setter!(
-            _doc;
-            $subsys,
-            $desc $( : $detail )?,
-            $field $( : $link )?,
-            $setter,
-            $( $val ),*
+            _doc; $subsys, $desc $( : $detail )?, $field $( : $link )?, $setter, $( $val ),*
         ),
         pub fn $setter(&mut self, $field: $ty) -> Result<()> {
             self.write_file(subsys_file!($subsys, $field), $field)
@@ -137,12 +132,7 @@ macro_rules! gen_setter {
         $( $val: expr ),*
     ) => { with_doc! {
         gen_setter!(
-            _doc;
-            $subsys,
-            $desc $( : $detail )?,
-            $field $( : $link )?,
-            $setter,
-            $( $val ),*
+            _doc; $subsys, $desc $( : $detail )?, $field $( : $link )?, $setter, $( $val ),*
         ),
         pub fn $setter(&mut self, $arg: $ty) -> Result<()> {
             self.write_file(subsys_file!($subsys, $field), $arg $( as $as )?)
@@ -166,7 +156,7 @@ macro_rules! gen_setter {
 
 #[cfg(test)]
 macro_rules! gen_subsystem_test {
-    // Test create, file_exists, and delete
+    // Test `create`, `file_exists`, and `delete`
     ($kind: ident, [ $( $file: literal ),* $(, )?]) => { {
         use crate::v1::{CgroupPath, SubsystemKind};
 
@@ -203,7 +193,7 @@ macro_rules! gen_subsystem_test {
         cgroup.delete()
     } };
 
-    // Test `apply()`
+    // Test `apply`
     ($kind: ident, $resources: expr, $( ($field: ident, $val: expr) ),* $(, )?) => { {
         let mut cgroup =
             Subsystem::new(CgroupPath::new(v1::SubsystemKind::$kind, gen_cgroup_name!()));

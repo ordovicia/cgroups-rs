@@ -229,7 +229,7 @@ impl UnifiedRepr {
         Ok(())
     }
 
-    /// Applies resource limits and constraints to each cgroup of the all supported subsystems.
+    /// Applies resource limits and constraints to all cgroups of the all supported subsystems.
     pub fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
         $(
             if let Some(ref mut s) = self.$subsystem {
@@ -272,7 +272,7 @@ impl UnifiedRepr {
         Ok(tasks)
     }
 
-    /// Attaches a task to each cgroup of the all supported subsystems.
+    /// Attaches a task to all cgroups of the all supported subsystems.
     ///
     /// See [`Cgroup::add_task`] for more information.
     ///
@@ -286,7 +286,7 @@ impl UnifiedRepr {
         Ok(())
     }
 
-    /// Removes a task from each cgroup of the all supported subsystems.
+    /// Removes a task from all cgroups of the all supported subsystems.
     ///
     /// See [`Cgroup::remove_task`] for more information.
     ///
@@ -315,7 +315,7 @@ impl UnifiedRepr {
         Ok(procs)
     }
 
-    /// Attaches a process to each cgroup of the all supported subsystems.
+    /// Attaches a process to all cgroups of the all supported subsystems.
     ///
     /// See [`Cgroup::add_proc`] for more information.
     ///
@@ -329,7 +329,7 @@ impl UnifiedRepr {
         Ok(())
     }
 
-    /// Removes a process from each cgroup of the all supported subsystems.
+    /// Removes a process from all cgroups of the all supported subsystems.
     ///
     /// See [`Cgroup::remove_proc`] for more information.
     ///

@@ -34,9 +34,9 @@ failed to write to `", $file, "` file of this cgroup.
     };
 }
 
-// NOTE: Keep the example below in sync with README.md and lib.rs
+// NOTE: Keep the example below in sync with `README.md` and `lib.rs`
 
-/// Common operations on a cgroup. Each subsystem handler implements this trait.
+/// Common operations on a cgroup. All subsystem handlers implement this trait.
 ///
 /// # Examples
 ///
