@@ -160,8 +160,42 @@
 //! # }
 //! ```
 //!
+//! ### Spawn a process within one or more cgroups
+//!
+//! [`v1::CommandExt`] extends the [`std::process::Command`] builder to attach a command process to
+//! one or more cgroups on start.
+//!
+//! ```no_run
+//! # fn main() -> controlgroup::Result<()> {
+//! use std::path::PathBuf;
+//! use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+//! // Import extension trait
+//! use controlgroup::v1::CommandExt as _;
+//!
+//! let mut cgroup = cpu::Subsystem::new(
+//!     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+//! cgroup.create()?;
+//!
+//! let mut child = std::process::Command::new("sleep")
+//!     .arg("1")
+//!     // Attach this command process to a cgroup on start
+//!     .cgroup(&mut cgroup)
+//!     // This process will run within the cgroup
+//!     .spawn()
+//!     .unwrap();
+//!
+//! println!("{:?}", cgroup.stat()?);
+//!
+//! child.wait().unwrap();
+//! cgroup.delete()?;
+//! # Ok(())
+//! # }
+//! ```
+//!
 //! [`v1`]: v1/index.html
 //! [`v1::Builder`]: v1/builder/struct.Builder.html
+//! [`v1::CommandExt`]: v1/trait.CommandExt.html
+//! [`std::process::Command`]: https://doc.rust-lang.org/std/process/struct.Command.html
 
 #[macro_use]
 mod macros;

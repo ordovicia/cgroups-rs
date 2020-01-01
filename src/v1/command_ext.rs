@@ -17,6 +17,8 @@ pub trait CommandExt {
 }
 
 impl CommandExt for std::process::Command {
+    // NOTE: Keep the example below in sync with `README.md` and `lib.rs`
+
     /// Attaches this command process to a cgroup on start.
     ///
     /// The process will run within the cgroup from the beginning of its execution.
@@ -29,7 +31,9 @@ impl CommandExt for std::process::Command {
     /// ```no_run
     /// # fn main() -> controlgroup::Result<()> {
     /// use std::path::PathBuf;
-    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, CommandExt, SubsystemKind};
+    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+    /// // Import extension trait
+    /// use controlgroup::v1::CommandExt as _;
     ///
     /// let mut cgroup = cpu::Subsystem::new(
     ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
@@ -37,7 +41,9 @@ impl CommandExt for std::process::Command {
     ///
     /// let mut child = std::process::Command::new("sleep")
     ///     .arg("1")
+    ///     // Attach this command process to a cgroup on start
     ///     .cgroup(&mut cgroup)
+    ///     // This process will run within the cgroup
     ///     .spawn()
     ///     .unwrap();
     ///
