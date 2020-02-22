@@ -46,6 +46,7 @@ mod macros;
 mod cgroup;
 pub mod blkio;
 pub mod builder;
+mod command_ext;
 pub mod cpu;
 pub mod cpuacct;
 pub mod cpuset;
@@ -62,6 +63,7 @@ mod unified_repr;
 
 pub use builder::Builder;
 pub use cgroup::{Cgroup, CgroupPath};
+pub use command_ext::CommandExt;
 pub use unified_repr::UnifiedRepr;
 
 const CGROUPFS_MOUNT_POINT: &str = "/sys/fs/cgroup";

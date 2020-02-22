@@ -620,8 +620,8 @@ impl CgroupPath {
 
 macro_rules! impl_cgroup {
     ($subsystem: ident, $kind: ident, $( $tt: tt )*) => {
-        impl Cgroup for $subsystem {
-            fn new(path: CgroupPath) -> Self {
+        impl crate::v1::Cgroup for $subsystem {
+            fn new(path: crate::v1::CgroupPath) -> Self {
                 Self { path }
             }
 

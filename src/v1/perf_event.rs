@@ -40,7 +40,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    v1::{self, Cgroup, CgroupPath},
+    v1::{self, CgroupPath},
     Result,
 };
 
