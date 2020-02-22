@@ -134,7 +134,7 @@ mod tests {
             let id_set = [0].iter().copied().collect::<cpuset::IdSet>();
             &cpuset::Resources {
                 cpus: Some(id_set.clone()),
-                mems: Some(id_set.clone()),
+                mems: Some(id_set),
                 ..cpuset::Resources::default()
             }
             .into()
