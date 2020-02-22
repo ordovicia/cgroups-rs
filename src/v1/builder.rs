@@ -321,10 +321,10 @@ macro_rules! _gen_setter {
         }
     };
 
-    (_doc; $desc: literal, $sub: ident, $field: ident) => { concat!(
+    (_doc; $desc: literal, $subsys: ident, $field: ident) => { concat!(
         "Sets ", $desc, ".\n\n",
-        "See [`", stringify!($sub), "::Subsystem::set_", stringify!($field), "`]",
-        "(../", stringify!($sub), "/struct.Subsystem.html#method.set_", stringify!($field), ")",
+        "See [`", stringify!($subsys), "::Subsystem::set_", stringify!($field), "`]",
+        "(../", stringify!($subsys), "/struct.Subsystem.html#method.set_", stringify!($field), ")",
         " for more information."
     ) };
 }

@@ -175,7 +175,7 @@ fn parse_limits(reader: impl std::io::Read) -> Result<HashMap<String, Limit>> {
             let mut kv = e.split('=');
 
             match kv.next() {
-                // FIXME: column order is guaranteed?
+                // FIXME: is column order guaranteed?
                 Some("hca_handle") => {
                     if hca_handle.is_some() {
                         bail_parse!();

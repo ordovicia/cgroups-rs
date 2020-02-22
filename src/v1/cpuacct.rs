@@ -197,7 +197,7 @@ fn parse_usage_all(reader: impl io::Read) -> Result<Vec<Stat>> {
         bail_parse!();
     }
 
-    // FIXME: column order is guaranteed?
+    // FIXME: is column order guaranteed?
     let system_column = match (header.next(), header.next()) {
         (Some("system"), Some("user")) => 0,
         (Some("user"), Some("system")) => 1,
@@ -212,7 +212,7 @@ fn parse_usage_all(reader: impl io::Read) -> Result<Vec<Stat>> {
 
         let mut entry = line.split_whitespace();
 
-        // FIXME: IDs are guaranteed to be sorted ?
+        // FIXME: are IDs guaranteed to be sorted ?
         let _id: u32 = parse_next(&mut entry)?;
 
         if system_column == 0 {
