@@ -180,11 +180,11 @@ impl Subsystem {
     with_doc! { concat!(
         gen_doc!(
             sets;
-            subsys_file!("hugetlb.<hugepage size>", limit_in_bytes),
+            "hugetlb.<hugepage size>.limit_in_bytes",
             "a limit of hugepage TLB usage"
         ),
         gen_doc!(see),
-        gen_doc!(err_write; subsys_file!("hugetlb.<hugepage size>", limit_in_bytes)),
+        gen_doc!(err_write; "hugetlb.<hugepage size>.limit_in_bytes"),
         gen_doc!(
             eg_write; hugetlb,
             set_limit, hugetlb::HugepageSize::Mb2, hugetlb::Limit::Pages(4)
@@ -226,11 +226,11 @@ impl Subsystem {
     with_doc! { concat!(
         gen_doc!(
             reads;
-            subsys_file!("hugetlb.<hugepage size>", failcnt),
+            "hugetlb.<hugepage size>.failcnt",
             "the number of allocation failure due to the limit,"
         ),
         gen_doc!(see),
-        gen_doc!(err_read; subsys_file!("hugetlb.<hugepage size>", failcnt)),
+        gen_doc!(err_read; "hugetlb.<hugepage size>.failcnt"),
         gen_doc!(eg_read; hugetlb, failcnt, hugetlb::HugepageSize::Mb2)),
         pub fn failcnt(&self, size: HugepageSize) -> Result<u64> {
             self.open_file_read(&format!("hugetlb.{}.{}", size, FAILCNT))

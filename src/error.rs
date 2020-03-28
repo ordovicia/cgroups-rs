@@ -110,18 +110,17 @@ impl Error {
     }
 }
 
-macro_rules! impl_from {
-    ($source: ty, $kind: ident) => {
-        impl From<$source> for Error {
-            fn from(e: $source) -> Self {
-                Self::with_source(ErrorKind::$kind, e)
-            }
-        }
-    };
+impl From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Self {
+        Self::with_source(ErrorKind::Io, e)
+    }
 }
 
-impl_from!(std::io::Error, Io);
-impl_from!(std::num::ParseIntError, Parse);
+impl From<std::num::ParseIntError> for Error {
+    fn from(e: std::num::ParseIntError) -> Self {
+        Self::with_source(ErrorKind::Parse, e)
+    }
+}
 
 #[cfg(test)]
 #[allow(unreachable_code, dead_code)]

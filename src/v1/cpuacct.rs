@@ -139,7 +139,7 @@ impl Subsystem {
 
     with_doc! { concat!(
         "Resets the accounted CPU time of this cgroup by writing to `cpuacct.usage` file.\n\n",
-        gen_doc!(err_write; subsys_file!(cpuacct, usage)),
+        gen_doc!(err_write; "cpuacct.usage"),
         gen_doc!(eg_write; cpuacct, reset)),
         pub fn reset(&mut self) -> Result<()> {
             self.write_file("cpuacct.usage", 0)

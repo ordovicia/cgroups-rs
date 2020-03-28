@@ -56,7 +56,7 @@ impl CommandExt for std::process::Command {
     /// # }
     /// ```
     fn cgroup<C: Cgroup>(&mut self, cgroup: &mut C) -> &mut Self {
-        let path = cgroup.path().join(subsys_file!(cgroup, procs));
+        let path = cgroup.path().join("cgroup.procs");
         unsafe { self.pre_exec(move || fs::write(&path, std::process::id().to_string())) }
         // FIXME: is it safe to write to the same file in parallel?
     }
