@@ -121,13 +121,13 @@ impl Subsystem {
 
     with_doc! { concat!(
         gen_doc!(
-            sets; subsys_file!(rdma, max),
+            sets; "rdma.max",
             "usage limits on RDMA/IB devices"
              : "The first element of the iterator item is device name,
                 and the second is limit for the device."
         ),
         gen_doc!(see; max),
-        gen_doc!(err_write; subsys_file!(rdma, max)),
+        gen_doc!(err_write; "rdma.max"),
         gen_doc!(
             eg_write;
             rdma,
@@ -175,7 +175,7 @@ fn parse_limits(reader: impl std::io::Read) -> Result<HashMap<String, Limit>> {
             let mut kv = e.split('=');
 
             match kv.next() {
-                // FIXME: column order is guaranteed?
+                // FIXME: is column order guaranteed?
                 Some("hca_handle") => {
                     if hca_handle.is_some() {
                         bail_parse!();

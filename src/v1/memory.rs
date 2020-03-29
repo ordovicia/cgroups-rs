@@ -305,7 +305,7 @@ impl Subsystem {
     with_doc! { concat!(
         gen_doc!(
             sets;
-            subsys_file!(memory, limit_in_bytes),
+            "memory.limit_in_bytes",
             "a limit on memory usage of this cgroup," : "Setting -1 removes the current limit."
         ),
         gen_doc!(see; limit_in_bytes),
@@ -363,7 +363,7 @@ impl Subsystem {
     with_doc! { concat!(
         gen_doc!(
             sets;
-            subsys_file!(memory, soft_limit_in_bytes),
+            "memory.soft_limit_in_bytes",
             "a soft limit on memory usage of this cgroup," : "Setting -1 removes the current limit."
         ),
         gen_doc!(see; soft_limit_in_bytes),
@@ -450,7 +450,7 @@ impl Subsystem {
     with_doc! { concat!(
         "Makes this cgroup's memory usage empty, by writing to `memory.force_empty` file.\n\n",
         gen_doc!(see),
-        gen_doc!(err_write; subsys_file!(memory, force_empty)),
+        gen_doc!(err_write; "memory.force_empty"),
         gen_doc!(eg_write; memory, force_empty)),
         pub fn force_empty(&mut self) -> Result<()> {
             self.write_file("memory.force_empty", 0)

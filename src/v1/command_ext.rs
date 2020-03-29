@@ -56,8 +56,9 @@ impl CommandExt for std::process::Command {
     /// # }
     /// ```
     fn cgroup<C: Cgroup>(&mut self, cgroup: &mut C) -> &mut Self {
-        let path = cgroup.path().join(subsys_file!(cgroup, procs));
+        let path = cgroup.path().join("cgroup.procs");
         unsafe { self.pre_exec(move || fs::write(&path, std::process::id().to_string())) }
+        // FIXME: is it safe to write to the same file in parallel?
     }
 
     /// Attaches this command process to each subsystem supported by a [`UnifiedRepr`] on start.
@@ -125,9 +126,10 @@ mod tests {
     #[test]
     fn test_command_ext_unified() -> Result<()> {
         use crate::v1::cpuset;
+        use SubsystemKind::*;
 
         let mut cgroups = UnifiedRepr::new(gen_cgroup_name!());
-        cgroups.skip_create(&[SubsystemKind::Cpuacct, SubsystemKind::NetCls]);
+        cgroups.skip_create(&[Cpuacct, NetCls]);
         cgroups.create()?;
 
         cgroups.cpuset_mut().unwrap().apply({
@@ -150,19 +152,19 @@ mod tests {
         assert_eq!(
             cgroups.procs().unwrap(),
             hashmap! {
-                (SubsystemKind::BlkIo, vec![pid]),
-                (SubsystemKind::Cpu, vec![pid]),
-                (SubsystemKind::Cpuacct, vec![pid]),
-                (SubsystemKind::Cpuset, vec![pid]),
-                (SubsystemKind::Devices, vec![pid]),
-                (SubsystemKind::Freezer, vec![pid]),
-                (SubsystemKind::HugeTlb, vec![pid]),
-                (SubsystemKind::Memory, vec![pid]),
-                (SubsystemKind::NetCls, vec![pid]),
-                (SubsystemKind::NetPrio, vec![pid]),
-                (SubsystemKind::PerfEvent, vec![pid]),
-                (SubsystemKind::Pids, vec![pid]),
-                (SubsystemKind::Rdma, vec![pid]),
+                (BlkIo, vec![pid]),
+                (Cpu, vec![pid]),
+                (Cpuacct, vec![pid]),
+                (Cpuset, vec![pid]),
+                (Devices, vec![pid]),
+                (Freezer, vec![pid]),
+                (HugeTlb, vec![pid]),
+                (Memory, vec![pid]),
+                (NetCls, vec![pid]),
+                (NetPrio, vec![pid]),
+                (PerfEvent, vec![pid]),
+                (Pids, vec![pid]),
+                (Rdma, vec![pid]),
             }
         );
 

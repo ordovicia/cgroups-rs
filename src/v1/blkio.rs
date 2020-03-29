@@ -378,7 +378,7 @@ impl Subsystem {
         "Resets all statistics about block I/O performed by this cgroup,",
         " by writing to `blkio.reset_stats` file.\n\n",
         gen_doc!(see),
-        gen_doc!(err_write; subsys_file!(blkio, reset_stats)),
+        gen_doc!(err_write; "blkio.reset_stats"),
         gen_doc!(eg_write; blkio, reset_stats)),
         pub fn reset_stats(&mut self) -> Result<()> {
             self.write_file("blkio.reset_stats", 0)

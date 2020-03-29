@@ -13,7 +13,7 @@
 #![allow(clippy::string_lit_as_bytes)]
 #![doc(html_root_url = "https://docs.rs/controlgroup/0.2.1")]
 
-//! Native Rust crate for operating on cgroups.
+//! Native Rust crate for cgroup operations.
 //!
 //! Currently this crate supports only cgroup v1 hierarchy, implemented in [`v1`] module.
 //!
@@ -526,7 +526,7 @@ impl<K, V> RefKv<K, V> for &(K, V) {
 //
 // FIXME: consume system time
 #[cfg(test)]
-pub fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
+pub(crate) fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
     use std::{
         sync::{
             atomic::{AtomicBool, Ordering},

@@ -13,25 +13,15 @@ const NOTIFY_ON_RELEASE: &str = "notify_on_release";
 const RELEASE_AGENT: &str = "release_agent";
 
 macro_rules! _gen_doc {
-    (err_read_inval; $file: expr) => { concat!(
+    ($op: literal, $file: expr) => { concat!(
 "# Errors
 
 This file is present only in the root cgroup. If you call this method on a non-root cgroup, an error
 is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup, returns an error if
-failed to read and parse `", $file, "` file of this cgroup.
+failed to ", $op, " `", $file, "` file of this cgroup.
 
-[`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation\n\n")
-    };
-
-    (err_write_inval; $file: expr) => { concat!(
-"# Errors
-
-This file is present only in the root cgroup. If you call this method on a non-root cgroup, an error
-is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup, returns an error if
-failed to write to `", $file, "` file of this cgroup.
-
-[`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation\n\n")
-    };
+[`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation\n\n"
+    ) };
 }
 
 // NOTE: Keep the example below in sync with `README.md` and `lib.rs`
@@ -315,7 +305,7 @@ pub trait Cgroup {
 
     gen_getter!(
         cgroup;
-        subsys_file!(cgroup, procs),
+        "cgroup.procs",
         "a list of processes attached to this cgroup,"
         : "The resulting tasks are represented by their PIDs.",
         procs,
@@ -327,10 +317,10 @@ pub trait Cgroup {
         "Attaches a process to this cgroup, with all threads in the same thread group at once,
          by writing a PID to `cgroup.procs` file.\n\n",
         gen_doc!(see),
-        gen_doc!(err_write; subsys_file!(cgroup, procs)),
+        gen_doc!(err_write; "cgroup.procs"),
         gen_doc!(eg_write; cpu, add_proc, std::process::id())),
         fn add_proc(&mut self, pid: impl Into<Pid>) -> Result<()> {
-            fs::write(self.path().join(subsys_file!(cgroup, procs)), format!("{}", pid.into())).map_err(Into::into)
+            fs::write(self.path().join("cgroup.procs"), format!("{}", pid.into())).map_err(Into::into)
         }
     }
 
@@ -402,7 +392,7 @@ pub trait Cgroup {
              i.e. this cgroup is emptied of all tasks,"
         ),
         gen_doc!(see),
-        _gen_doc!(err_read_inval; "release_agent"),
+        _gen_doc!("read and parse", "release_agent"),
         gen_doc!(eg_read; cpu, release_agent)),
         fn release_agent(&self) -> Result<String> {
             use std::io::Read;
@@ -427,7 +417,7 @@ pub trait Cgroup {
              i.e. this cgroup is emptied of all tasks,"
         ),
         gen_doc!(see),
-        _gen_doc!(err_write_inval; "release_agent"),
+        _gen_doc!("write to", "release_agent"),
         gen_doc!(eg_write; cpu, set_release_agent, b"/user/local/bin/foo.sh")),
         fn set_release_agent(&mut self, agent_path: impl AsRef<[u8]>) -> Result<()> {
             if !self.is_root() {
@@ -440,18 +430,18 @@ pub trait Cgroup {
     with_doc! { concat!(
         gen_doc!(
             reads;
-            subsys_file!(cgroup, sane_behavior),
+            "cgroup.sane_behavior",
             "whether the subsystem of this cgroup is forced to follow \"sane behavior\","
         ),
         gen_doc!(see),
-        _gen_doc!(err_read_inval; subsys_file!(cgroup, sane_behavior)),
+        _gen_doc!("read and parse", "cgroup.sane_behavior"),
         gen_doc!(eg_read; cpu, sane_behavior)),
         fn sane_behavior(&self) -> Result<bool> {
             if !self.is_root() {
                 return Err(Error::new(ErrorKind::InvalidOperation));
             }
 
-            self.open_file_read(subsys_file!(cgroup, sane_behavior)).and_then(parse_01_bool)
+            self.open_file_read("cgroup.sane_behavior").and_then(parse_01_bool)
         }
     }
 
@@ -841,17 +831,17 @@ mod tests {
         let root = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, PathBuf::new()));
         assert!([
             "tasks",
-            subsys_file!(cgroup, procs),
+            "cgroup.procs",
             NOTIFY_ON_RELEASE,
             RELEASE_AGENT,
-            subsys_file!(cgroup, sane_behavior),
+            "cgroup.sane_behavior",
         ]
         .iter()
         .all(|f| root.file_exists(f)));
         assert!(!root.file_exists("does_not_exist"));
 
         // non-root
-        let files = ["tasks", subsys_file!(cgroup, procs), NOTIFY_ON_RELEASE];
+        let files = ["tasks", "cgroup.procs", NOTIFY_ON_RELEASE];
         let mut cgroup =
             cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;

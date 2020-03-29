@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.com/ordovicia/controlgroup-rs.svg?branch=master)](https://travis-ci.com/ordovicia/controlgroup-rs)
 [![Docs](https://docs.rs/controlgroup/badge.svg)](https://docs.rs/controlgroup)
 
-Native Rust crate for operating on cgroups.
+Native Rust crate for cgroup operations.
 
 Currently this crate supports only cgroup v1 hierarchy, implemented in `v1` module.
 

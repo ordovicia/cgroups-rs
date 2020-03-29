@@ -29,8 +29,8 @@ matrix:
         - cargo clippy --tests -- -D clippy::all
 
 script:
-  - cargo build --verbose --all
-  - cargo test --verbose --all
+  - cargo build --verbose
+  - cargo test --verbose
   # must not be executed in parallel
   - cargo test --verbose -- --ignored --test-threads=1 add_get_remove_tasks # Cgroup, UnifiedRepr
   - cargo test --verbose -- --ignored --test-threads=1 add_get_remove_procs # Cgroup, UnifiedRepr
