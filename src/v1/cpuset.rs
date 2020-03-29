@@ -749,7 +749,7 @@ mod tests {
                 sched_load_balance: Some(false),
                 sched_relax_domain_level: None, // Some(0)
             },
-            (cpus, id_set.clone()),
+            (cpus, id_set),
             (mems, id_set),
             (memory_migrate, true),
             (cpu_exclusive, true),
