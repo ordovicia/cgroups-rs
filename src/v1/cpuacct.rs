@@ -82,68 +82,65 @@ macro_rules! _gen_getter {
 }
 
 impl Subsystem {
-    _gen_getter!(
-        "the statistics about how much CPU time is consumed by this cgroup (in `USER_HZ` unit)"
-        : "The CPU time is further divided into user and system times.",
-        stat, Stat, parse_stat
-    );
+    /// Reads the statistics about how much CPU time is consumed by this cgroup (in `USER_HZ` unit)
+    /// from `cpuacct.stat` file.
+    ///
+    /// The CPU time is further divided into user and system times.
+    pub fn stat(&self) -> Result<Stat> {
+        self.open_file_read("cpuacct.stat").and_then(parse_stat)
+    }
 
-    _gen_getter!(
-        "the total CPU time consumed by this cgroup (in nanoseconds)",
-        usage,
-        u64,
-        parse
-    );
+    /// Reads the total CPU time consumed by this cgroup (in nanoseconds) from `cpuacct.usage` file.
+    pub fn usage(&self) -> Result<u64> {
+        self.open_file_read("cpuacct.usage").and_then(parse)
+    }
 
-    _gen_getter!(
-        "the per-CPU total CPU time consumed by this cgroup (in nanoseconds)" :
-        "The CPU time is further divided into user and system times.",
-        usage_all, Vec<Stat>, parse_usage_all
-    );
+    /// Reads the per-CPU total CPU time consumed by this cgroup (in nanoseconds) from
+    /// `cpuacct.usage_all` file.
+    ///
+    /// The CPU time is further divided into user and system times.
+    pub fn usage_all(&self) -> Result<Vec<Stat>> {
+        self.open_file_read("cpuacct.usage_all")
+            .and_then(parse_usage_all)
+    }
 
-    _gen_getter!(
-        "the per-CPU total CPU times consumed by this cgroup (in nanoseconds)",
-        usage_percpu,
-        Vec<u64>,
-        parse_vec
-    );
+    /// Reads the per-CPU total CPU times consumed by this cgroup (in nanoseconds) from
+    /// `cpuacct.usage_percpu` file.
+    ///
+    pub fn usage_percpu(&self) -> Result<Vec<u64>> {
+        self.open_file_read("cpuacct.usage_percpu")
+            .and_then(parse_vec)
+    }
 
-    _gen_getter!(
-        "the per-CPU total CPU times consumed by this cgroup
-         in the system (kernel) mode (in nanoseconds)",
-        usage_percpu_sys,
-        Vec<u64>,
-        parse_vec
-    );
+    /// Reads the per-CPU total CPU times consumed by this cgroup in the system (kernel) mode (in
+    /// nanoseconds) from `cpuacct.usage_percpu_sys` file.
+    pub fn usage_percpu_sys(&self) -> Result<Vec<u64>> {
+        self.open_file_read("cpuacct.usage_percpu_sys")
+            .and_then(parse_vec)
+    }
 
-    _gen_getter!(
-        "the per-CPU total CPU times consumed by this cgroup in the user mode (in nanoseconds)",
-        usage_percpu_user,
-        Vec<u64>,
-        parse_vec
-    );
+    /// Reads the per-CPU total CPU times consumed by this cgroup in the user  mode (in nanoseconds)
+    /// from `cpuacct.usage_percpu_user` file.
+    pub fn usage_percpu_user(&self) -> Result<Vec<u64>> {
+        self.open_file_read("cpuacct.usage_percpu_user")
+            .and_then(parse_vec)
+    }
 
-    _gen_getter!(
-        "the total CPU time consumed by this cgroup in the system (kernel) mode (in nanoseconds)",
-        usage_sys,
-        u64,
-        parse
-    );
+    /// Reads the total CPU time consumed by this cgroup in the system (kernel) mode (in
+    /// nanoseconds) from `cpuacct.usage_sys` file.
+    pub fn usage_sys(&self) -> Result<u64> {
+        self.open_file_read("cpuacct.usage_sys").and_then(parse)
+    }
 
-    _gen_getter!(
-        "the total CPU time consumed by this cgroup in the user mode (in nanoseconds)",
-        usage_user,
-        u64,
-        parse
-    );
+    /// Reads the total CPU time consumed by this cgroup in the user mode (in nanoseconds) from
+    /// `cpuacct.usage_user` file.
+    pub fn usage_user(&self) -> Result<u64> {
+        self.open_file_read("cpuacct.usage_user").and_then(parse)
+    }
 
-    with_doc! { concat!(
-        "Resets the accounted CPU time of this cgroup by writing to `cpuacct.usage` file.\n\n",
-        gen_doc!(err_write; "cpuacct.usage"),
-        gen_doc!(eg_write; cpuacct, reset)),
-        pub fn reset(&mut self) -> Result<()> {
-            self.write_file("cpuacct.usage", 0)
-        }
+    /// Resets the accounted CPU time of this cgroup by writing to `cpuacct.usage` file.
+    pub fn reset(&mut self) -> Result<()> {
+        self.write_file("cpuacct.usage", 0)
     }
 }
 

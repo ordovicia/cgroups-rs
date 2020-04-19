@@ -704,9 +704,6 @@ mod tests {
     #[test]
     #[rustfmt::skip]
     fn test_subsystem_stat() -> Result<()> {
-        // TODO: Remove when https://github.com/rust-lang/rust-clippy/issues/3900 is fixed
-        #![allow(clippy::cognitive_complexity)]
-
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::Memory, gen_cgroup_name!()));
         cgroup.create()?;
 

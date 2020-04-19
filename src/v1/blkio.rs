@@ -161,228 +161,279 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_getter {
-    (
-        map;
-        $desc: literal,
-        $field: ident $( : $link: ident )?,
-        $ty: ty
-        $(, $recursive: ident )?
-    ) => {
-        gen_getter!(blkio, $desc, $field $( : $link )?, HashMap<Device, $ty>, parse_map);
-        $( _gen_getter!(_rec; $recursive, $field, HashMap<Device, $ty>, parse_map); )?
-    };
-
-    (io_service; $desc: literal, $field: ident, $recursive: ident) => {
-        gen_getter!(blkio, $desc, $field, IoService, parse_io_service);
-        _gen_getter!(_rec; $recursive, $field, IoService, parse_io_service);
-    };
-
-    (throttle; $desc: literal, $field: ident : link) => { with_doc! { concat!(
-        gen_doc!(reads; subsys_file!("blkio.throttle", $field), $desc),
-        gen_doc!(see; $field),
-        gen_doc!(err_read; subsys_file!("blkio.throttle", $field)),
-        gen_doc!(eg_read; blkio, $field)),
-        pub fn $field(&self) -> Result<HashMap<Device, u64>> {
-            self.open_file_read(subsys_file!("blkio.throttle", $field)).and_then(parse_map)
-        }
-    } };
-
-    (_rec; $recursive: ident, $field: ident, $ty: ty, $parser: ident) => { with_doc! {
-        gen_doc!(reads_see; subsys_file!(blkio, $recursive), $field),
-        pub fn $recursive(&self) -> Result<$ty> {
-            self.open_file_read(subsys_file!(blkio, $recursive))
-                .and_then($parser)
-        }
-    } };
-}
-
 const WEIGHT_MIN: u16 = 10;
 const WEIGHT_MAX: u16 = 1000;
 
-macro_rules! _gen_setter {
-    (weight; $desc: literal, $field: ident : link, $setter: ident) => { with_doc! { concat!(
-        _gen_setter!(_sets_see_err_weight; $desc, $field),
-        gen_doc!(eg_write; blkio, $setter, 1000)),
-        pub fn $setter(&mut self, weight: u16) -> Result<()> {
-            if weight < WEIGHT_MIN || weight > WEIGHT_MAX {
-                return Err(Error::new(ErrorKind::InvalidArgument));
-            }
-
-            self.write_file(subsys_file!(blkio, $field), weight)
-        }
-    } };
-
-    (weight_map; $desc: literal, $field: ident : link, $setter: ident) => { with_doc!{ concat!(
-        _gen_setter!(_sets_see_err_weight; $desc, $field),
-        gen_doc!(eg_write; blkio, $setter, [8, 0].into(), 1000)),
-        pub fn $setter(&mut self, device: Device, weight: u16) -> Result<()> {
-            use io::Write;
-
-            if weight < WEIGHT_MIN || weight > WEIGHT_MAX {
-                return Err(Error::new(ErrorKind::InvalidArgument));
-            }
-
-            let mut file = self.open_file_write(subsys_file!(blkio, $field))?;
-            write!(file, "{} {}", device, weight).map_err(Into::into)
-        }
-    } };
-
-    (throttle; $desc: literal, $field: ident : link, $setter: ident, $arg: ident, $ty: ty) => {
-        with_doc! { concat!(
-            gen_doc!(sets; subsys_file!("blkio.throttle", $field), $desc),
-            gen_doc!(see; $field),
-            gen_doc!(err_write; subsys_file!("blkio.throttle", $field)),
-            gen_doc!(eg_write; blkio, $setter, [8, 0].into(), 100)),
-            pub fn $setter(&mut self, device: Device, $arg: $ty) -> Result<()> {
-                use io::Write;
-
-                let mut file = self.open_file_write(subsys_file!("blkio.throttle", $field))?;
-                // write!(file, "{} {}", device, $arg).map_err(Into::into) // not work
-                file.write_all(format!("{} {}", device, $arg).as_bytes()).map_err(Into::into)
-            }
-        }
-    };
-
-    (_sets_see_err_weight; $desc: literal, $field: ident) => { concat!(
-        gen_doc!(
-            sets;
-            subsys_file!(blkio, $field),
-            $desc : "The value must be between 10 and 1,000 (inclusive)."
-        ),
-        gen_doc!(see; $field),
-"# Errors
-
-Returns an error with kind [`ErrorKind::InvalidArgument`] if the weight is out-of-range. Returns an
-error if failed to write to `", subsys_file!(blkio, $field), "` file of this cgroup.
-
-[`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument\n\n",
-    ) };
-}
-
 impl Subsystem {
-    gen_getter!(
-        blkio,
-        "the relative weight of block I/O performed by this cgroup,",
-        weight: link,
-        u16,
-        parse
-    );
-    _gen_setter!(
-        weight; "a relative weight of block I/O performed by this cgroup,",
-        weight : link, set_weight
-    );
+    /// Reads the relative weight of block I/O performed by this cgroup, from `blkio.weight` file.
+    pub fn weight(&self) -> Result<u16> {
+        self.open_file_read("blkio.weight").and_then(parse)
+    }
 
-    _gen_getter!(map; "the overriding weight for devices", weight_device : link, u16);
-    _gen_setter!(
-        weight_map; "the overriding weight for a device",
-        weight_device : link, set_weight_device
-    );
+    /// Sets the relative weight of block I/O performed by this cgroup, by writing to `blkio.weight` file.
+    ///
+    /// The weight must be between 10 and 1,000 (inclusive). If the weight is out-of-range, this
+    /// method returns an error with kind [`ErrorKind::InvalidArgument`].
+    ///
+    /// [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument\n\n",
+    pub fn set_weight(&mut self, weight: u16) -> Result<()> {
+        validate_weight(weight)?;
+        self.write_file("blkio.weight", weight)
+    }
 
-    gen_getter!(
-        blkio,
-        "the weight this cgroup has while competing against descendant cgroups,",
-        leaf_weight: link,
-        u16,
-        parse
-    );
-    _gen_setter!(
-        weight; "a weight this cgroup has while competing against descendant cgroups,",
-        leaf_weight : link, set_leaf_weight
-    );
+    /// Reads an overriding weight for devices from `blkio.weight_device` file.
+    pub fn weight_device(&self) -> Result<HashMap<Device, u16>> {
+        self.open_file_read("blkio.weight_device")
+            .and_then(parse_map)
+    }
 
-    _gen_getter!(
-        map; "the overriding leaf weight for devices",
-        leaf_weight_device : link, u16
-    );
-    _gen_setter!(
-        weight_map; "the overriding leaf weight for a device",
-        leaf_weight_device : link, set_leaf_weight_device
-    );
+    /// Sets an overriding wright for a device by writing to `blkio.weight_device` file.
+    ///
+    /// The weight must be between 10 and 1,000 (inclusive). If the weight is out-of-range, this
+    /// method returns an error with kind [`ErrorKind::InvalidArgument`].
+    ///
+    /// [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument\n\n",
+    fn set_weight_device(&mut self, device: Device, weight: u16) -> Result<()> {
+        use io::Write;
 
-    _gen_getter!(
-        map; "the I/O time allocated to this cgroup per device (in milliseconds)",
-        time, u64, time_recursive
-    );
+        validate_weight(weight)?;
 
-    _gen_getter!(
-        map; "the number of sectors transferred by this cgroup,",
-        sectors, u64, sectors_recursive
-    );
+        let mut file = self.open_file_write("blkio.weight_device")?;
+        write!(file, "{} {}", device, weight).map_err(Into::into)
+    }
 
-    _gen_getter!(
-        io_service; "the I/O service transferred by this cgroup (in bytes)",
-        io_service_bytes, io_service_bytes_recursive
-    );
-    _gen_getter!(
-        io_service; "the I/O service transferred by this cgroup (in operation count)",
-        io_serviced, io_serviced_recursive
-    );
-    _gen_getter!(
-        io_service; "the I/O service transferred by this cgroup (in nanoseconds)",
-        io_service_time, io_service_time_recursive
-    );
+    /// Reads the weight this cgroup has while competing against descendant cgroups, from
+    /// `blkio.leaf_weight` file.
+    pub fn leaf_weight(&self) -> Result<u16> {
+        self.open_file_read("blkio.leaf_weight").and_then(parse)
+    }
 
-    _gen_getter!(
-        io_service; "the total time the I/O for this cgroup spent waiting for service,",
-        io_wait_time, io_wait_time_recursive
-    );
+    /// Sets the weight this cgroup has while competing against descendant cgroups, by writing to
+    /// `blkio.leaf_weight` file.
+    ///
+    /// The weight must be between 10 and 1,000 (inclusive). If the weight is out-of-range, this
+    /// method returns an error with kind [`ErrorKind::InvalidArgument`].
+    ///
+    /// [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument\n\n",
+    pub fn set_leaf_weight(&mut self, leaf_weight: u16) -> Result<()> {
+        validate_weight(leaf_weight)?;
+        self.write_file("blkio.leaf_weight", leaf_weight)
+    }
 
-    _gen_getter!(
-        io_service;
-        "the number of BIOS requests merged into I/O requests belonging to this cgroup,",
-        io_merged, io_merged_recursive
-    );
+    /// Reads the overriding leaf wright for devices from `blkio.leaf_weight_device` file.
+    pub fn leaf_weight_device(&self) -> Result<HashMap<Device, u16>> {
+        self.open_file_read("blkio.leaf_weight_device")
+            .and_then(parse_map)
+    }
 
-    _gen_getter!(
-        io_service; "the number of I/O operations queued by this cgroup,",
-        io_queued, io_queued_recursive
-    );
+    /// Sets an overriding leaf weight for a device by writing to `blkio.leaf_weight_device` file.
+    ///
+    /// The weight must be between 10 and 1,000 (inclusive). If the weight is out-of-range, this
+    /// method returns an error with kind [`ErrorKind::InvalidArgument`].
+    ///
+    /// [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument\n\n",
+    pub fn set_leaf_weight_device(&mut self, device: Device, weight: u16) -> Result<()> {
+        use io::Write;
 
-    _gen_getter!(
-        throttle; "throttle on bandwidth of read access in terms of bytes/s,",
-        read_bps_device : link
-    );
-    _gen_getter!(
-        throttle; "throttle on bandwidth of write access in terms of bytes/s,",
-        write_bps_device : link
-    );
-    _gen_getter!(
-        throttle; "throttle on bandwidth of read access in terms of ops/s,",
-        read_iops_device : link
-    );
-    _gen_getter!(
-        throttle; "throttle on bandwidth of write access in terms of ops/s,",
-        write_iops_device : link
-    );
+        validate_weight(weight)?;
 
-    _gen_setter!(
-        throttle; "throttle on bandwidth of read access in terms of bytes/s,",
-        read_bps_device : link, throttle_read_bps_device, bps, u64
-    );
-    _gen_setter!(
-        throttle; "throttle on bandwidth of write access in terms of bytes/s,",
-        write_bps_device : link, throttle_write_bps_device, bps, u64
-    );
+        let mut file = self.open_file_write("blkio.leaf_weight_device")?;
+        write!(file, "{} {}", device, weight).map_err(Into::into)
+    }
 
-    _gen_setter!(
-        throttle; "throttle on bandwidth of read access in terms of ops/s,",
-        read_iops_device : link, throttle_read_iops_device, iops, u64
-    );
-    _gen_setter!(
-        throttle; "throttle on bandwidth of write access in terms of ops/s,",
-        write_iops_device : link, throttle_write_iops_device, iops, u64
-    );
+    /// Reads the I/O time allocated to this cgroup per device (in milliseconds) from `blkio.time`
+    /// file.
+    pub fn time(&self) -> Result<HashMap<Device, u64>> {
+        self.open_file_read("blkio.time").and_then(parse_map)
+    }
 
-    with_doc! { concat!(
-        "Resets all statistics about block I/O performed by this cgroup,",
-        " by writing to `blkio.reset_stats` file.\n\n",
-        gen_doc!(see),
-        gen_doc!(err_write; "blkio.reset_stats"),
-        gen_doc!(eg_write; blkio, reset_stats)),
-        pub fn reset_stats(&mut self) -> Result<()> {
-            self.write_file("blkio.reset_stats", 0)
-        }
+    /// Reads `blkio.time_recursive` file. See [`time`] method for more information.
+    ///
+    /// [`time`]: #method.time
+    pub fn time_recursive(&self) -> Result<HashMap<Device, u64>> {
+        self.open_file_read("blkio.time_recursive")
+            .and_then(parse_map)
+    }
+
+    /// Reads the number of sectors transferred by this cgroup, from `blkio.sectors` file.
+    pub fn sectors(&self) -> Result<HashMap<Device, u64>> {
+        self.open_file_read("blkio.sectors").and_then(parse_map)
+    }
+
+    /// Reads `blkio.sectors_recursive` file. See [`sectors`] method for more information.
+    ///
+    /// [`sectors`]: #method.sectors
+    pub fn sectors_recursive(&self) -> Result<HashMap<Device, u64>> {
+        self.open_file_read("blkio.sectors_recursive")
+            .and_then(parse_map)
+    }
+
+    /// Reads the I/O service transferred by this cgroup (in bytes), from `blkio.io_service_bytes`
+    /// file.
+    pub fn io_service_bytes(&self) -> Result<IoService> {
+        self.open_file_read("blkio.io_service_bytes")
+            .and_then(parse_io_service)
+    }
+
+    /// Reads `blkio.io_service_bytes_recursive` file. See [`io_service_bytes`] method for more
+    /// information.
+    ///
+    /// [`io_service_bytes`]: #method.io_service_bytes
+    pub fn io_service_bytes_recursive(&self) -> Result<IoService> {
+        self.open_file_read("blkio.io_service_bytes_recursive")
+            .and_then(parse_io_service)
+    }
+
+    /// Reads the I/O service transferred by this cgroup (in operation count), from
+    /// `blkio.io_serviced` file.
+    pub fn io_serviced(&self) -> Result<IoService> {
+        self.open_file_read("blkio.io_serviced")
+            .and_then(parse_io_service)
+    }
+
+    /// Reads `blkio.io_serviced_recursive` file. See [`io_serviced`] method for more
+    /// information.
+    ///
+    /// [`io_serviced`]: #method.io_serviced
+    pub fn io_serviced_recursive(&self) -> Result<IoService> {
+        self.open_file_read("blkio.io_serviced_recursive")
+            .and_then(parse_io_service)
+    }
+
+    /// Reads the I/O service transferred by this cgroup (in nanoseconds), from
+    /// `blkio.io_service_time` file.
+    pub fn io_service_time(&self) -> Result<IoService> {
+        self.open_file_read("blkio.io_service_time")
+            .and_then(parse_io_service)
+    }
+
+    /// Reads `blkio.io_service_time_recursive` file. See [`io_service_time`] method for more
+    /// information.
+    ///
+    /// [`io_service_time`]: #method.io_service_time
+    pub fn io_service_time_recursive(&self) -> Result<IoService> {
+        self.open_file_read("blkio.io_service_time_recursive")
+            .and_then(parse_io_service)
+    }
+
+    /// Reads the total time the I/O for this cgroup spent waiting for services, from
+    /// `blkio.io_wait_time` file.
+    pub fn io_wait_time(&self) -> Result<IoService> {
+        self.open_file_read("blkio.io_wait_time")
+            .and_then(parse_io_service)
+    }
+
+    /// Reads `blkio.io_wait_time_recursive` file. See [`io_wait_time`] method for more
+    /// information.
+    ///
+    /// [`io_wait_time`]: #method.io_wait_time
+    pub fn io_wait_time_recursive(&self) -> Result<IoService> {
+        self.open_file_read("blkio.io_wait_time_recursive")
+            .and_then(parse_io_service)
+    }
+
+    /// Reads the number of BIOS requests merged into I/O requests belonging to this cgroup, from
+    /// `blkio.io_merged` file.
+    pub fn io_merged(&self) -> Result<IoService> {
+        self.open_file_read("blkio.io_merged")
+            .and_then(parse_io_service)
+    }
+
+    /// Reads `blkio.io_merged_recursive` file. See [`io_merged`] method for more information.
+    ///
+    /// [`io_merged`]: #method.io_merged
+    pub fn io_merged_recursive(&self) -> Result<IoService> {
+        self.open_file_read("blkio.io_merged_recursive")
+            .and_then(parse_io_service)
+    }
+
+    /// Reads the number of I/O operations queued by this cgroup, from `blkio.io_queued` file.
+    pub fn io_queued(&self) -> Result<IoService> {
+        self.open_file_read("blkio.io_queued")
+            .and_then(parse_io_service)
+    }
+
+    /// Reads `blkio.io_queued_recursive` file. See [`io_queued`] method for more information.
+    ///
+    /// [`io_queued`]: #method.io_queued
+    pub fn io_queued_recursive(&self) -> Result<IoService> {
+        self.open_file_read("blkio.io_queued_recursive")
+            .and_then(parse_io_service)
+    }
+
+    /// Reads the throttle on bandwidth of read access in terms of bytes/s, from
+    /// `blkio.throttle.read_bps_device` file.
+    pub fn read_bps_device(&self) -> Result<HashMap<Device, u64>> {
+        self.open_file_read("blkio.throttle.read_bps_device")
+            .and_then(parse_map)
+    }
+
+    /// Reads the throttle on bandwidth of write access in terms of bytes/s, from
+    /// `blkio.throttle.write_bps_device` file.
+    pub fn write_bps_device(&self) -> Result<HashMap<Device, u64>> {
+        self.open_file_read("blkio.throttle.write_bps_device")
+            .and_then(parse_map)
+    }
+
+    /// Reads the throttle on bandwidth of read access in terms of ops/s, from
+    /// `blkio.throttle.read_iops_device` file.
+    pub fn read_iops_device(&self) -> Result<HashMap<Device, u64>> {
+        self.open_file_read("blkio.throttle.read_iops_device")
+            .and_then(parse_map)
+    }
+
+    /// Reads the throttle on bandwidth of write access in terms of ops/s, from
+    /// `blkio.throttle.write_iops_device` file.
+    pub fn write_iops_device(&self) -> Result<HashMap<Device, u64>> {
+        self.open_file_read("blkio.throttle.write_iops_device")
+            .and_then(parse_map)
+    }
+
+    /// Sets a throttle on bandwidth of read access in terms of bytes/s, by writing to
+    /// `blkio.throttle.read_bps_device` file.
+    pub fn throttle_read_bps_device(&mut self, device: Device, bps: u64) -> Result<()> {
+        use io::Write;
+
+        let mut file = self.open_file_write("blkio.throttle.read_bps_device")?;
+        // write!(file, "{} {}", device, $arg).map_err(Into::into) // not work
+        file.write_all(format!("{} {}", device, bps).as_bytes())
+            .map_err(Into::into)
+    }
+
+    /// Sets a throttle on bandwidth of write access in terms of bytes/s, by writing to
+    /// `blkio.throttle.write_bps_device` file.
+    pub fn throttle_write_bps_device(&mut self, device: Device, bps: u64) -> Result<()> {
+        use io::Write;
+
+        let mut file = self.open_file_write("blkio.throttle.write_bps_device")?;
+        file.write_all(format!("{} {}", device, bps).as_bytes())
+            .map_err(Into::into)
+    }
+
+    /// Sets a throttle on bandwidth of read access in terms of ops/s, by writing to
+    /// `blkio.throttle.read_iops_device` file.
+    pub fn throttle_read_iops_device(&mut self, device: Device, iops: u64) -> Result<()> {
+        use io::Write;
+
+        let mut file = self.open_file_write("blkio.throttle.read_iops_device")?;
+        file.write_all(format!("{} {}", device, iops).as_bytes())
+            .map_err(Into::into)
+    }
+
+    /// Sets a throttle on bandwidth of write access in terms of ops/s, by writing to
+    /// `blkio.throttle.write_iops_device` file.
+    pub fn throttle_write_iops_device(&mut self, device: Device, iops: u64) -> Result<()> {
+        use io::Write;
+
+        let mut file = self.open_file_write("blkio.throttle.write_iops_device")?;
+        file.write_all(format!("{} {}", device, iops).as_bytes())
+            .map_err(Into::into)
+    }
+
+    /// Resets all statistics about block I/O performed by this cgroup, by writing to
+    /// `blkio.reset_stats` file.
+    pub fn reset_stats(&mut self) -> Result<()> {
+        self.write_file("blkio.reset_stats", 0)
     }
 }
 
@@ -392,6 +443,14 @@ impl Into<v1::Resources> for Resources {
             blkio: self,
             ..v1::Resources::default()
         }
+    }
+}
+
+fn validate_weight(weight: u16) -> Result<()> {
+    if weight < WEIGHT_MIN || weight > WEIGHT_MAX {
+        Err(Error::new(ErrorKind::InvalidArgument))
+    } else {
+        Ok(())
     }
 }
 

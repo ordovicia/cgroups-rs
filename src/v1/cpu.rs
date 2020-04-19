@@ -85,6 +85,15 @@ pub struct Resources {
     pub rt_period_us: Option<u64>,
 }
 
+impl Into<v1::Resources> for Resources {
+    fn into(self) -> v1::Resources {
+        v1::Resources {
+            cpu: self,
+            ..v1::Resources::default()
+        }
+    }
+}
+
 /// Throttling statistics of a cgroup.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stat {
@@ -124,82 +133,70 @@ impl_cgroup! {
 }
 
 impl Subsystem {
-    gen_getter!(
-        cpu,
-        "the throttling statistics of this cgroup",
-        stat,
-        Stat,
-        parse_stat
-    );
+    /// Reads the throttling statistics of this cgroup from `cpu.stat` file.
+    pub fn stat(&self) -> Result<Stat> {
+        self.open_file_read("cpu.stat").and_then(parse_stat)
+    }
 
-    gen_getter!(cpu, "the CPU time shares", shares: link, u64, parse);
-    gen_setter!(cpu, "CPU time shares", shares: link, set_shares, u64, 2048);
+    /// Reads the CPU time shares of this cgroup from `cpu.shares` file.
+    pub fn shares(&self) -> Result<u64> {
+        self.open_file_read("cpu.shares").and_then(parse)
+    }
 
-    gen_getter!(
-        cpu,
-        "the total available CPU time within a period (in microseconds)",
-        cfs_quota_us: link,
-        i64,
-        parse
-    );
-    gen_setter!(
-        cpu,
-        "total available CPU time within a period (in microseconds)"
-            : "Setting -1 removes the current limit.",
-        cfs_quota_us : link,
-        set_cfs_quota_us,
-        quota: i64,
-        500 * 1000
-    );
+    /// Sets a CPU time shares of this cgroup by writing to `cpu.shares` file.
+    pub fn set_shares(&mut self, shares: u64) -> Result<()> {
+        self.write_file("cpu.shares", shares)
+    }
 
-    gen_getter!(
-        cpu,
-        "the length of period (in microseconds)",
-        cfs_period_us: link,
-        u64,
-        parse
-    );
-    gen_setter!(
-        cpu,
-        "length of period (in microseconds)",
-        cfs_period_us: link,
-        set_cfs_period_us,
-        period: u64,
-        1000 * 1000
-    );
+    /// Reads the total available CPU time within a period (in microseconds) from `cpu.cfs_quota_us`
+    /// file.
+    pub fn cfs_quota_us(&self) -> Result<i64> {
+        self.open_file_read("cpu.cfs_quota_us").and_then(parse)
+    }
 
-    gen_getter!(
-        cpu,
-        "the total available CPU time for realtime tasks within a period (in microseconds)",
-        rt_runtime_us: link,
-        i64,
-        parse
-    );
-    gen_setter!(
-        cpu,
-        "total available CPU time for realtime tasks within a period (in microseconds)"
-            : "Setting -1 removes the current limit.",
-        rt_runtime_us : link,
-        set_rt_runtime_us,
-        runtime: i64,
-        500 * 1000
-    );
+    /// Sets a total available CPU time within a period (in microseconds) by writing to
+    /// `cpu.cfs_quota_us` file.
+    ///
+    /// Setting -1 removes the current limit.
+    pub fn set_cfs_quota_us(&mut self, quota: i64) -> Result<()> {
+        self.write_file("cpu.cfs_quota_us", quota)
+    }
 
-    gen_getter!(
-        cpu,
-        "the length of period for realtime tasks (in microseconds)",
-        rt_period_us: link,
-        u64,
-        parse
-    );
-    gen_setter!(
-        cpu,
-        "the length of period for realtime tasks (in microseconds)",
-        rt_period_us: link,
-        set_rt_period_us,
-        period: u64,
-        1000 * 1000
-    );
+    /// Reads the length of a period (in microseconds) from `cpu.cfs_period_us` file.
+    pub fn cfs_period_us(&self) -> Result<u64> {
+        self.open_file_read("cpu.cfs_period_us").and_then(parse)
+    }
+
+    /// Sets the length of a period (in microseconds) by writing to `cpu.cfs_period_us` file.
+    pub fn set_cfs_period_us(&mut self, period: u64) -> Result<()> {
+        self.write_file("cpu.cfs_period_us", period)
+    }
+
+    /// Reads the total available CPU time for realtime tasks within a period (in microseconds)
+    /// from `cpu.rt_runtime_us` file.
+    pub fn rt_runtime_us(&self) -> Result<i64> {
+        self.open_file_read("cpu.rt_runtime_us").and_then(parse)
+    }
+
+    /// Sets available CPU time for realtime tasks within a period (in microseconds) by writing to
+    /// `cpu.rt_runtime_us` file.
+    ///
+    /// Setting -1 removes the current limit.
+    pub fn set_rt_runtime_us(&mut self, runtime: i64) -> Result<()> {
+        self.write_file("cpu.rt_runtime_us", runtime)
+    }
+
+    /// Reads the length of a period for realtime tasks (in microseconds) from `cpu.rt_period_us`
+    /// file.
+    pub fn rt_period_us(&self) -> Result<u64> {
+        self.open_file_read("cpu.rt_period_us").and_then(parse)
+    }
+
+    /// Sets the length of a period for realtime tasks (in microseconds) by writing to
+    /// `cpu.rt_period_us` file.
+    pub fn set_rt_period_us(&mut self, period: u64) -> Result<()> {
+        self.write_file("cpu.rt_period_us", period)
+    }
 }
 
 fn parse_stat(reader: impl std::io::Read) -> Result<Stat> {
@@ -246,15 +243,6 @@ fn parse_stat(reader: impl std::io::Read) -> Result<Stat> {
         }),
         _ => {
             bail_parse!();
-        }
-    }
-}
-
-impl Into<v1::Resources> for Resources {
-    fn into(self) -> v1::Resources {
-        v1::Resources {
-            cpu: self,
-            ..v1::Resources::default()
         }
     }
 }

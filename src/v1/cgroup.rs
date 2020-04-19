@@ -9,20 +9,11 @@ use crate::{
     Error, ErrorKind, Pid, Result,
 };
 
+const TASKS: &str = "tasks";
+const CGROUP_PROCS: &str = "cgroup.procs";
 const NOTIFY_ON_RELEASE: &str = "notify_on_release";
 const RELEASE_AGENT: &str = "release_agent";
-
-macro_rules! _gen_doc {
-    ($op: literal, $file: expr) => { concat!(
-"# Errors
-
-This file is present only in the root cgroup. If you call this method on a non-root cgroup, an error
-is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup, returns an error if
-failed to ", $op, " `", $file, "` file of this cgroup.
-
-[`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation\n\n"
-    ) };
-}
+const CGROUP_SANE_BEHAVIOR: &str = "cgroup.sane_behavior";
 
 // NOTE: Keep the example below in sync with `README.md` and `lib.rs`
 
@@ -72,16 +63,6 @@ pub trait Cgroup {
     ///
     /// Note that this method does not create a new cgroup. [`create`] method creates the new
     /// directory for the defined cgroup.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::path::PathBuf;
-    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let cgroup = cpu::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
-    /// ```
     ///
     /// [`create`]: #method.create
     fn new(path: CgroupPath) -> Self;
@@ -158,7 +139,7 @@ pub trait Cgroup {
     /// Creates a new directory for this cgroup.
     ///
     /// Note that this method does not create directories recursively; If a parent of the path does
-    /// not exist, an error will be returned. All parent directories must be created before you call
+    /// not exist, an error will be returned. All parent directories must be created before calling
     /// this method.
     ///
     /// Also note that this method does not verify that the subsystem directory (e.g.
@@ -168,21 +149,6 @@ pub trait Cgroup {
     /// # Errors
     ///
     /// Returns an error if failed to create the directory, with kind [`ErrorKind::Io`].
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> controlgroup::Result<()> {
-    /// use std::path::PathBuf;
-    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let mut cgroup = cpu::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
-    ///
-    /// cgroup.create()?;
-    /// # Ok(())
-    /// # }
-    /// ```
     ///
     /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
     fn create(&mut self) -> Result<()> {
@@ -196,253 +162,131 @@ pub trait Cgroup {
     /// # Errors
     ///
     /// Returns an error if failed to apply the resource configuration.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> controlgroup::Result<()> {
-    /// use std::path::PathBuf;
-    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, Resources, SubsystemKind};
-    ///
-    /// let mut cgroup = cpu::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
-    ///
-    /// let resources = Resources {
-    ///         cpu: cpu::Resources {
-    ///             shares: Some(1024),
-    ///             cfs_quota_us: Some(500 * 1000),
-    ///             cfs_period_us: Some(1000 * 1000),
-    ///             ..cpu::Resources::default()
-    ///         },
-    ///         ..Resources::default()
-    ///     };
-    ///
-    /// cgroup.apply(&resources)?;
-    /// # Ok(())
-    /// # }
-    /// ```
     fn apply(&mut self, resources: &Resources) -> Result<()>;
 
     /// Deletes the directory of this cgroup.
     ///
-    /// Deleting the directory will fail if this cgroup is in use, i.e. a task is still attached.
+    /// Deleting the directory will fail if this cgroup is in use, i.e. a task is still attached to
+    /// this cgroup.
     ///
     /// # Errors
     ///
     /// Returns an error if failed to delete the directory, with kind [`ErrorKind::Io`].
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> controlgroup::Result<()> {
-    /// use std::path::PathBuf;
-    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let mut cgroup = cpu::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
-    ///
-    /// cgroup.create()?;
-    ///
-    /// cgroup.delete()?;
-    /// # Ok(())
-    /// # }
-    /// ```
     ///
     /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
     fn delete(&mut self) -> Result<()> {
         fs::remove_dir(self.path()).map_err(Into::into)
     }
 
-    gen_getter!(
-        cgroup;
-        "tasks",
-        "a list of tasks attached to this cgroup,"
-        : "The resulting tasks are represented by their thread IDs.",
-        tasks,
-        Vec<Pid>,
-        parse_tasks_procs
-    );
+    /// Reads the list of tasks attached to this cgroup, from `tasks` file.
+    ///
+    /// The resulting tasks are represented by their thread IDs.
+    fn tasks(&self) -> Result<Vec<Pid>> {
+        self.open_file_read(TASKS).and_then(parse_tasks_procs)
+    }
 
-    with_doc! { concat!(
-        "Attaches a task to this cgroup by writing a thread ID to `tasks` file.\n\n",
-        gen_doc!(see),
-        gen_doc!(err_write; "tasks"),
-        gen_doc!(eg_write; cpu, add_task, std::process::id())),
-        fn add_task(&mut self, pid: impl Into<Pid>) -> Result<()> {
-            fs::write(self.path().join("tasks"), format!("{}", pid.into())).map_err(Into::into)
-        }
+    /// Attaches a task to this cgroup by writing a thread ID to `tasks` file.
+    fn add_task(&mut self, pid: impl Into<Pid>) -> Result<()> {
+        fs::write(self.path().join(TASKS), format!("{}", pid.into())).map_err(Into::into)
     }
 
     /// Removes a task from this cgroup by writing a thread ID to `tasks` file of the root cgroup.
-    ///
-    /// See the kernel's documentation for more information about this field.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to write to `tasks` file of the root cgroup of the same
-    /// subsystem.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> controlgroup::Result<()> {
-    /// use std::path::PathBuf;
-    /// use controlgroup::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
-    ///
-    /// let mut cgroup = cpu::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
-    ///
-    /// let pid = Pid::from(std::process::id());
-    /// cgroup.add_task(pid)?;
-    ///
-    /// cgroup.remove_task(pid)?;
-    /// # Ok(())
-    /// # }
-    /// ```
     fn remove_task(&mut self, pid: impl Into<Pid>) -> Result<()> {
         self.root_cgroup().add_task(pid)
     }
 
-    gen_getter!(
-        cgroup;
-        "cgroup.procs",
-        "a list of processes attached to this cgroup,"
-        : "The resulting tasks are represented by their PIDs.",
-        procs,
-        Vec<Pid>,
-        parse_tasks_procs
-    );
+    /// Reads the list of processes attached to this cgroup, from `cgroup.procs` file.
+    ///
+    /// The resulting processes are represented by their PIDs.
+    fn procs(&self) -> Result<Vec<Pid>> {
+        self.open_file_read(CGROUP_PROCS)
+            .and_then(parse_tasks_procs)
+    }
 
-    with_doc! { concat!(
-        "Attaches a process to this cgroup, with all threads in the same thread group at once,
-         by writing a PID to `cgroup.procs` file.\n\n",
-        gen_doc!(see),
-        gen_doc!(err_write; "cgroup.procs"),
-        gen_doc!(eg_write; cpu, add_proc, std::process::id())),
-        fn add_proc(&mut self, pid: impl Into<Pid>) -> Result<()> {
-            fs::write(self.path().join("cgroup.procs"), format!("{}", pid.into())).map_err(Into::into)
-        }
+    /// Attaches a process to this cgroup, with all threads in the same thread group at once, by
+    /// writing a PID to `cgroup.procs` file.
+    fn add_proc(&mut self, pid: impl Into<Pid>) -> Result<()> {
+        fs::write(self.path().join(CGROUP_PROCS), format!("{}", pid.into())).map_err(Into::into)
     }
 
     /// Removes a process from this cgroup, with all threads in the same thread group at once, by
     /// writing a PID to `cgroup.procs` file of the root cgroup.
-    ///
-    /// See the kernel's documentation for more information about this field.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if failed to write to `cgroup.procs` file of the root cgroup of the same
-    /// subsystem.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> controlgroup::Result<()> {
-    /// use std::path::PathBuf;
-    /// use controlgroup::{Pid, v1::{cpu, Cgroup, CgroupPath, SubsystemKind}};
-    ///
-    /// let mut cgroup = cpu::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
-    ///
-    /// let pid = Pid::from(std::process::id());
-    /// cgroup.add_proc(pid)?;
-    ///
-    /// cgroup.remove_proc(pid)?;
-    /// # Ok(())
-    /// # }
-    /// ```
     fn remove_proc(&mut self, pid: impl Into<Pid>) -> Result<()> {
         self.root_cgroup().add_proc(pid)
     }
 
-    gen_getter!(
-        cgroup;
-        "notify_on_release",
-        "whether the system executes the executable written in `release_agent` file
-         when this cgroup no longer has any task,",
-        notify_on_release,
-        bool,
-        parse_01_bool
-    );
-
-    with_doc! { concat!(
-        gen_doc!(
-            sets;
-            "notify_on_release",
-            "whether the system executes the executable written in `release_agent` file
-             when this cgroup no longer has any task,"
-        ),
-        gen_doc!(see),
-        gen_doc!(err_write; "notify_on_release"),
-        gen_doc!(eg_write; cpu, set_notify_on_release, true)),
-        fn set_notify_on_release(&mut self, enable: bool) -> Result<()> {
-            fs::write(
-                self.path().join(NOTIFY_ON_RELEASE),
-                format!("{}", enable as i32),
-            )
-            .map_err(Into::into)
-        }
+    /// Reads whether the system executes the executable written in `release_agent` file when this
+    /// cgroup no longer has any task, from `notify_on_release` file.
+    fn notify_on_release(&self) -> Result<bool> {
+        self.open_file_read(NOTIFY_ON_RELEASE)
+            .and_then(parse_01_bool)
     }
 
-    with_doc! { concat!(
-        gen_doc!(
-            reads;
-            "release_agent",
-            "the command to be executed when \"notify on release\" is triggered,
-             i.e. this cgroup is emptied of all tasks,"
-        ),
-        gen_doc!(see),
-        _gen_doc!("read and parse", "release_agent"),
-        gen_doc!(eg_read; cpu, release_agent)),
-        fn release_agent(&self) -> Result<String> {
-            use std::io::Read;
-
-            if !self.is_root() {
-                return Err(Error::new(ErrorKind::InvalidOperation));
-            }
-
-            let mut buf = String::new();
-            self.open_file_read(RELEASE_AGENT)?
-                .read_to_string(&mut buf)?;
-
-            Ok(buf)
-        }
+    /// Sets whether the system executes the executable written in `release_agent` file when this
+    /// cgroup no longer has any task, by writing to `notify_on_release` file.
+    fn set_notify_on_release(&mut self, enable: bool) -> Result<()> {
+        fs::write(
+            self.path().join(NOTIFY_ON_RELEASE),
+            format!("{}", enable as i32),
+        )
+        .map_err(Into::into)
     }
 
-    with_doc! { concat!(
-        gen_doc!(
-            sets;
-            "release_agent",
-            "a command to be executed when \"notify on release\" is triggered,
-             i.e. this cgroup is emptied of all tasks,"
-        ),
-        gen_doc!(see),
-        _gen_doc!("write to", "release_agent"),
-        gen_doc!(eg_write; cpu, set_release_agent, b"/user/local/bin/foo.sh")),
-        fn set_release_agent(&mut self, agent_path: impl AsRef<[u8]>) -> Result<()> {
-            if !self.is_root() {
-                return Err(Error::new(ErrorKind::InvalidOperation));
-            }
-            fs::write(self.path().join(RELEASE_AGENT), agent_path.as_ref()).map_err(Into::into)
+    /// Reads the command to be executed when "notify on release" is triggered, i.e. this cgroup is
+    /// emptied of all tasks, from `release_agent` file.
+    ///
+    /// # Errors
+    ///
+    /// `release_agent` file is present only in the root cgroup. If you call this method on a
+    /// non-root cgroup, an error is returned with kind [`ErrorKind::InvalidOperation`].
+    ///
+    /// [`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation
+    fn release_agent(&self) -> Result<String> {
+        use std::io::Read;
+
+        if !self.is_root() {
+            return Err(Error::new(ErrorKind::InvalidOperation));
         }
+
+        let mut buf = String::new();
+        self.open_file_read(RELEASE_AGENT)?
+            .read_to_string(&mut buf)?;
+
+        Ok(buf)
     }
 
-    with_doc! { concat!(
-        gen_doc!(
-            reads;
-            "cgroup.sane_behavior",
-            "whether the subsystem of this cgroup is forced to follow \"sane behavior\","
-        ),
-        gen_doc!(see),
-        _gen_doc!("read and parse", "cgroup.sane_behavior"),
-        gen_doc!(eg_read; cpu, sane_behavior)),
-        fn sane_behavior(&self) -> Result<bool> {
-            if !self.is_root() {
-                return Err(Error::new(ErrorKind::InvalidOperation));
-            }
-
-            self.open_file_read("cgroup.sane_behavior").and_then(parse_01_bool)
+    /// Sets a command to be executed when "notify on release" is triggered, i.e. this cgroup is
+    /// emptied of all tasks, by writing to `release_agent` file.
+    ///
+    /// # Errors
+    ///
+    /// `release_agent` file is present only in the root cgroup. If you call this method on a
+    /// non-root cgroup, an error is returned with kind [`ErrorKind::InvalidOperation`].
+    ///
+    /// [`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation
+    fn set_release_agent(&mut self, agent_path: impl AsRef<[u8]>) -> Result<()> {
+        if !self.is_root() {
+            return Err(Error::new(ErrorKind::InvalidOperation));
         }
+        fs::write(self.path().join(RELEASE_AGENT), agent_path.as_ref()).map_err(Into::into)
+    }
+
+    /// Reads whether the subsystem of this cgroup is forced to follow "sane behavior", from
+    /// `cgroup.sane_behavior` file.
+    ///
+    /// # Errors
+    ///
+    /// `sane_behavior` file is present only in the root cgroup. If you call this method on a
+    /// non-root cgroup, an error is returned with kind [`ErrorKind::InvalidOperation`].
+    ///
+    /// [`ErrorKind::InvalidOperation`]: ../enum.ErrorKind.html#variant.InvalidOperation
+    fn sane_behavior(&self) -> Result<bool> {
+        if !self.is_root() {
+            return Err(Error::new(ErrorKind::InvalidOperation));
+        }
+
+        self.open_file_read(CGROUP_SANE_BEHAVIOR)
+            .and_then(parse_01_bool)
     }
 
     /// Returns whether a file with the given name exists in this cgroup.
@@ -472,21 +316,6 @@ pub trait Cgroup {
     ///
     /// Returns an error if failed to open the file, with kind [`ErrorKind::Io`].
     ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> controlgroup::Result<()> {
-    /// use std::path::PathBuf;
-    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let cgroup = cpu::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
-    ///
-    /// let cpu_stat_file = cgroup.open_file_read("cpu.stat")?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
     /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
     fn open_file_read(&self, name: &str) -> Result<File> {
         File::open(self.path().join(name)).map_err(Into::into)
@@ -497,21 +326,6 @@ pub trait Cgroup {
     /// # Errors
     ///
     /// Returns an error if failed to open the file, with kind [`ErrorKind::Io`].
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> controlgroup::Result<()> {
-    /// use std::path::PathBuf;
-    /// use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
-    ///
-    /// let mut cgroup = cpu::Subsystem::new(
-    ///     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
-    ///
-    /// let cpu_shares_file = cgroup.open_file_write("cpu.shares")?;
-    /// # Ok(())
-    /// # }
-    /// ```
     ///
     /// [`ErrorKind::Io`]: ../enum.ErrorKind.html#variant.Io
     fn open_file_write(&mut self, name: &str) -> Result<File> {
@@ -830,18 +644,18 @@ mod tests {
         // root
         let root = cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, PathBuf::new()));
         assert!([
-            "tasks",
-            "cgroup.procs",
+            TASKS,
+            CGROUP_PROCS,
             NOTIFY_ON_RELEASE,
             RELEASE_AGENT,
-            "cgroup.sane_behavior",
+            CGROUP_SANE_BEHAVIOR,
         ]
         .iter()
         .all(|f| root.file_exists(f)));
         assert!(!root.file_exists("does_not_exist"));
 
         // non-root
-        let files = ["tasks", "cgroup.procs", NOTIFY_ON_RELEASE];
+        let files = [TASKS, CGROUP_PROCS, NOTIFY_ON_RELEASE];
         let mut cgroup =
             cpu::Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;

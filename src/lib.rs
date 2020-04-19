@@ -204,11 +204,6 @@ mod parse;
 mod types;
 pub mod v1;
 
-use std::{
-    fmt::{self, Display},
-    str::FromStr,
-};
-
 pub use error::{Error, ErrorKind, Result};
 pub use types::{Device, DeviceNumber, Max, Pid, RefKv};
 

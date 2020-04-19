@@ -16,46 +16,6 @@ pub struct Error {
     source: Option<Box<dyn StdError + Sync + Send + 'static>>,
 }
 
-/// Kinds of errors that can occur while operating on cgroups.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ErrorKind {
-    /// Failed to do an I/O operation on a cgroup file system.
-    Io,
-
-    /// Failed to parse a content of a cgroup file into a value.
-    ///
-    /// In a future version, there will be some information attached to this variant.
-    Parse,
-
-    /// You passed an invalid argument.
-    ///
-    /// In a future version, this variant may have some information attached, or be replaced with
-    /// more fine-grained variants.
-    ///
-    /// Note that this crate catches not all errors caused by an invalid argument. In some cases,
-    /// the system (kernel) raises an lower-level error, and this crate returns an [`Error`] with
-    /// other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
-    /// [`Error::source`] method.
-    ///
-    /// [`Error`]: struct.Error.html
-    /// [`Error::source`]: https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.source
-    InvalidArgument,
-
-    /// You tried to do something invalid.
-    ///
-    /// In a future version, this variant may have some information attached, or be replaced with
-    /// more fine-grained variants.
-    ///
-    /// Note that this crate catches not all errors caused by an invalid operation. In some cases,
-    /// the system (kernel) raises an lower-level error, and this crate returns an [`Error`] with
-    /// other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
-    /// [`Error::source`] method.
-    ///
-    /// [`Error`]: struct.Error.html
-    /// [`Error::source`]: https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.source
-    InvalidOperation,
-}
-
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self.source {
@@ -120,6 +80,46 @@ impl From<std::num::ParseIntError> for Error {
     fn from(e: std::num::ParseIntError) -> Self {
         Self::with_source(ErrorKind::Parse, e)
     }
+}
+
+/// Kinds of errors that can occur while operating on cgroups.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ErrorKind {
+    /// Failed to do an I/O operation on a cgroup file system.
+    Io,
+
+    /// Failed to parse a content of a cgroup file into a value.
+    ///
+    /// In a future version, there will be some information attached to this variant.
+    Parse,
+
+    /// You passed an invalid argument.
+    ///
+    /// In a future version, this variant may have some information attached, or be replaced with
+    /// more fine-grained variants.
+    ///
+    /// Note that this crate catches not all errors caused by an invalid argument. In some cases,
+    /// the system (kernel) raises an lower-level error, and this crate returns an [`Error`] with
+    /// other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
+    /// [`Error::source`] method.
+    ///
+    /// [`Error`]: struct.Error.html
+    /// [`Error::source`]: https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.source
+    InvalidArgument,
+
+    /// You tried to do something invalid.
+    ///
+    /// In a future version, this variant may have some information attached, or be replaced with
+    /// more fine-grained variants.
+    ///
+    /// Note that this crate catches not all errors caused by an invalid operation. In some cases,
+    /// the system (kernel) raises an lower-level error, and this crate returns an [`Error`] with
+    /// other `ErrorKind`, typically `Io`. The lower-level source can be obtained via
+    /// [`Error::source`] method.
+    ///
+    /// [`Error`]: struct.Error.html
+    /// [`Error::source`]: https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.source
+    InvalidOperation,
 }
 
 #[cfg(test)]

@@ -13,6 +13,35 @@
 //!
 //! [`Builder`] provides a way to configure a set of cgroups in the builder pattern.
 //!
+//! ---
+//!
+//! Most getter methods (e.g. [`Cgroup::notify_on_release`]) read the corresponding file, parse its
+//! content, and returns the result. They returns an error if failed to read and parse the file.
+//!
+//! Most setter methods (e.g. [`Cgroup::set_notify_on_release`]) format a given value into a string
+//! and write it to the corresponding file. They returns an error if failed to write to the file.
+//!
+//! # Examples
+//!
+//! ```no_run
+//! # fn main() -> controlgroup::Result<()> {
+//! use std::path::PathBuf;
+//! use controlgroup::v1::{cpu, Cgroup, CgroupPath, SubsystemKind};
+//!
+//! let mut cgroup = cpu::Subsystem::new(
+//!     CgroupPath::new(SubsystemKind::Cpu, PathBuf::from("students/charlie")));
+//!
+//! // Read `notify_on_release` file.
+//! let will_notify = cgroup.notify_on_release()?; // Returns `Result<bool, Error>`
+//!
+//! // Write to `notify_on_release` file.
+//! cgroup.set_notify_on_release(!will_notify)?; // Returns `Result<(), Error>`
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ---
+//!
 //! For more information about cgroup v1, see the kernel's documentation
 //! [Documentation/cgroup-v1/cgroups.txt].
 //!
@@ -34,6 +63,8 @@
 //! [`Cgroup`]: trait.Cgroup.html
 //! [`UnifiedRepr`]: struct.UnifiedRepr.html
 //! [`Builder`]: builder/struct.Builder.html
+//! [`Cgroup::notify_on_release`]: trait.Cgroup.html#method.notify_on_release
+//! [`Cgroup::set_notify_on_release`]: trait.Cgroup.html#method.set_notify_on_release
 //!
 //! [Documentation/cgroup-v1/cgroups.txt]: https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 
@@ -117,34 +148,6 @@ pub enum SubsystemKind {
     PerfEvent,
 }
 
-/// Compound of resource limits and constraints for all subsystems.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct Resources {
-    /// Resource limit on how much CPU time this cgroup can use.
-    pub cpu: cpu::Resources,
-    /// Resource limit on which CPUs and memory nodes this cgroup can use, and how they are
-    /// controlled by the system.
-    pub cpuset: cpuset::Resources,
-    /// Resource limit on what amount and how this cgroup can use memory.
-    pub memory: memory::Resources,
-    /// Resource limit no how many hugepage TLBs this cgroup can use.
-    pub hugetlb: hugetlb::Resources,
-    /// Allow or deny this cgroup to perform specific accesses to devices.
-    pub devices: devices::Resources,
-    /// Throttle bandwidth of block I/O by this cgroup.
-    pub blkio: blkio::Resources,
-    /// Resource limit on how much this cgroup can use RDMA/IB devices.
-    pub rdma: rdma::Resources,
-    /// Priority map of traffic originating from this cgroup.
-    pub net_prio: net_prio::Resources,
-    /// Tag network packets from this cgroup with a class ID.
-    pub net_cls: net_cls::Resources,
-    /// Resource limit on how many processes this cgroup can have.
-    pub pids: pids::Resources,
-    /// Freeze tasks in this cgroup.
-    pub freezer: freezer::Resources,
-}
-
 impl AsRef<Path> for SubsystemKind {
     fn as_ref(&self) -> &Path {
         Path::new(self.as_str())
@@ -175,4 +178,32 @@ impl SubsystemKind {
             Self::PerfEvent => "perf_event",
         }
     }
+}
+
+/// Compound of resource limits and constraints for all subsystems.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct Resources {
+    /// Resource limit on how much CPU time this cgroup can use.
+    pub cpu: cpu::Resources,
+    /// Resource limit on which CPUs and memory nodes this cgroup can use, and how they are
+    /// controlled by the system.
+    pub cpuset: cpuset::Resources,
+    /// Resource limit on what amount and how this cgroup can use memory.
+    pub memory: memory::Resources,
+    /// Resource limit no how many hugepage TLBs this cgroup can use.
+    pub hugetlb: hugetlb::Resources,
+    /// Allow or deny this cgroup to perform specific accesses to devices.
+    pub devices: devices::Resources,
+    /// Throttle bandwidth of block I/O by this cgroup.
+    pub blkio: blkio::Resources,
+    /// Resource limit on how much this cgroup can use RDMA/IB devices.
+    pub rdma: rdma::Resources,
+    /// Priority map of traffic originating from this cgroup.
+    pub net_prio: net_prio::Resources,
+    /// Tag network packets from this cgroup with a class ID.
+    pub net_cls: net_cls::Resources,
+    /// Resource limit on how many processes this cgroup can have.
+    pub pids: pids::Resources,
+    /// Freeze tasks in this cgroup.
+    pub freezer: freezer::Resources,
 }

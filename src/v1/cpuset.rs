@@ -112,6 +112,15 @@ pub struct Resources {
     // pub effective_mems: Vec<IdSet>,
 }
 
+impl Into<v1::Resources> for Resources {
+    fn into(self) -> v1::Resources {
+        v1::Resources {
+            cpuset: self,
+            ..v1::Resources::default()
+        }
+    }
+}
+
 /// Set of CPU ID or memory node ID for which CPUs and memory nodes.
 ///
 /// # Instantiation
@@ -183,333 +192,6 @@ pub struct Resources {
 /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IdSet(HashSet<u32>);
-
-impl_cgroup! {
-    Subsystem, Cpuset,
-
-    /// Applies the `Some` fields in `resources.cpuset`.
-    fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
-        let res: &self::Resources = &resources.cpuset;
-
-        macro_rules! a {
-            ($field: ident, $setter: ident) => {
-                if let Some(r) = res.$field {
-                    self.$setter(r)?;
-                }
-            };
-        }
-
-        if let Some(ref cpus) = res.cpus {
-            self.set_cpus(cpus)?;
-        }
-        if let Some(ref mems) = res.mems {
-            self.set_mems(mems)?;
-        }
-
-        a!(memory_migrate, set_memory_migrate);
-        a!(cpu_exclusive, set_cpu_exclusive);
-        a!(mem_exclusive, set_mem_exclusive);
-        a!(mem_hardwall, set_mem_hardwall);
-        a!(memory_pressure_enabled, set_memory_pressure_enabled);
-        a!(memory_spread_page, set_memory_spread_page);
-        a!(memory_spread_slab, set_memory_spread_slab);
-        a!(sched_load_balance, set_sched_load_balance);
-        a!(sched_relax_domain_level, set_sched_relax_domain_level);
-
-        Ok(())
-    }
-}
-
-macro_rules! _gen_getter {
-    ($desc: literal, $field: ident $( : $link : ident )?, $ty: ty, $parser: ident) => {
-        gen_getter!(cpuset, $desc, $field $( : $link )?, $ty, $parser);
-    };
-}
-
-macro_rules! _gen_setter {
-    ($desc: literal, $field: ident : link, $setter: ident, $ty: ty, $val: expr) => {
-        gen_setter!(cpuset, $desc, $field: link, $setter, $ty, $val);
-    };
-
-    (
-        $desc: literal,
-        $field: ident : link,
-        $setter: ident,
-        $arg: ident : $ty: ty as $as: ty,
-        $val: expr
-    ) => {
-        gen_setter!(cpuset, $desc, $field: link, $setter, $arg: $ty as $as, $val);
-    };
-}
-
-const MEMORY_PRESSURE_ENABLED: &str = "cpuset.memory_pressure_enabled";
-const CLONE_CHILDREN: &str = "cgroup.clone_children";
-
-const DOMAIN_LEVEL_MIN: i32 = -1;
-const DOMAIN_LEVEL_MAX: i32 = 5;
-
-impl Subsystem {
-    _gen_getter!(
-        "the set of CPUs this cgroup can use",
-        cpus: link,
-        IdSet,
-        parse
-    );
-
-    _gen_setter!(
-        "a set of CPUs this cgroup can use",
-        cpus: link,
-        set_cpus,
-        &IdSet,
-        &"0,1".parse::<cpuset::IdSet>()?
-    );
-
-    _gen_getter!(
-        "the set of memory nodes this cgroup can use",
-        mems: link,
-        IdSet,
-        parse
-    );
-
-    _gen_setter!(
-        "a set of memory nodes this cgroup can use",
-        mems: link,
-        set_mems,
-        &IdSet,
-        &"0,1".parse::<cpuset::IdSet>()?
-    );
-
-    _gen_getter!(
-        "whether the memory used by this cgroup should be migrated
-         when memory selection is updated,",
-        memory_migrate: link,
-        bool,
-        parse_01_bool
-    );
-
-    _gen_setter!(
-        "whether the memory used by this cgroup should be migrated
-         when memory selection is updated,",
-        memory_migrate: link,
-        set_memory_migrate,
-        enable: bool as i32,
-        true
-    );
-
-    _gen_getter!(
-        "whether the selected CPUs should be exclusive to this cgroup,",
-        cpu_exclusive: link,
-        bool,
-        parse_01_bool
-    );
-
-    _gen_setter!(
-        "whether the selected CPUs should be exclusive to this cgroup,",
-        cpu_exclusive: link,
-        set_cpu_exclusive,
-        exclusive: bool as i32,
-        true
-    );
-
-    _gen_getter!(
-        "whether the selected memory nodes should be exclusive to this cgroup,",
-        mem_exclusive: link,
-        bool,
-        parse_01_bool
-    );
-
-    _gen_setter!(
-        "whether the selected memory nodes should be exclusive to this cgroup,",
-        mem_exclusive: link,
-        set_mem_exclusive,
-        exclusive: bool as i32,
-        true
-    );
-
-    _gen_getter!(
-        "whether this cgroup is \"hardwalled\"",
-        mem_hardwall: link,
-        bool,
-        parse_01_bool
-    );
-
-    _gen_setter!(
-        "whether this cgroup is \"hardwalled\"",
-        mem_hardwall: link,
-        set_mem_hardwall,
-        enable: bool as i32,
-        true
-    );
-
-    _gen_getter!(
-        "the running average of the memory pressure faced by this cgroup,",
-        memory_pressure,
-        u64,
-        parse
-    );
-
-    with_doc! { concat!(
-        gen_doc!(
-            reads;
-            "cpuset.memory_pressure_enabled",
-            "whether the kernel computes the memory pressure of this cgroup,"
-         ),
-        gen_doc!(see; memory_pressure_enabled),
-"# Errors
-
-This field is present only in the root cgroup. If you call this method on a non-root cgroup, an
-error is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup, returns an error if
-failed to read and parse `cpuset.memory_pressure_enabled` file.
-
-[`ErrorKind::InvalidOperation`]: ../../enum.ErrorKind.html#variant.InvalidOperation\n\n",
-        gen_doc!(eg_read; cpuset, memory_pressure_enabled)),
-        pub fn memory_pressure_enabled(&self) -> Result<bool> {
-            if self.is_root() {
-                self.open_file_read(MEMORY_PRESSURE_ENABLED)
-                    .and_then(parse_01_bool)
-            } else {
-                Err(Error::new(ErrorKind::InvalidOperation))
-            }
-        }
-    }
-
-    with_doc! { concat!(
-        gen_doc!(
-            sets;
-            "cpuset.memory_pressure_enabled",
-            "whether the kernel computes the memory pressure of this cgroup,"
-        ),
-        gen_doc!(see; memory_pressure_enabled),
-"# Errors
-
-This field is present only in the root cgroup. If you call this method on a non-root cgroup, an
-error is returned with kind [`ErrorKind::InvalidOperation`]. On the root cgroup, returns an error if
-failed to write to `cpuset.memory_pressure_enabled` file.
-
-[`ErrorKind::InvalidOperation`]: ../../enum.ErrorKind.html#variant.InvalidOperation\n\n",
-        gen_doc!(eg_write; cpuset, set_memory_pressure_enabled, true)),
-        pub fn set_memory_pressure_enabled(&mut self, enable: bool) -> Result<()> {
-            if self.is_root() {
-                self.write_file(MEMORY_PRESSURE_ENABLED, enable as i32)
-            } else {
-                Err(Error::new(ErrorKind::InvalidOperation))
-            }
-        }
-    }
-
-    _gen_getter!(
-        "whether file system buffers are spread across the selected memory nodes,",
-        memory_spread_page: link,
-        bool,
-        parse_01_bool
-    );
-
-    _gen_setter!(
-        "whether file system buffers are spread across the selected memory nodes,",
-        memory_spread_page: link,
-        set_memory_spread_page,
-        enable: bool as i32,
-        true
-    );
-
-    _gen_getter!(
-        "whether the kernel slab caches for file I/O are spread across the selected memory nodes,",
-        memory_spread_slab: link,
-        bool,
-        parse_01_bool
-    );
-
-    _gen_setter!(
-        "whether the kernel slab caches for file I/O are spread across the selected memory nodes,",
-        memory_spread_slab: link,
-        set_memory_spread_slab,
-        enable: bool as i32,
-        true
-    );
-
-    _gen_getter!(
-        "whether the kernel balances the load across the selected CPUs,",
-        sched_load_balance: link,
-        bool,
-        parse_01_bool
-    );
-
-    _gen_setter!(
-        "whether the kernel balances the load across the selected CPUs,",
-        sched_load_balance: link,
-        set_sched_load_balance,
-        enable: bool as i32,
-        true
-    );
-
-    _gen_getter!(
-        "how much work the kernel do to balance the load on this cgroup,",
-        sched_relax_domain_level: link,
-        i32,
-        parse
-    );
-
-    with_doc! { concat!(
-        gen_doc!(
-            sets;
-            "cpuset.sched_relax_domain_level",
-            "how much work the kernel do to balance the load on this cgroup,"
-            : "The value must be between -1 and 5 (inclusive)."
-        ),
-        gen_doc!(see; sched_relax_domain_level),
-"# Errors
-
-Returns an error with kind [`ErrorKind::InvalidArgument`] if the level is out-of-range. Returns an
-error if failed to write to `cpuset.sched_relax_domain_level` file of this cgroup.
-
-[`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument\n\n",
-        gen_doc!(eg_write; cpuset, set_sched_relax_domain_level, 0)),
-        pub fn set_sched_relax_domain_level(&mut self, level: i32) -> Result<()> {
-            if level < DOMAIN_LEVEL_MIN || level > DOMAIN_LEVEL_MAX {
-                return Err(Error::new(ErrorKind::InvalidArgument));
-            }
-
-            self.write_file("cpuset.sched_relax_domain_level", level)
-        }
-    }
-
-    with_doc! { concat!(
-        gen_doc!(
-            reads;
-            "cgroup.clone_children",
-            "whether a new cpuset cgroup will copy the configuration from its parent cgroup,"
-        ),
-        gen_doc!(see),
-        gen_doc!(err_read; "cgroup.clone_children"),
-        gen_doc!(eg_read; cpuset, clone_children)),
-        pub fn clone_children(&self) -> Result<bool> {
-            self.open_file_read(CLONE_CHILDREN).and_then(parse_01_bool)
-        }
-    }
-
-    with_doc! { concat!(
-        gen_doc!(
-            sets;
-            "cgroup.clone_children",
-            "whether a new cpuset cgroup will copy the configuration from its parent cgroup,"
-        ),
-        gen_doc!(see),
-        gen_doc!(err_write; "cgroup.clone_children"),
-        gen_doc!(eg_write; cpuset, set_clone_children, true)),
-        pub fn set_clone_children(&mut self, clone: bool) -> Result<()> {
-            self.write_file(CLONE_CHILDREN, clone as i32)
-        }
-    }
-}
-
-impl Into<v1::Resources> for Resources {
-    fn into(self) -> v1::Resources {
-        v1::Resources {
-            cpuset: self,
-            ..v1::Resources::default()
-        }
-    }
-}
 
 impl FromIterator<u32> for IdSet {
     fn from_iter<I: IntoIterator<Item = u32>>(iter: I) -> Self {
@@ -693,6 +375,236 @@ impl IdSet {
     /// ```
     pub fn remove(&mut self, id: u32) {
         self.0.remove(&id);
+    }
+}
+
+impl_cgroup! {
+    Subsystem, Cpuset,
+
+    /// Applies the `Some` fields in `resources.cpuset`.
+    fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
+        let res: &self::Resources = &resources.cpuset;
+
+        if let Some(ref cpus) = res.cpus {
+            self.set_cpus(cpus)?;
+        }
+        if let Some(ref mems) = res.mems {
+            self.set_mems(mems)?;
+        }
+
+        macro_rules! a {
+            ($field: ident, $setter: ident) => {
+                if let Some(r) = res.$field {
+                    self.$setter(r)?;
+                }
+            };
+        }
+
+        a!(memory_migrate, set_memory_migrate);
+        a!(cpu_exclusive, set_cpu_exclusive);
+        a!(mem_exclusive, set_mem_exclusive);
+        a!(mem_hardwall, set_mem_hardwall);
+        a!(memory_pressure_enabled, set_memory_pressure_enabled);
+        a!(memory_spread_page, set_memory_spread_page);
+        a!(memory_spread_slab, set_memory_spread_slab);
+        a!(sched_load_balance, set_sched_load_balance);
+        a!(sched_relax_domain_level, set_sched_relax_domain_level);
+
+        Ok(())
+    }
+}
+
+const MEMORY_PRESSURE_ENABLED: &str = "cpuset.memory_pressure_enabled";
+const CLONE_CHILDREN: &str = "cgroup.clone_children";
+
+const DOMAIN_LEVEL_MIN: i32 = -1;
+const DOMAIN_LEVEL_MAX: i32 = 5;
+
+impl Subsystem {
+    /// Reads the set of CPUs this cgroup can use from `cpuset.cpus` file.
+    pub fn cpus(&self) -> Result<IdSet> {
+        self.open_file_read("cpuset.cpus").and_then(parse)
+    }
+
+    /// Sets a set of CPUs this cgroup can use by writing to `cpuset.cpus` file.
+    pub fn set_cpus(&mut self, cpus: &IdSet) -> Result<()> {
+        self.write_file("cpuset.cpus", cpus)
+    }
+
+    /// Reads the set of memory nodes this cgroup can use from `cpuset.mems` file.
+    pub fn mems(&self) -> Result<IdSet> {
+        self.open_file_read("cpuset.mems").and_then(parse)
+    }
+
+    /// Sets a set of memory nodes this cgroup can use by writing to `cpuset.mems` file.
+    pub fn set_mems(&mut self, mems: &IdSet) -> Result<()> {
+        self.write_file("cpuset.mems", mems)
+    }
+
+    /// Reads whether the memory used by this cgroup should be migrated when memory selection is
+    /// updated, from `cpuset.memory_migrate` file.
+    pub fn memory_migrate(&self) -> Result<bool> {
+        self.open_file_read("cpuset.memory_migrate")
+            .and_then(parse_01_bool)
+    }
+
+    /// Sets whether the memory used by this cgroup should be migrated when memory selection is
+    /// updated, by writing to `cpuset.memory_migrate` file.
+    pub fn set_memory_migrate(&mut self, enable: bool) -> Result<()> {
+        self.write_file("cpuset.memory_migrate", enable as i32)
+    }
+
+    /// Reads whether the selected CPUs should be exclusive to this cgroup, from
+    /// `cpuset.cpu_exclusive` file.
+    pub fn cpu_exclusive(&self) -> Result<bool> {
+        self.open_file_read("cpuset.cpu_exclusive")
+            .and_then(parse_01_bool)
+    }
+
+    /// Sets whether the selected CPUs should be exclusive to this cgroup, by writing to
+    /// `cpuset.cpu_exclusive` file.
+    pub fn set_cpu_exclusive(&mut self, exclusive: bool) -> Result<()> {
+        self.write_file("cpuset.cpu_exclusive", exclusive as i32)
+    }
+
+    /// Reads whether the selected memory nodes should be exclusive to this cgroup, from
+    /// `cpuset.mem_exclusive` file.
+    pub fn mem_exclusive(&self) -> Result<bool> {
+        self.open_file_read("cpuset.mem_exclusive")
+            .and_then(parse_01_bool)
+    }
+
+    /// Sets whether the selected memory nodes should be exclusive to this cgroup, by writing to
+    /// `cpuset.mem_exclusive` file.
+    pub fn set_mem_exclusive(&mut self, exclusive: bool) -> Result<()> {
+        self.write_file("cpuset.mem_exclusive", exclusive as i32)
+    }
+
+    /// Reads whether this cgroup is "hardwalled" from `cpuset.mem_hardwall` file.
+    pub fn mem_hardwall(&self) -> Result<bool> {
+        self.open_file_read("cpuset.mem_hardwall")
+            .and_then(parse_01_bool)
+    }
+
+    /// Sets whether this cgroup is "hardwalled" by writing to `cpuset.mem_hardwall` file.
+    pub fn set_mem_hardwall(&mut self, enable: bool) -> Result<()> {
+        self.write_file("cpuset.mem_hardwall", enable as i32)
+    }
+
+    /// Reads the running average of the memory pressure faced by this cgroup, from
+    /// `cpuset.memory_pressure` file.
+    pub fn memory_pressure(&self) -> Result<u64> {
+        self.open_file_read("cpuset.memory_pressure")
+            .and_then(parse)
+    }
+
+    /// Reads whether the kernel computes the memory pressure of this cgroup, from
+    /// `cpuset.memory_pressure_enabled` file.
+    ///
+    /// # Errors
+    ///
+    /// This field is present only in the root cgroup. If you call this method on a non-root cgroup,
+    /// an error is returned with kind [`ErrorKind::InvalidOperation`].
+    ///
+    /// [`ErrorKind::InvalidOperation`]: ../../enum.ErrorKind.html#variant.InvalidOperation
+    pub fn memory_pressure_enabled(&self) -> Result<bool> {
+        if self.is_root() {
+            self.open_file_read(MEMORY_PRESSURE_ENABLED)
+                .and_then(parse_01_bool)
+        } else {
+            Err(Error::new(ErrorKind::InvalidOperation))
+        }
+    }
+
+    /// Sets whether the kernel computes the memory pressure of this cgroup, by writing to
+    /// `cpuset.memory_pressure_enabled` file.
+    ///
+    /// # Errors
+    ///
+    /// This field is present only in the root cgroup. If you call this method on a non-root cgroup,
+    /// an error is returned with kind [`ErrorKind::InvalidOperation`].
+    ///
+    /// [`ErrorKind::InvalidOperation`]: ../../enum.ErrorKind.html#variant.InvalidOperation
+    pub fn set_memory_pressure_enabled(&mut self, enable: bool) -> Result<()> {
+        if self.is_root() {
+            self.write_file(MEMORY_PRESSURE_ENABLED, enable as i32)
+        } else {
+            Err(Error::new(ErrorKind::InvalidOperation))
+        }
+    }
+
+    /// Reads whether file system buffers are spread across the selected memory nodes, from
+    /// `cpuset.memory_spread_page` file.
+    pub fn memory_spread_page(&self) -> Result<bool> {
+        self.open_file_read("cpuset.memory_spread_page")
+            .and_then(parse_01_bool)
+    }
+
+    /// Sets whether file system buffers are spread across the selected memory nodes, by writing to
+    /// `cpuset.memory_spread_page` file.
+    pub fn set_memory_spread_page(&mut self, enable: bool) -> Result<()> {
+        self.write_file("cpuset.memory_spread_page", enable as i32)
+    }
+
+    /// Reads whether the kernel slab caches for file I/O are spread across the selected memory
+    /// nodes, from `cpuset.memory_spread_slab` file.
+    pub fn memory_spread_slab(&self) -> Result<bool> {
+        self.open_file_read("cpuset.memory_spread_slab")
+            .and_then(parse_01_bool)
+    }
+
+    /// Sets whether the kernel slab caches for file I/O are spread across the selected memory
+    /// nodes, by writing to `cpuset.memory_spread_slab` file.
+    pub fn set_memory_spread_slab(&mut self, enable: bool) -> Result<()> {
+        self.write_file("cpuset.memory_spread_slab", enable as i32)
+    }
+
+    /// Reads whether the kernel balances the load across the selected CPUs, from
+    /// `cpuset.sched_load_balance` file.
+    pub fn sched_load_balance(&self) -> Result<bool> {
+        self.open_file_read("cpuset.sched_load_balance")
+            .and_then(parse_01_bool)
+    }
+
+    /// Reads whether the kernel balances the load across the selected CPUs, by writing to
+    /// `cpuset.sched_load_balance` file.
+    pub fn set_sched_load_balance(&mut self, enable: bool) -> Result<()> {
+        self.write_file("cpuset.sched_load_balance", enable as i32)
+    }
+
+    /// Reads how much work the kernel do to balance the load on this cgroup, from
+    /// `cpuset.sched_relax_domain_level` file.
+    pub fn sched_relax_domain_level(&self) -> Result<i32> {
+        self.open_file_read("cpuset.sched_relax_domain_level")
+            .and_then(parse)
+    }
+
+    /// Sets how much work the kernel do to balance the load on this cgroup, by writing to
+    /// `cpuset.sched_relax_domain_level` file.
+    ///
+    /// The value must be between -1 and 5 (inclusive). If the value is out-of-range, this method
+    /// returns an eror with kind [`ErrorKind::InvalidArgument`].
+    ///
+    /// [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument
+    pub fn set_sched_relax_domain_level(&mut self, level: i32) -> Result<()> {
+        if level < DOMAIN_LEVEL_MIN || level > DOMAIN_LEVEL_MAX {
+            return Err(Error::new(ErrorKind::InvalidArgument));
+        }
+
+        self.write_file("cpuset.sched_relax_domain_level", level)
+    }
+
+    /// Reads whether a new cpuset cgroup will copy the configuration from its parent cgroup, from
+    /// `cgoup.clone_children` file.
+    pub fn clone_children(&self) -> Result<bool> {
+        self.open_file_read("cgroup.clone_children")
+            .and_then(parse_01_bool)
+    }
+
+    /// Sets whether a new cpuset cgroup will copy the configuration from its parent cgroup, by
+    /// writing to `cgoup.clone_children` file.
+    pub fn set_clone_children(&mut self, clone: bool) -> Result<()> {
+        self.write_file("cgroup.clone_children", clone as i32)
     }
 }
 

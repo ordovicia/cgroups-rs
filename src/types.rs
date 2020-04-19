@@ -1,3 +1,10 @@
+use std::{
+    fmt::{self, Display},
+    str::FromStr,
+};
+
+use crate::{parse, Error, Result};
+
 /// PID or thread ID for attaching a task to a cgroup.
 ///
 /// `Pid` can be converted from [`u32`] and [`&std::process::Child`].
