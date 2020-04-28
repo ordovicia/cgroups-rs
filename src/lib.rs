@@ -212,7 +212,7 @@ pub use types::{Device, DeviceNumber, Max, Pid, RefKv};
 //
 // FIXME: consume system time
 #[cfg(test)]
-pub(crate) fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64) {
+pub(crate) fn consume_cpu_until(condition: impl Fn() -> bool, timeout_sec: u64) {
     use std::{
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -235,7 +235,7 @@ pub(crate) fn consume_cpu_until(condition: impl Fn() -> bool, timeout_secs: u64)
         .collect::<Vec<_>>();
 
     let start = time::Instant::now();
-    while start.elapsed() < time::Duration::from_secs(timeout_secs) {
+    while start.elapsed() < time::Duration::from_secs(timeout_sec) {
         if condition() {
             finished.store(true, Ordering::Relaxed);
             for handler in handlers {

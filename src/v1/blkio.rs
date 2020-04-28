@@ -97,6 +97,15 @@ pub struct Resources {
     pub write_iops_device: HashMap<Device, u64>,
 }
 
+impl Into<v1::Resources> for Resources {
+    fn into(self) -> v1::Resources {
+        v1::Resources {
+            blkio: self,
+            ..v1::Resources::default()
+        }
+    }
+}
+
 /// How much I/O service a cgroup has transferred for each device and in total.
 ///
 /// The unit can be either bytes/s, ops/s, or nanosecond, depending on the source from which the
@@ -161,13 +170,57 @@ impl_cgroup! {
     }
 }
 
+macro_rules! def_file {
+    ($var: ident, $name: literal) => {
+        const $var: &str = concat!("blkio.", $name);
+    };
+}
+
+def_file!(WEIGHT, "weight");
+def_file!(WEIGHT_DEVICE, "weight_device");
+
+def_file!(LEAF_WEIGHT, "leaf_weight");
+def_file!(LEAF_WEIGHT_DEVICE, "leaf_weight_device");
+
+def_file!(TIME, "time");
+def_file!(TIME_RECURSIVE, "time_recursive");
+
+def_file!(SECTORS, "sectors");
+def_file!(SECTORS_RECURSIVE, "sectors_recursive");
+
+def_file!(IO_SERVICE_BYTES, "io_service_bytes");
+def_file!(IO_SERVICE_BYTES_RECURSIVE, "io_service_bytes_recursive");
+
+def_file!(IO_SERVICED, "io_serviced");
+def_file!(IO_SERVICED_RECURSIVE, "io_serviced_recursive");
+
+def_file!(IO_SERVICE_TIME, "io_service_time");
+def_file!(IO_SERVICE_TIME_RECURSIVE, "io_service_time_recursive");
+
+def_file!(IO_WAIT_TIME, "io_wait_time");
+def_file!(IO_WAIT_TIME_RECURSIVE, "io_wait_time_recursive");
+
+def_file!(IO_MERGED, "io_merged");
+def_file!(IO_MERGED_RECURSIVE, "io_merged_recursive");
+
+def_file!(IO_QUEUED, "io_queued");
+def_file!(IO_QUEUED_RECURSIVE, "io_queued_recursive");
+
+def_file!(READ_BPS_DEVICE, "throttle.read_bps_device");
+def_file!(WRITE_BPS_DEVICE, "throttle.write_bps_device");
+
+def_file!(READ_IOPS_DEVICE, "throttle.read_iops_device");
+def_file!(WRITE_IOPS_DEVICE, "throttle.write_iops_device");
+
+def_file!(RESET_STATS, "reset_stats");
+
 const WEIGHT_MIN: u16 = 10;
 const WEIGHT_MAX: u16 = 1000;
 
 impl Subsystem {
     /// Reads the relative weight of block I/O performed by this cgroup, from `blkio.weight` file.
     pub fn weight(&self) -> Result<u16> {
-        self.open_file_read("blkio.weight").and_then(parse)
+        self.open_file_read(WEIGHT).and_then(parse)
     }
 
     /// Sets the relative weight of block I/O performed by this cgroup, by writing to `blkio.weight` file.
@@ -178,13 +231,12 @@ impl Subsystem {
     /// [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument\n\n",
     pub fn set_weight(&mut self, weight: u16) -> Result<()> {
         validate_weight(weight)?;
-        self.write_file("blkio.weight", weight)
+        self.write_file(WEIGHT, weight)
     }
 
     /// Reads an overriding weight for devices from `blkio.weight_device` file.
     pub fn weight_device(&self) -> Result<HashMap<Device, u16>> {
-        self.open_file_read("blkio.weight_device")
-            .and_then(parse_map)
+        self.open_file_read(WEIGHT_DEVICE).and_then(parse_map)
     }
 
     /// Sets an overriding wright for a device by writing to `blkio.weight_device` file.
@@ -197,15 +249,14 @@ impl Subsystem {
         use io::Write;
 
         validate_weight(weight)?;
-
-        let mut file = self.open_file_write("blkio.weight_device")?;
+        let mut file = self.open_file_write(WEIGHT_DEVICE)?;
         write!(file, "{} {}", device, weight).map_err(Into::into)
     }
 
     /// Reads the weight this cgroup has while competing against descendant cgroups, from
     /// `blkio.leaf_weight` file.
     pub fn leaf_weight(&self) -> Result<u16> {
-        self.open_file_read("blkio.leaf_weight").and_then(parse)
+        self.open_file_read(LEAF_WEIGHT).and_then(parse)
     }
 
     /// Sets the weight this cgroup has while competing against descendant cgroups, by writing to
@@ -217,13 +268,12 @@ impl Subsystem {
     /// [`ErrorKind::InvalidArgument`]: ../../enum.ErrorKind.html#variant.InvalidArgument\n\n",
     pub fn set_leaf_weight(&mut self, leaf_weight: u16) -> Result<()> {
         validate_weight(leaf_weight)?;
-        self.write_file("blkio.leaf_weight", leaf_weight)
+        self.write_file(LEAF_WEIGHT, leaf_weight)
     }
 
     /// Reads the overriding leaf wright for devices from `blkio.leaf_weight_device` file.
     pub fn leaf_weight_device(&self) -> Result<HashMap<Device, u16>> {
-        self.open_file_read("blkio.leaf_weight_device")
-            .and_then(parse_map)
+        self.open_file_read(LEAF_WEIGHT_DEVICE).and_then(parse_map)
     }
 
     /// Sets an overriding leaf weight for a device by writing to `blkio.leaf_weight_device` file.
@@ -236,42 +286,39 @@ impl Subsystem {
         use io::Write;
 
         validate_weight(weight)?;
-
-        let mut file = self.open_file_write("blkio.leaf_weight_device")?;
+        let mut file = self.open_file_write(LEAF_WEIGHT_DEVICE)?;
         write!(file, "{} {}", device, weight).map_err(Into::into)
     }
 
     /// Reads the I/O time allocated to this cgroup per device (in milliseconds) from `blkio.time`
     /// file.
     pub fn time(&self) -> Result<HashMap<Device, u64>> {
-        self.open_file_read("blkio.time").and_then(parse_map)
+        self.open_file_read(TIME).and_then(parse_map)
     }
 
     /// Reads `blkio.time_recursive` file. See [`time`] method for more information.
     ///
     /// [`time`]: #method.time
     pub fn time_recursive(&self) -> Result<HashMap<Device, u64>> {
-        self.open_file_read("blkio.time_recursive")
-            .and_then(parse_map)
+        self.open_file_read(TIME_RECURSIVE).and_then(parse_map)
     }
 
     /// Reads the number of sectors transferred by this cgroup, from `blkio.sectors` file.
     pub fn sectors(&self) -> Result<HashMap<Device, u64>> {
-        self.open_file_read("blkio.sectors").and_then(parse_map)
+        self.open_file_read(SECTORS).and_then(parse_map)
     }
 
     /// Reads `blkio.sectors_recursive` file. See [`sectors`] method for more information.
     ///
     /// [`sectors`]: #method.sectors
     pub fn sectors_recursive(&self) -> Result<HashMap<Device, u64>> {
-        self.open_file_read("blkio.sectors_recursive")
-            .and_then(parse_map)
+        self.open_file_read(SECTORS_RECURSIVE).and_then(parse_map)
     }
 
     /// Reads the I/O service transferred by this cgroup (in bytes), from `blkio.io_service_bytes`
     /// file.
     pub fn io_service_bytes(&self) -> Result<IoService> {
-        self.open_file_read("blkio.io_service_bytes")
+        self.open_file_read(IO_SERVICE_BYTES)
             .and_then(parse_io_service)
     }
 
@@ -280,15 +327,14 @@ impl Subsystem {
     ///
     /// [`io_service_bytes`]: #method.io_service_bytes
     pub fn io_service_bytes_recursive(&self) -> Result<IoService> {
-        self.open_file_read("blkio.io_service_bytes_recursive")
+        self.open_file_read(IO_SERVICE_BYTES_RECURSIVE)
             .and_then(parse_io_service)
     }
 
     /// Reads the I/O service transferred by this cgroup (in operation count), from
     /// `blkio.io_serviced` file.
     pub fn io_serviced(&self) -> Result<IoService> {
-        self.open_file_read("blkio.io_serviced")
-            .and_then(parse_io_service)
+        self.open_file_read(IO_SERVICED).and_then(parse_io_service)
     }
 
     /// Reads `blkio.io_serviced_recursive` file. See [`io_serviced`] method for more
@@ -296,14 +342,14 @@ impl Subsystem {
     ///
     /// [`io_serviced`]: #method.io_serviced
     pub fn io_serviced_recursive(&self) -> Result<IoService> {
-        self.open_file_read("blkio.io_serviced_recursive")
+        self.open_file_read(IO_SERVICED_RECURSIVE)
             .and_then(parse_io_service)
     }
 
     /// Reads the I/O service transferred by this cgroup (in nanoseconds), from
     /// `blkio.io_service_time` file.
     pub fn io_service_time(&self) -> Result<IoService> {
-        self.open_file_read("blkio.io_service_time")
+        self.open_file_read(IO_SERVICE_TIME)
             .and_then(parse_io_service)
     }
 
@@ -312,15 +358,14 @@ impl Subsystem {
     ///
     /// [`io_service_time`]: #method.io_service_time
     pub fn io_service_time_recursive(&self) -> Result<IoService> {
-        self.open_file_read("blkio.io_service_time_recursive")
+        self.open_file_read(IO_SERVICE_TIME_RECURSIVE)
             .and_then(parse_io_service)
     }
 
     /// Reads the total time the I/O for this cgroup spent waiting for services, from
     /// `blkio.io_wait_time` file.
     pub fn io_wait_time(&self) -> Result<IoService> {
-        self.open_file_read("blkio.io_wait_time")
-            .and_then(parse_io_service)
+        self.open_file_read(IO_WAIT_TIME).and_then(parse_io_service)
     }
 
     /// Reads `blkio.io_wait_time_recursive` file. See [`io_wait_time`] method for more
@@ -328,65 +373,59 @@ impl Subsystem {
     ///
     /// [`io_wait_time`]: #method.io_wait_time
     pub fn io_wait_time_recursive(&self) -> Result<IoService> {
-        self.open_file_read("blkio.io_wait_time_recursive")
+        self.open_file_read(IO_WAIT_TIME_RECURSIVE)
             .and_then(parse_io_service)
     }
 
     /// Reads the number of BIOS requests merged into I/O requests belonging to this cgroup, from
     /// `blkio.io_merged` file.
     pub fn io_merged(&self) -> Result<IoService> {
-        self.open_file_read("blkio.io_merged")
-            .and_then(parse_io_service)
+        self.open_file_read(IO_MERGED).and_then(parse_io_service)
     }
 
     /// Reads `blkio.io_merged_recursive` file. See [`io_merged`] method for more information.
     ///
     /// [`io_merged`]: #method.io_merged
     pub fn io_merged_recursive(&self) -> Result<IoService> {
-        self.open_file_read("blkio.io_merged_recursive")
+        self.open_file_read(IO_MERGED_RECURSIVE)
             .and_then(parse_io_service)
     }
 
     /// Reads the number of I/O operations queued by this cgroup, from `blkio.io_queued` file.
     pub fn io_queued(&self) -> Result<IoService> {
-        self.open_file_read("blkio.io_queued")
-            .and_then(parse_io_service)
+        self.open_file_read(IO_QUEUED).and_then(parse_io_service)
     }
 
     /// Reads `blkio.io_queued_recursive` file. See [`io_queued`] method for more information.
     ///
     /// [`io_queued`]: #method.io_queued
     pub fn io_queued_recursive(&self) -> Result<IoService> {
-        self.open_file_read("blkio.io_queued_recursive")
+        self.open_file_read(IO_QUEUED_RECURSIVE)
             .and_then(parse_io_service)
     }
 
     /// Reads the throttle on bandwidth of read access in terms of bytes/s, from
     /// `blkio.throttle.read_bps_device` file.
     pub fn read_bps_device(&self) -> Result<HashMap<Device, u64>> {
-        self.open_file_read("blkio.throttle.read_bps_device")
-            .and_then(parse_map)
+        self.open_file_read(READ_BPS_DEVICE).and_then(parse_map)
     }
 
     /// Reads the throttle on bandwidth of write access in terms of bytes/s, from
     /// `blkio.throttle.write_bps_device` file.
     pub fn write_bps_device(&self) -> Result<HashMap<Device, u64>> {
-        self.open_file_read("blkio.throttle.write_bps_device")
-            .and_then(parse_map)
+        self.open_file_read(WRITE_BPS_DEVICE).and_then(parse_map)
     }
 
     /// Reads the throttle on bandwidth of read access in terms of ops/s, from
     /// `blkio.throttle.read_iops_device` file.
     pub fn read_iops_device(&self) -> Result<HashMap<Device, u64>> {
-        self.open_file_read("blkio.throttle.read_iops_device")
-            .and_then(parse_map)
+        self.open_file_read(READ_IOPS_DEVICE).and_then(parse_map)
     }
 
     /// Reads the throttle on bandwidth of write access in terms of ops/s, from
     /// `blkio.throttle.write_iops_device` file.
     pub fn write_iops_device(&self) -> Result<HashMap<Device, u64>> {
-        self.open_file_read("blkio.throttle.write_iops_device")
-            .and_then(parse_map)
+        self.open_file_read(WRITE_IOPS_DEVICE).and_then(parse_map)
     }
 
     /// Sets a throttle on bandwidth of read access in terms of bytes/s, by writing to
@@ -394,8 +433,8 @@ impl Subsystem {
     pub fn throttle_read_bps_device(&mut self, device: Device, bps: u64) -> Result<()> {
         use io::Write;
 
-        let mut file = self.open_file_write("blkio.throttle.read_bps_device")?;
-        // write!(file, "{} {}", device, $arg).map_err(Into::into) // not work
+        let mut file = self.open_file_write(READ_BPS_DEVICE)?;
+        // write!(file, "{} {}", device, $arg).map_err(Into::into) // does not work
         file.write_all(format!("{} {}", device, bps).as_bytes())
             .map_err(Into::into)
     }
@@ -405,7 +444,7 @@ impl Subsystem {
     pub fn throttle_write_bps_device(&mut self, device: Device, bps: u64) -> Result<()> {
         use io::Write;
 
-        let mut file = self.open_file_write("blkio.throttle.write_bps_device")?;
+        let mut file = self.open_file_write(WRITE_BPS_DEVICE)?;
         file.write_all(format!("{} {}", device, bps).as_bytes())
             .map_err(Into::into)
     }
@@ -415,7 +454,7 @@ impl Subsystem {
     pub fn throttle_read_iops_device(&mut self, device: Device, iops: u64) -> Result<()> {
         use io::Write;
 
-        let mut file = self.open_file_write("blkio.throttle.read_iops_device")?;
+        let mut file = self.open_file_write(READ_IOPS_DEVICE)?;
         file.write_all(format!("{} {}", device, iops).as_bytes())
             .map_err(Into::into)
     }
@@ -425,7 +464,7 @@ impl Subsystem {
     pub fn throttle_write_iops_device(&mut self, device: Device, iops: u64) -> Result<()> {
         use io::Write;
 
-        let mut file = self.open_file_write("blkio.throttle.write_iops_device")?;
+        let mut file = self.open_file_write(WRITE_IOPS_DEVICE)?;
         file.write_all(format!("{} {}", device, iops).as_bytes())
             .map_err(Into::into)
     }
@@ -433,16 +472,7 @@ impl Subsystem {
     /// Resets all statistics about block I/O performed by this cgroup, by writing to
     /// `blkio.reset_stats` file.
     pub fn reset_stats(&mut self) -> Result<()> {
-        self.write_file("blkio.reset_stats", 0)
-    }
-}
-
-impl Into<v1::Resources> for Resources {
-    fn into(self) -> v1::Resources {
-        v1::Resources {
-            blkio: self,
-            ..v1::Resources::default()
-        }
+        self.write_file(RESET_STATS, 0)
     }
 }
 
@@ -559,31 +589,40 @@ mod tests {
     use v1::SubsystemKind;
 
     #[test]
-    #[rustfmt::skip]
-    fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(
+    fn test_subsystem_create_delete() -> Result<()> {
+        gen_test_subsystem_create_delete!(
             BlkIo,
-            [
-                "weight", "weight_device", "leaf_weight", "leaf_weight_device",
-                "throttle.io_service_bytes", "throttle.io_serviced",
-                "throttle.read_bps_device", "throttle.read_iops_device",
-                "throttle.write_bps_device", "throttle.write_iops_device",
-                "reset_stats",
-
-                "time", "sectors",
-                "io_service_bytes", "io_service_time", "io_serviced",
-                "io_merged", "io_queued", "io_wait_time",
-
-                "time_recursive", "sectors_recursive",
-                "io_service_bytes_recursive", "io_service_time_recursive", "io_serviced_recursive",
-                "io_merged_recursive", "io_queued_recursive", "io_wait_time_recursive",
-            ]
+            WEIGHT,
+            WEIGHT_DEVICE,
+            LEAF_WEIGHT,
+            LEAF_WEIGHT_DEVICE,
+            TIME,
+            TIME_RECURSIVE,
+            SECTORS,
+            SECTORS_RECURSIVE,
+            IO_SERVICE_BYTES,
+            IO_SERVICE_BYTES_RECURSIVE,
+            IO_SERVICED,
+            IO_SERVICED_RECURSIVE,
+            IO_SERVICE_TIME,
+            IO_SERVICE_TIME_RECURSIVE,
+            IO_WAIT_TIME,
+            IO_WAIT_TIME_RECURSIVE,
+            IO_MERGED,
+            IO_MERGED_RECURSIVE,
+            IO_QUEUED,
+            IO_QUEUED_RECURSIVE,
+            READ_BPS_DEVICE,
+            WRITE_BPS_DEVICE,
+            READ_IOPS_DEVICE,
+            WRITE_IOPS_DEVICE,
+            RESET_STATS,
         )
     }
 
     #[test]
     fn test_subsystem_apply() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_apply!(
             BlkIo,
             Resources {
                 weight: Some(1000),
@@ -604,7 +643,7 @@ mod tests {
     fn test_subsystem_weight() -> Result<()> {
         const WEIGHT_DEFAULT: u16 = 500;
 
-        gen_subsystem_test!(
+        gen_test_subsystem_get_set!(
             BlkIo,
             weight,
             WEIGHT_DEFAULT,
@@ -612,7 +651,7 @@ mod tests {
             WEIGHT_MIN,
             WEIGHT_MAX,
         )?;
-        gen_subsystem_test!(
+        gen_test_subsystem_get_set!(
             BlkIo,
             leaf_weight,
             WEIGHT_DEFAULT,
@@ -624,13 +663,13 @@ mod tests {
 
     #[test]
     fn err_subsystem_weight() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_err!(
             BlkIo,
             set_weight,
             (InvalidArgument, WEIGHT_MIN - 1),
             (InvalidArgument, WEIGHT_MAX + 1),
         )?;
-        gen_subsystem_test!(
+        gen_test_subsystem_err!(
             BlkIo,
             set_leaf_weight,
             (InvalidArgument, WEIGHT_MIN - 1),
@@ -640,21 +679,21 @@ mod tests {
 
     #[test]
     fn test_subsystem_weight_device() -> Result<()> {
-        gen_subsystem_test!(BlkIo, weight_device, hashmap! {})?;
-        gen_subsystem_test!(BlkIo, leaf_weight_device, hashmap! {})
+        gen_test_subsystem_get!(BlkIo, weight_device, hashmap! {})?;
+        gen_test_subsystem_get!(BlkIo, leaf_weight_device, hashmap! {})
     }
 
     #[test]
     fn err_subsystem_weight_device() -> Result<()> {
         let device = lsblk();
 
-        gen_subsystem_test!(
+        gen_test_subsystem_err!(
             BlkIo,
             set_weight_device,
             (InvalidArgument, device, WEIGHT_MIN - 1),
             (InvalidArgument, device, WEIGHT_MAX + 1),
         )?;
-        gen_subsystem_test!(
+        gen_test_subsystem_err!(
             BlkIo,
             set_leaf_weight_device,
             (InvalidArgument, device, WEIGHT_MIN - 1),
@@ -664,14 +703,14 @@ mod tests {
 
     #[test]
     fn test_subsystem_time() -> Result<()> {
-        gen_subsystem_test!(BlkIo, time, hashmap! {})?;
-        gen_subsystem_test!(BlkIo, time_recursive, hashmap! {})
+        gen_test_subsystem_get!(BlkIo, time, hashmap! {})?;
+        gen_test_subsystem_get!(BlkIo, time_recursive, hashmap! {})
     }
 
     #[test]
     fn test_subsystem_sectors() -> Result<()> {
-        gen_subsystem_test!(BlkIo, sectors, hashmap! {})?;
-        gen_subsystem_test!(BlkIo, sectors_recursive, hashmap! {})
+        gen_test_subsystem_get!(BlkIo, sectors, hashmap! {})?;
+        gen_test_subsystem_get!(BlkIo, sectors_recursive, hashmap! {})
     }
 
     #[test]
@@ -681,14 +720,14 @@ mod tests {
             total: 0,
         };
 
-        gen_subsystem_test!(BlkIo, io_service_bytes, io_service)?;
-        gen_subsystem_test!(BlkIo, io_service_bytes_recursive, io_service)?;
+        gen_test_subsystem_get!(BlkIo, io_service_bytes, io_service)?;
+        gen_test_subsystem_get!(BlkIo, io_service_bytes_recursive, io_service)?;
 
-        gen_subsystem_test!(BlkIo, io_serviced, io_service)?;
-        gen_subsystem_test!(BlkIo, io_serviced_recursive, io_service)?;
+        gen_test_subsystem_get!(BlkIo, io_serviced, io_service)?;
+        gen_test_subsystem_get!(BlkIo, io_serviced_recursive, io_service)?;
 
-        gen_subsystem_test!(BlkIo, io_service_time, io_service)?;
-        gen_subsystem_test!(BlkIo, io_service_time_recursive, io_service)
+        gen_test_subsystem_get!(BlkIo, io_service_time, io_service)?;
+        gen_test_subsystem_get!(BlkIo, io_service_time_recursive, io_service)
     }
 
     #[test]
@@ -698,8 +737,8 @@ mod tests {
             total: 0,
         };
 
-        gen_subsystem_test!(BlkIo, io_wait_time, io_service)?;
-        gen_subsystem_test!(BlkIo, io_wait_time_recursive, io_service)
+        gen_test_subsystem_get!(BlkIo, io_wait_time, io_service)?;
+        gen_test_subsystem_get!(BlkIo, io_wait_time_recursive, io_service)
     }
 
     #[test]
@@ -709,8 +748,8 @@ mod tests {
             total: 0,
         };
 
-        gen_subsystem_test!(BlkIo, io_merged, io_service)?;
-        gen_subsystem_test!(BlkIo, io_merged_recursive, io_service)
+        gen_test_subsystem_get!(BlkIo, io_merged, io_service)?;
+        gen_test_subsystem_get!(BlkIo, io_merged_recursive, io_service)
     }
 
     #[test]
@@ -720,8 +759,8 @@ mod tests {
             total: 0,
         };
 
-        gen_subsystem_test!(BlkIo, io_queued, io_service)?;
-        gen_subsystem_test!(BlkIo, io_queued_recursive, io_service)
+        gen_test_subsystem_get!(BlkIo, io_queued, io_service)?;
+        gen_test_subsystem_get!(BlkIo, io_queued_recursive, io_service)
     }
 
     #[test]
@@ -753,9 +792,7 @@ mod tests {
     fn test_subsystem_reset_stats() -> Result<()> {
         let mut cgroup = Subsystem::new(CgroupPath::new(SubsystemKind::BlkIo, gen_cgroup_name!()));
         cgroup.create()?;
-
         cgroup.reset_stats()?;
-
         cgroup.delete()
     }
 

@@ -132,26 +132,41 @@ impl_cgroup! {
     }
 }
 
+macro_rules! def_file {
+    ($var: ident, $name: literal) => {
+        const $var: &str = concat!("cpu.", $name);
+    };
+}
+
+def_file!(STAT, "stat");
+def_file!(SHARES, "shares");
+
+def_file!(CFS_QUOTA_US, "cfs_quota_us");
+def_file!(CFS_PERIOD_US, "cfs_period_us");
+
+def_file!(RT_RUNTIME_US, "rt_quota_us");
+def_file!(RT_PERIOD_US, "rt_period_us");
+
 impl Subsystem {
     /// Reads the throttling statistics of this cgroup from `cpu.stat` file.
     pub fn stat(&self) -> Result<Stat> {
-        self.open_file_read("cpu.stat").and_then(parse_stat)
+        self.open_file_read(STAT).and_then(parse_stat)
     }
 
     /// Reads the CPU time shares of this cgroup from `cpu.shares` file.
     pub fn shares(&self) -> Result<u64> {
-        self.open_file_read("cpu.shares").and_then(parse)
+        self.open_file_read(SHARES).and_then(parse)
     }
 
     /// Sets a CPU time shares of this cgroup by writing to `cpu.shares` file.
     pub fn set_shares(&mut self, shares: u64) -> Result<()> {
-        self.write_file("cpu.shares", shares)
+        self.write_file(SHARES, shares)
     }
 
     /// Reads the total available CPU time within a period (in microseconds) from `cpu.cfs_quota_us`
     /// file.
     pub fn cfs_quota_us(&self) -> Result<i64> {
-        self.open_file_read("cpu.cfs_quota_us").and_then(parse)
+        self.open_file_read(CFS_QUOTA_US).and_then(parse)
     }
 
     /// Sets a total available CPU time within a period (in microseconds) by writing to
@@ -159,23 +174,23 @@ impl Subsystem {
     ///
     /// Setting -1 removes the current limit.
     pub fn set_cfs_quota_us(&mut self, quota: i64) -> Result<()> {
-        self.write_file("cpu.cfs_quota_us", quota)
+        self.write_file(CFS_QUOTA_US, quota)
     }
 
     /// Reads the length of a period (in microseconds) from `cpu.cfs_period_us` file.
     pub fn cfs_period_us(&self) -> Result<u64> {
-        self.open_file_read("cpu.cfs_period_us").and_then(parse)
+        self.open_file_read(CFS_PERIOD_US).and_then(parse)
     }
 
     /// Sets the length of a period (in microseconds) by writing to `cpu.cfs_period_us` file.
     pub fn set_cfs_period_us(&mut self, period: u64) -> Result<()> {
-        self.write_file("cpu.cfs_period_us", period)
+        self.write_file(CFS_PERIOD_US, period)
     }
 
     /// Reads the total available CPU time for realtime tasks within a period (in microseconds)
     /// from `cpu.rt_runtime_us` file.
     pub fn rt_runtime_us(&self) -> Result<i64> {
-        self.open_file_read("cpu.rt_runtime_us").and_then(parse)
+        self.open_file_read(RT_RUNTIME_US).and_then(parse)
     }
 
     /// Sets available CPU time for realtime tasks within a period (in microseconds) by writing to
@@ -183,19 +198,19 @@ impl Subsystem {
     ///
     /// Setting -1 removes the current limit.
     pub fn set_rt_runtime_us(&mut self, runtime: i64) -> Result<()> {
-        self.write_file("cpu.rt_runtime_us", runtime)
+        self.write_file(RT_RUNTIME_US, runtime)
     }
 
     /// Reads the length of a period for realtime tasks (in microseconds) from `cpu.rt_period_us`
     /// file.
     pub fn rt_period_us(&self) -> Result<u64> {
-        self.open_file_read("cpu.rt_period_us").and_then(parse)
+        self.open_file_read(RT_PERIOD_US).and_then(parse)
     }
 
     /// Sets the length of a period for realtime tasks (in microseconds) by writing to
     /// `cpu.rt_period_us` file.
     pub fn set_rt_period_us(&mut self, period: u64) -> Result<()> {
-        self.write_file("cpu.rt_period_us", period)
+        self.write_file(RT_PERIOD_US, period)
     }
 }
 
@@ -254,12 +269,19 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Cpu, ["stat", "shares", "cfs_quota_us", "cfs_period_us"])
+        gen_test_subsystem_create_delete!(
+            Cpu,
+            STAT,
+            SHARES,
+            CFS_QUOTA_US,
+            CFS_PERIOD_US,
+            // RT_RUNTIME_US, RT_PERIOD_US,
+        )
     }
 
     #[test]
     fn test_subsystem_apply() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_apply!(
             Cpu,
             Resources {
                 shares: Some(1024),
@@ -276,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_stat() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_get!(
             Cpu,
             stat,
             Stat {
@@ -288,7 +310,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // must not executed in parallel
+    #[ignore] // must not be executed in parallel
     fn test_subsystem_stat_throttled() -> Result<()> {
         let mut cgroup =
             Subsystem::new(CgroupPath::new(v1::SubsystemKind::Cpu, gen_cgroup_name!()));
@@ -312,17 +334,17 @@ mod tests {
 
     #[test]
     fn test_subsystem_shares() -> Result<()> {
-        gen_subsystem_test!(Cpu, shares, 1024, set_shares, 2048)
+        gen_test_subsystem_get_set!(Cpu, shares, 1024, set_shares, 2048)
     }
 
     #[test]
     fn test_subsystem_cfs_quota_us() -> Result<()> {
-        gen_subsystem_test!(Cpu, cfs_quota_us, -1, set_cfs_quota_us, 100 * 1000)
+        gen_test_subsystem_get_set!(Cpu, cfs_quota_us, -1, set_cfs_quota_us, 100 * 1000)
     }
 
     #[test]
     fn test_subsystem_cfs_period_us() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_get_set!(
             Cpu,
             cfs_period_us,
             100 * 1000,

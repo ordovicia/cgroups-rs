@@ -414,7 +414,31 @@ impl_cgroup! {
     }
 }
 
-const MEMORY_PRESSURE_ENABLED: &str = "cpuset.memory_pressure_enabled";
+macro_rules! def_file {
+    ($var: ident, $name: literal) => {
+        const $var: &str = concat!("cpuset.", $name);
+    };
+}
+
+def_file!(CPUS, "cpus");
+def_file!(MEMS, "mems");
+
+def_file!(MEMORY_MIGRATE, "memory_migrate");
+
+def_file!(CPU_EXCLUSIVE, "cpu_exclusive");
+def_file!(MEM_EXCLUSIVE, "mem_exclusive");
+
+def_file!(MEM_HARDWALL, "mem_hardwall");
+
+def_file!(MEMORY_PRESSURE, "memory_pressure");
+def_file!(MEMORY_PRESSURE_ENABLED, "memory_pressure_enabled");
+
+def_file!(MEMORY_SPREAD_PAGE, "memory_spread_page");
+def_file!(MEMORY_SPREAD_SLAB, "memory_spread_slab");
+
+def_file!(SCHED_LOAD_BALANCE, "sched_load_balance");
+def_file!(SCHED_RELAX_DOMAIN_LEVEL, "sched_relax_domain_level");
+
 const CLONE_CHILDREN: &str = "cgroup.clone_children";
 
 const DOMAIN_LEVEL_MIN: i32 = -1;
@@ -423,79 +447,74 @@ const DOMAIN_LEVEL_MAX: i32 = 5;
 impl Subsystem {
     /// Reads the set of CPUs this cgroup can use from `cpuset.cpus` file.
     pub fn cpus(&self) -> Result<IdSet> {
-        self.open_file_read("cpuset.cpus").and_then(parse)
+        self.open_file_read(CPUS).and_then(parse)
     }
 
     /// Sets a set of CPUs this cgroup can use by writing to `cpuset.cpus` file.
     pub fn set_cpus(&mut self, cpus: &IdSet) -> Result<()> {
-        self.write_file("cpuset.cpus", cpus)
+        self.write_file(CPUS, cpus)
     }
 
     /// Reads the set of memory nodes this cgroup can use from `cpuset.mems` file.
     pub fn mems(&self) -> Result<IdSet> {
-        self.open_file_read("cpuset.mems").and_then(parse)
+        self.open_file_read(MEMS).and_then(parse)
     }
 
     /// Sets a set of memory nodes this cgroup can use by writing to `cpuset.mems` file.
     pub fn set_mems(&mut self, mems: &IdSet) -> Result<()> {
-        self.write_file("cpuset.mems", mems)
+        self.write_file(MEMS, mems)
     }
 
     /// Reads whether the memory used by this cgroup should be migrated when memory selection is
     /// updated, from `cpuset.memory_migrate` file.
     pub fn memory_migrate(&self) -> Result<bool> {
-        self.open_file_read("cpuset.memory_migrate")
-            .and_then(parse_01_bool)
+        self.open_file_read(MEMORY_MIGRATE).and_then(parse_01_bool)
     }
 
     /// Sets whether the memory used by this cgroup should be migrated when memory selection is
     /// updated, by writing to `cpuset.memory_migrate` file.
     pub fn set_memory_migrate(&mut self, enable: bool) -> Result<()> {
-        self.write_file("cpuset.memory_migrate", enable as i32)
+        self.write_file(MEMORY_MIGRATE, enable as i32)
     }
 
     /// Reads whether the selected CPUs should be exclusive to this cgroup, from
     /// `cpuset.cpu_exclusive` file.
     pub fn cpu_exclusive(&self) -> Result<bool> {
-        self.open_file_read("cpuset.cpu_exclusive")
-            .and_then(parse_01_bool)
+        self.open_file_read(CPU_EXCLUSIVE).and_then(parse_01_bool)
     }
 
     /// Sets whether the selected CPUs should be exclusive to this cgroup, by writing to
     /// `cpuset.cpu_exclusive` file.
     pub fn set_cpu_exclusive(&mut self, exclusive: bool) -> Result<()> {
-        self.write_file("cpuset.cpu_exclusive", exclusive as i32)
+        self.write_file(CPU_EXCLUSIVE, exclusive as i32)
     }
 
     /// Reads whether the selected memory nodes should be exclusive to this cgroup, from
     /// `cpuset.mem_exclusive` file.
     pub fn mem_exclusive(&self) -> Result<bool> {
-        self.open_file_read("cpuset.mem_exclusive")
-            .and_then(parse_01_bool)
+        self.open_file_read(MEM_EXCLUSIVE).and_then(parse_01_bool)
     }
 
     /// Sets whether the selected memory nodes should be exclusive to this cgroup, by writing to
     /// `cpuset.mem_exclusive` file.
     pub fn set_mem_exclusive(&mut self, exclusive: bool) -> Result<()> {
-        self.write_file("cpuset.mem_exclusive", exclusive as i32)
+        self.write_file(MEM_EXCLUSIVE, exclusive as i32)
     }
 
     /// Reads whether this cgroup is "hardwalled" from `cpuset.mem_hardwall` file.
     pub fn mem_hardwall(&self) -> Result<bool> {
-        self.open_file_read("cpuset.mem_hardwall")
-            .and_then(parse_01_bool)
+        self.open_file_read(MEM_HARDWALL).and_then(parse_01_bool)
     }
 
     /// Sets whether this cgroup is "hardwalled" by writing to `cpuset.mem_hardwall` file.
     pub fn set_mem_hardwall(&mut self, enable: bool) -> Result<()> {
-        self.write_file("cpuset.mem_hardwall", enable as i32)
+        self.write_file(MEM_HARDWALL, enable as i32)
     }
 
     /// Reads the running average of the memory pressure faced by this cgroup, from
     /// `cpuset.memory_pressure` file.
     pub fn memory_pressure(&self) -> Result<u64> {
-        self.open_file_read("cpuset.memory_pressure")
-            .and_then(parse)
+        self.open_file_read(MEMORY_PRESSURE).and_then(parse)
     }
 
     /// Reads whether the kernel computes the memory pressure of this cgroup, from
@@ -536,46 +555,46 @@ impl Subsystem {
     /// Reads whether file system buffers are spread across the selected memory nodes, from
     /// `cpuset.memory_spread_page` file.
     pub fn memory_spread_page(&self) -> Result<bool> {
-        self.open_file_read("cpuset.memory_spread_page")
+        self.open_file_read(MEMORY_SPREAD_PAGE)
             .and_then(parse_01_bool)
     }
 
     /// Sets whether file system buffers are spread across the selected memory nodes, by writing to
     /// `cpuset.memory_spread_page` file.
     pub fn set_memory_spread_page(&mut self, enable: bool) -> Result<()> {
-        self.write_file("cpuset.memory_spread_page", enable as i32)
+        self.write_file(MEMORY_SPREAD_PAGE, enable as i32)
     }
 
     /// Reads whether the kernel slab caches for file I/O are spread across the selected memory
     /// nodes, from `cpuset.memory_spread_slab` file.
     pub fn memory_spread_slab(&self) -> Result<bool> {
-        self.open_file_read("cpuset.memory_spread_slab")
+        self.open_file_read(MEMORY_SPREAD_SLAB)
             .and_then(parse_01_bool)
     }
 
     /// Sets whether the kernel slab caches for file I/O are spread across the selected memory
     /// nodes, by writing to `cpuset.memory_spread_slab` file.
     pub fn set_memory_spread_slab(&mut self, enable: bool) -> Result<()> {
-        self.write_file("cpuset.memory_spread_slab", enable as i32)
+        self.write_file(MEMORY_SPREAD_SLAB, enable as i32)
     }
 
     /// Reads whether the kernel balances the load across the selected CPUs, from
     /// `cpuset.sched_load_balance` file.
     pub fn sched_load_balance(&self) -> Result<bool> {
-        self.open_file_read("cpuset.sched_load_balance")
+        self.open_file_read(SCHED_LOAD_BALANCE)
             .and_then(parse_01_bool)
     }
 
     /// Reads whether the kernel balances the load across the selected CPUs, by writing to
     /// `cpuset.sched_load_balance` file.
     pub fn set_sched_load_balance(&mut self, enable: bool) -> Result<()> {
-        self.write_file("cpuset.sched_load_balance", enable as i32)
+        self.write_file(SCHED_LOAD_BALANCE, enable as i32)
     }
 
     /// Reads how much work the kernel do to balance the load on this cgroup, from
     /// `cpuset.sched_relax_domain_level` file.
     pub fn sched_relax_domain_level(&self) -> Result<i32> {
-        self.open_file_read("cpuset.sched_relax_domain_level")
+        self.open_file_read(SCHED_RELAX_DOMAIN_LEVEL)
             .and_then(parse)
     }
 
@@ -591,20 +610,19 @@ impl Subsystem {
             return Err(Error::new(ErrorKind::InvalidArgument));
         }
 
-        self.write_file("cpuset.sched_relax_domain_level", level)
+        self.write_file(SCHED_RELAX_DOMAIN_LEVEL, level)
     }
 
     /// Reads whether a new cpuset cgroup will copy the configuration from its parent cgroup, from
     /// `cgoup.clone_children` file.
     pub fn clone_children(&self) -> Result<bool> {
-        self.open_file_read("cgroup.clone_children")
-            .and_then(parse_01_bool)
+        self.open_file_read(CLONE_CHILDREN).and_then(parse_01_bool)
     }
 
     /// Sets whether a new cpuset cgroup will copy the configuration from its parent cgroup, by
     /// writing to `cgoup.clone_children` file.
     pub fn set_clone_children(&mut self, clone: bool) -> Result<()> {
-        self.write_file("cgroup.clone_children", clone as i32)
+        self.write_file(CLONE_CHILDREN, clone as i32)
     }
 }
 
@@ -614,21 +632,26 @@ mod tests {
     use v1::SubsystemKind;
 
     #[test]
-    #[rustfmt::skip]
     fn test_subsystem_create_file_exists() -> Result<()> {
         // root
         let root = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::new()));
         assert!(root.file_exists(MEMORY_PRESSURE_ENABLED));
 
         // non-root
-        gen_subsystem_test!(
+        gen_test_subsystem_create_delete!(
             Cpuset,
-            [
-                "cpus", "mems", "memory_migrate", "cpu_exclusive", "mem_exclusive", "mem_hardwall",
-                "memory_pressure", // "memory_pressure_enabled",
-                "memory_spread_page", "memory_spread_slab", "sched_load_balance",
-                "sched_relax_domain_level",
-            ]
+            CPUS,
+            MEMS,
+            MEMORY_MIGRATE,
+            CPU_EXCLUSIVE,
+            MEM_EXCLUSIVE,
+            MEM_HARDWALL,
+            MEMORY_PRESSURE,
+            // MEMORY_PRESSURE_ENABLED,
+            MEMORY_SPREAD_PAGE,
+            MEMORY_SPREAD_SLAB,
+            SCHED_LOAD_BALANCE,
+            SCHED_RELAX_DOMAIN_LEVEL,
         )?;
 
         let mut non_root =
@@ -637,6 +660,7 @@ mod tests {
 
         assert!(non_root.file_exists(CLONE_CHILDREN));
         assert!(!non_root.file_exists(MEMORY_PRESSURE_ENABLED));
+        assert!(!non_root.file_exists("does_not_exist"));
 
         non_root.delete()
     }
@@ -646,7 +670,7 @@ mod tests {
     fn test_subsystem_apply() -> Result<()> {
         let id_set = [0].iter().copied().collect::<IdSet>();
 
-        gen_subsystem_test!(
+        gen_test_subsystem_apply!(
             Cpuset,
             Resources {
                 cpus: Some(id_set.clone()),
@@ -679,7 +703,6 @@ mod tests {
         cgroup.create()?;
 
         let id_set = [0].iter().copied().collect();
-
         cgroup.set_cpus(&id_set)?;
         assert_eq!(cgroup.cpus()?, id_set);
 
@@ -692,7 +715,6 @@ mod tests {
         cgroup.create()?;
 
         let id_set = [0].iter().copied().collect();
-
         cgroup.set_mems(&id_set)?;
         assert_eq!(cgroup.mems()?, id_set);
 
@@ -701,29 +723,29 @@ mod tests {
 
     #[test]
     fn test_subsystem_memory_migrate() -> Result<()> {
-        gen_subsystem_test!(Cpuset, memory_migrate, false, set_memory_migrate, true)
+        gen_test_subsystem_get_set!(Cpuset, memory_migrate, false, set_memory_migrate, true)
     }
 
     #[test]
     #[ignore] // must not be executed in parallel
     fn test_subsystem_cpu_exclusive() -> Result<()> {
-        gen_subsystem_test!(Cpuset, cpu_exclusive, false, set_cpu_exclusive, true)
+        gen_test_subsystem_get_set!(Cpuset, cpu_exclusive, false, set_cpu_exclusive, true)
     }
 
     #[test]
     #[ignore] // must not be executed in parallel
     fn test_subsystem_mem_exclusive() -> Result<()> {
-        gen_subsystem_test!(Cpuset, mem_exclusive, false, set_mem_exclusive, true)
+        gen_test_subsystem_get_set!(Cpuset, mem_exclusive, false, set_mem_exclusive, true)
     }
 
     #[test]
     fn test_subsystem_mem_hardwall() -> Result<()> {
-        gen_subsystem_test!(Cpuset, mem_hardwall, false, set_mem_hardwall, true)
+        gen_test_subsystem_get_set!(Cpuset, mem_hardwall, false, set_mem_hardwall, true)
     }
 
     #[test]
     fn test_subsystem_memory_pressure() -> Result<()> {
-        gen_subsystem_test!(Cpuset, memory_pressure, 0)
+        gen_test_subsystem_get!(Cpuset, memory_pressure, 0)
     }
 
     #[test]
@@ -743,7 +765,7 @@ mod tests {
 
     #[test]
     fn err_subsystem_memory_pressure_enabled() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_err!(
             Memory,
             set_memory_pressure_enabled,
             (InvalidOperation, true)
@@ -752,7 +774,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_memory_spread_page() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_get_set!(
             Cpuset,
             memory_spread_page,
             false,
@@ -763,7 +785,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_memory_spread_slab() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_get_set!(
             Cpuset,
             memory_spread_slab,
             false,
@@ -787,12 +809,12 @@ mod tests {
     fn test_subsystem_sched_relax_domain_level() -> Result<()> {
         // NOTE: `set_sched_relax_domain_level()` raises `io::Error` with kind `InvalidInput` on
         //       Xenial and Bionic on Travis-CI
-        gen_subsystem_test!(Cpuset, sched_relax_domain_level, DOMAIN_LEVEL_MIN)
+        gen_test_subsystem_get!(Cpuset, sched_relax_domain_level, DOMAIN_LEVEL_MIN)
     }
 
     #[test]
     fn err_subsystem_sched_relax_domain_level() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_err!(
             Memory,
             set_sched_relax_domain_level,
             (InvalidArgument, DOMAIN_LEVEL_MIN - 1),
@@ -802,7 +824,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_clone_children() -> Result<()> {
-        gen_subsystem_test!(Cpuset, clone_children, false, set_clone_children, true)
+        gen_test_subsystem_get_set!(Cpuset, clone_children, false, set_clone_children, true)
     }
 
     #[test]
@@ -810,7 +832,6 @@ mod tests {
         macro_rules! hashset {
             ( $( $x: expr ),* $(, )? ) => {{
                 #![allow(unused_mut, clippy::let_and_return)]
-
                 let mut s = HashSet::new();
                 $( s.insert($x); )*
                 s
@@ -838,7 +859,7 @@ mod tests {
 
     #[test]
     fn err_id_set_from_str() {
-        for case in &[
+        for test_case in &[
             ",",
             ",0",
             "0,",
@@ -854,7 +875,10 @@ mod tests {
             "invalid",
             "0,invalid",
         ] {
-            assert_eq!(case.parse::<IdSet>().unwrap_err().kind(), ErrorKind::Parse);
+            assert_eq!(
+                test_case.parse::<IdSet>().unwrap_err().kind(),
+                ErrorKind::Parse
+            );
         }
     }
 
