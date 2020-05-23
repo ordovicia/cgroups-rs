@@ -656,7 +656,7 @@ mod tests {
 
     #[test]
     #[rustfmt::skip]
-    fn test_subsystem_create_file_exists() -> Result<()> {
+    fn test_subsystem_create_file_exists_delete() -> Result<()> {
         gen_subsystem_test!(
             Memory,
             [

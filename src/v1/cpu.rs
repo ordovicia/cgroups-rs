@@ -265,17 +265,17 @@ fn parse_stat(reader: impl std::io::Read) -> Result<Stat> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ErrorKind;
 
     #[test]
-    fn test_subsystem_create_file_exists() -> Result<()> {
+    fn test_subsystem_create_file_exists_delete() -> Result<()> {
         gen_test_subsystem_create_delete!(
             Cpu,
             STAT,
             SHARES,
             CFS_QUOTA_US,
             CFS_PERIOD_US,
-            // RT_RUNTIME_US, RT_PERIOD_US,
+            // RT_RUNTIME_US,
+            // RT_PERIOD_US,
         )
     }
 
@@ -372,7 +372,7 @@ throttled_time 32
 
         assert_eq!(
             parse_stat("".as_bytes()).unwrap_err().kind(),
-            ErrorKind::Parse
+            crate::ErrorKind::Parse
         );
 
         const CONTENT_NG_NOT_INT: &str = "\
@@ -407,7 +407,7 @@ invalid 256
         ] {
             assert_eq!(
                 parse_stat(case.as_bytes()).unwrap_err().kind(),
-                ErrorKind::Parse
+                crate::ErrorKind::Parse
             );
         }
 

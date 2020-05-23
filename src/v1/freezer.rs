@@ -67,6 +67,15 @@ pub struct Resources {
     pub state: Option<State>,
 }
 
+impl Into<v1::Resources> for Resources {
+    fn into(self) -> v1::Resources {
+        v1::Resources {
+            freezer: self,
+            ..v1::Resources::default()
+        }
+    }
+}
+
 /// Freezer state of a cgroup.
 ///
 /// `State` implements [`FromStr`], so you can [`parse`] a string into a `State`. If failed,
@@ -112,75 +121,6 @@ pub enum State {
     Frozen,
 }
 
-impl_cgroup! {
-    Subsystem, Freezer,
-
-    /// Freezes or thaws tasks in this cgroup according to `resources.freezer.state`.
-    ///
-    /// Note that only `State::Frozen` and `State::Thawed` are valid. Applying `State::Freezing`
-    /// will return an error with kind `ErrorKind::InvalidArgument`.
-    fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
-        match resources.freezer.state {
-            Some(State::Frozen) => self.freeze(),
-            Some(State::Thawed) => self.thaw(),
-            Some(State::Freezing) => Err(Error::new(ErrorKind::InvalidArgument)),
-            None => Ok(())
-        }
-    }
-}
-
-macro_rules! _gen_setter {
-    ($desc: literal, $setter: ident, $val: expr) => {
-        with_doc! { concat!(
-            $desc, " tasks in this cgroup by writing to `freezer.state` file.\n\n",
-            gen_doc!(see),
-            gen_doc!(err_write; "freezer.state"),
-            gen_doc!(eg_write; freezer, $setter)),
-            pub fn $setter(&mut self) -> Result<()> {
-                self.write_file("freezer.state", $val)
-            }
-        }
-    };
-}
-
-impl Subsystem {
-    gen_getter!(
-        freezer,
-        "the current state of this cgroup",
-        state: link,
-        State,
-        parse
-    );
-
-    gen_getter!(
-        freezer,
-        "whether this cgroup itself is frozen or in processes of being frozen,",
-        self_freezing,
-        bool,
-        parse_01_bool
-    );
-
-    gen_getter!(
-        freezer,
-        "whether any parent cgroups of this cgroup is frozen or in processes of being frozen,",
-        parent_freezing,
-        bool,
-        parse_01_bool
-    );
-
-    _gen_setter!("Freezes", freeze, State::Frozen);
-    _gen_setter!("Thaws, i.e. un-freezes", thaw, State::Thawed);
-}
-
-impl Into<v1::Resources> for Resources {
-    fn into(self) -> v1::Resources {
-        v1::Resources {
-            freezer: self,
-            ..v1::Resources::default()
-        }
-    }
-}
-
 impl std::str::FromStr for State {
     type Err = Error;
 
@@ -206,19 +146,68 @@ impl fmt::Display for State {
     }
 }
 
+impl_cgroup! {
+    Subsystem, Freezer,
+
+    /// Freezes or thaws tasks in this cgroup according to `resources.freezer.state`.
+    ///
+    /// Note that only `State::Frozen` and `State::Thawed` are valid. Applying `State::Freezing`
+    /// will return an error with kind `ErrorKind::InvalidArgument`.
+    fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
+        match resources.freezer.state {
+            Some(State::Frozen) => self.freeze(),
+            Some(State::Thawed) => self.thaw(),
+            Some(State::Freezing) => Err(Error::new(ErrorKind::InvalidArgument)),
+            None => Ok(())
+        }
+    }
+}
+
+const STATE: &str = "freezer.state";
+const SELF_FREEZING: &str = "freezer.self_freezing";
+const PARENT_FREEZING: &str = "freezer.parent_freezing";
+
+impl Subsystem {
+    /// Reads the current state of this cgroup from `freezer.state` file.
+    pub fn state(&self) -> Result<State> {
+        self.open_file_read(STATE).and_then(parse)
+    }
+
+    /// Reads whether this cgroup itself is frozen or in processes of being frozen, from
+    /// `freezer.self_freezing` file.
+    pub fn self_freezing(&self) -> Result<bool> {
+        self.open_file_read(SELF_FREEZING).and_then(parse_01_bool)
+    }
+
+    /// Reads whether any parent of this cgroup is frozen or in processes of being frozen, from
+    /// `freezer.parent_freezing` file.
+    pub fn parent_freezing(&self) -> Result<bool> {
+        self.open_file_read(PARENT_FREEZING).and_then(parse_01_bool)
+    }
+
+    /// Freezes tasks in this cgroup by writing to `freezer.state` file.
+    pub fn freeze(&mut self) -> Result<()> {
+        self.write_file(STATE, State::Frozen)
+    }
+
+    /// Thaws, i.e. un-freezes tasks in this cgroup by writing to `freezer.state` file.
+    pub fn thaw(&mut self) -> Result<()> {
+        self.write_file(STATE, State::Thawed)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use v1::SubsystemKind;
 
     #[test]
-    fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Freezer, ["state", "self_freezing", "parent_freezing"])
+    fn test_subsystem_create_file_exists_delete() -> Result<()> {
+        gen_test_subsystem_create_delete!(Freezer, STATE, SELF_FREEZING, PARENT_FREEZING)
     }
 
     #[test]
     fn test_subsystem_apply() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_apply!(
             Freezer,
             Resources {
                 state: Some(State::Frozen),

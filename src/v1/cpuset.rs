@@ -632,7 +632,7 @@ mod tests {
     use v1::SubsystemKind;
 
     #[test]
-    fn test_subsystem_create_file_exists() -> Result<()> {
+    fn test_subsystem_create_file_exists_delete() -> Result<()> {
         // root
         let root = Subsystem::new(CgroupPath::new(SubsystemKind::Cpuset, PathBuf::new()));
         assert!(root.file_exists(MEMORY_PRESSURE_ENABLED));

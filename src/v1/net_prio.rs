@@ -160,7 +160,7 @@ mod tests {
     use v1::SubsystemKind;
 
     #[test]
-    fn test_subsystem_create_file_exists() -> Result<()> {
+    fn test_subsystem_create_file_exists_delete() -> Result<()> {
         gen_subsystem_test!(NetPrio, ["prioidx", "ifpriomap"])
     }
 

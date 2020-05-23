@@ -75,11 +75,20 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_getter {
-    ($desc: literal $( : $detail: literal )?, $field: ident, $ty: ty, $parser: ident) => {
-        gen_getter!(cpuacct, $desc $( : $detail )?, $field, $ty, $parser);
+macro_rules! def_file {
+    ($var: ident, $name: literal) => {
+        const $var: &str = concat!("cpuacct.", $name);
     };
 }
+
+def_file!(STAT, "stat");
+def_file!(USAGE, "usage");
+def_file!(USAGE_ALL, "usage_all");
+def_file!(USAGE_PERCPU, "usage_percpu");
+def_file!(USAGE_PERCPU_SYS, "usage_percpu_sys");
+def_file!(USAGE_PERCPU_USER, "usage_percpu_user");
+def_file!(USAGE_SYS, "usage_sys");
+def_file!(USAGE_USER, "usage_user");
 
 impl Subsystem {
     /// Reads the statistics about how much CPU time is consumed by this cgroup (in `USER_HZ` unit)
@@ -87,12 +96,12 @@ impl Subsystem {
     ///
     /// The CPU time is further divided into user and system times.
     pub fn stat(&self) -> Result<Stat> {
-        self.open_file_read("cpuacct.stat").and_then(parse_stat)
+        self.open_file_read(STAT).and_then(parse_stat)
     }
 
     /// Reads the total CPU time consumed by this cgroup (in nanoseconds) from `cpuacct.usage` file.
     pub fn usage(&self) -> Result<u64> {
-        self.open_file_read("cpuacct.usage").and_then(parse)
+        self.open_file_read(USAGE).and_then(parse)
     }
 
     /// Reads the per-CPU total CPU time consumed by this cgroup (in nanoseconds) from
@@ -100,47 +109,43 @@ impl Subsystem {
     ///
     /// The CPU time is further divided into user and system times.
     pub fn usage_all(&self) -> Result<Vec<Stat>> {
-        self.open_file_read("cpuacct.usage_all")
-            .and_then(parse_usage_all)
+        self.open_file_read(USAGE_ALL).and_then(parse_usage_all)
     }
 
     /// Reads the per-CPU total CPU times consumed by this cgroup (in nanoseconds) from
     /// `cpuacct.usage_percpu` file.
     ///
     pub fn usage_percpu(&self) -> Result<Vec<u64>> {
-        self.open_file_read("cpuacct.usage_percpu")
-            .and_then(parse_vec)
+        self.open_file_read(USAGE_PERCPU).and_then(parse_vec)
     }
 
     /// Reads the per-CPU total CPU times consumed by this cgroup in the system (kernel) mode (in
     /// nanoseconds) from `cpuacct.usage_percpu_sys` file.
     pub fn usage_percpu_sys(&self) -> Result<Vec<u64>> {
-        self.open_file_read("cpuacct.usage_percpu_sys")
-            .and_then(parse_vec)
+        self.open_file_read(USAGE_PERCPU_SYS).and_then(parse_vec)
     }
 
     /// Reads the per-CPU total CPU times consumed by this cgroup in the user  mode (in nanoseconds)
     /// from `cpuacct.usage_percpu_user` file.
     pub fn usage_percpu_user(&self) -> Result<Vec<u64>> {
-        self.open_file_read("cpuacct.usage_percpu_user")
-            .and_then(parse_vec)
+        self.open_file_read(USAGE_PERCPU_USER).and_then(parse_vec)
     }
 
     /// Reads the total CPU time consumed by this cgroup in the system (kernel) mode (in
     /// nanoseconds) from `cpuacct.usage_sys` file.
     pub fn usage_sys(&self) -> Result<u64> {
-        self.open_file_read("cpuacct.usage_sys").and_then(parse)
+        self.open_file_read(USAGE_SYS).and_then(parse)
     }
 
     /// Reads the total CPU time consumed by this cgroup in the user mode (in nanoseconds) from
     /// `cpuacct.usage_user` file.
     pub fn usage_user(&self) -> Result<u64> {
-        self.open_file_read("cpuacct.usage_user").and_then(parse)
+        self.open_file_read(USAGE_USER).and_then(parse)
     }
 
     /// Resets the accounted CPU time of this cgroup by writing to `cpuacct.usage` file.
     pub fn reset(&mut self) -> Result<()> {
-        self.write_file("cpuacct.usage", 0)
+        self.write_file(USAGE, 0)
     }
 }
 
@@ -239,29 +244,33 @@ mod tests {
 
     #[test]
     #[rustfmt::skip]
-    fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(
+    fn test_subsystem_create_file_exists_delete() -> Result<()> {
+        gen_test_subsystem_create_delete!(
             Cpuacct,
-            [
-                "stat", "usage", "usage_all", "usage_percpu", "usage_percpu_sys",
-                "usage_percpu_user", "usage_sys", "usage_user"
-            ]
+            STAT,
+            USAGE,
+            USAGE_ALL,
+            USAGE_PERCPU,
+            USAGE_PERCPU_SYS,
+            USAGE_PERCPU_USER,
+            USAGE_SYS,
+            USAGE_PERCPU_USER,
         )
     }
 
     #[test]
     fn test_subsystem_stat() -> Result<()> {
-        gen_subsystem_test!(Cpuacct, stat, Stat { system: 0, user: 0 })
+        gen_test_subsystem_get!(Cpuacct, stat, Stat { system: 0, user: 0 })
     }
 
     #[test]
     fn test_subsystem_usage() -> Result<()> {
-        gen_subsystem_test!(Cpuacct, usage, 0)
+        gen_test_subsystem_get!(Cpuacct, usage, 0)
     }
 
     #[test]
     fn test_subsystem_usage_all() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_get!(
             Cpuacct,
             usage_all,
             vec![Stat { system: 0, user: 0 }; num_cpus::get()]
@@ -270,27 +279,27 @@ mod tests {
 
     #[test]
     fn test_subsystem_usage_percpu() -> Result<()> {
-        gen_subsystem_test!(Cpuacct, usage_percpu, vec![0; num_cpus::get()])
+        gen_test_subsystem_get!(Cpuacct, usage_percpu, vec![0; num_cpus::get()])
     }
 
     #[test]
     fn test_subsystem_usage_percpu_sys() -> Result<()> {
-        gen_subsystem_test!(Cpuacct, usage_percpu_sys, vec![0; num_cpus::get()])
+        gen_test_subsystem_get!(Cpuacct, usage_percpu_sys, vec![0; num_cpus::get()])
     }
 
     #[test]
     fn test_subsystem_usage_percpu_user() -> Result<()> {
-        gen_subsystem_test!(Cpuacct, usage_percpu_user, vec![0; num_cpus::get()])
+        gen_test_subsystem_get!(Cpuacct, usage_percpu_user, vec![0; num_cpus::get()])
     }
 
     #[test]
     fn test_subsystem_usage_sys() -> Result<()> {
-        gen_subsystem_test!(Cpuacct, usage_sys, 0)
+        gen_test_subsystem_get!(Cpuacct, usage_sys, 0)
     }
 
     #[test]
     fn test_subsystem_usage_user() -> Result<()> {
-        gen_subsystem_test!(Cpuacct, usage_user, 0)
+        gen_test_subsystem_get!(Cpuacct, usage_user, 0)
     }
 
     #[test]
@@ -345,7 +354,7 @@ mod tests {
                 let line = line!();
                 match ($left, $right) {
                     (left, right) if (left == 0) != (right == 0) => {
-                        eprintln!("sign-assertion failed at line {}", line);
+                        eprintln!("sign assertion failed at line {}", line);
                         eprintln!("{}: {}", stringify!($left), left);
                         eprintln!("{}: {}", stringify!($right), right);
                         failed = true;
@@ -359,7 +368,7 @@ mod tests {
                 match ($left, $right) {
                     (left, right) => {
                         if left.iter().all(|e| *e == 0) != right.iter().all(|e| *e == 0) {
-                            eprintln!("sign-assertion failed at line {}", line);
+                            eprintln!("sign assertion failed at line {}", line);
                             eprintln!("{}: {:?}", stringify!($left), left);
                             eprintln!("{}: {:?}", stringify!($right), right);
                             failed = true;
@@ -392,7 +401,7 @@ mod tests {
         );
 
         if failed {
-            panic!("sign-assertion failed");
+            panic!("sign assertion failed");
         }
 
         wait(100);

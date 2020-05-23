@@ -70,6 +70,15 @@ pub struct Resources {
     pub allow: Vec<Access>,
 }
 
+impl Into<v1::Resources> for Resources {
+    fn into(self) -> v1::Resources {
+        v1::Resources {
+            devices: self,
+            ..v1::Resources::default()
+        }
+    }
+}
+
 /// Access to devices of specific type and number.
 ///
 /// `Access` implements [`FromStr`] and [`Display`]. You can convert a `Access` into a string and
@@ -140,93 +149,6 @@ pub struct Access {
     pub access_type: AccessType,
 }
 
-/// Device type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum DeviceType {
-    /// Both character and block devices, and all major and minor numbers.
-    All,
-    /// Character device.
-    Char,
-    /// Block device.
-    Block,
-}
-
-/// Type of device access.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct AccessType {
-    /// Read access.
-    pub read: bool,
-    /// Write access.
-    pub write: bool,
-    /// Make-node access
-    pub mknod: bool,
-}
-
-impl_cgroup! {
-    Subsystem, Devices,
-
-    /// Applies `resources.devices`. `deny` list is applied first, and then `allow` list is.
-    fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
-        for denied in &resources.devices.deny {
-            self.deny(denied)?;
-        }
-
-        for allowed in &resources.devices.allow {
-            self.allow(allowed)?;
-        }
-
-        Ok(())
-    }
-}
-
-macro_rules! _gen_setter {
-    ($desc: literal, $field: ident) => { with_doc! { concat!(
-        $desc, " this cgroup to perform a type of access to devices with specific type and number,",
-        " by writing to `devices.", stringify!($field), "` file.\n\n",
-        gen_doc!(see; $field),
-        gen_doc!(err_write; subsys_file!(devices, $field)),
-        gen_doc!(eg_write; devices, $field, &"c 8:0 rm".parse::<devices::Access>()?)),
-        pub fn $field(&mut self, access: &Access) -> Result<()> {
-            self.write_file(subsys_file!(devices, $field), access)
-        }
-    } };
-}
-
-impl Subsystem {
-    gen_getter!(
-        devices,
-        "allowed device access of this cgroup",
-        list,
-        Vec<Access>,
-        parse_list
-    );
-
-    _gen_setter!("Denies", deny);
-    _gen_setter!("Allows", allow);
-}
-
-fn parse_list(reader: impl std::io::Read) -> Result<Vec<Access>> {
-    use std::io::{BufRead, BufReader};
-
-    let mut result = Vec::new();
-
-    for line in BufReader::new(reader).lines() {
-        let line = line?;
-        result.push(line.parse::<Access>()?);
-    }
-
-    Ok(result)
-}
-
-impl Into<v1::Resources> for Resources {
-    fn into(self) -> v1::Resources {
-        v1::Resources {
-            devices: self,
-            ..v1::Resources::default()
-        }
-    }
-}
-
 impl FromStr for Access {
     type Err = Error;
 
@@ -279,6 +201,17 @@ impl fmt::Display for Access {
     }
 }
 
+/// Device type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DeviceType {
+    /// Both character and block devices, and all major and minor numbers.
+    All,
+    /// Character device.
+    Char,
+    /// Block device.
+    Block,
+}
+
 impl FromStr for DeviceType {
     type Err = Error;
 
@@ -304,6 +237,17 @@ impl fmt::Display for DeviceType {
             Self::Block => 'b',
         })
     }
+}
+
+/// Type of device access.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AccessType {
+    /// Read access.
+    pub read: bool,
+    /// Write access.
+    pub write: bool,
+    /// Make-node access
+    pub mknod: bool,
 }
 
 impl FromStr for AccessType {
@@ -354,19 +298,71 @@ impl fmt::Display for AccessType {
     }
 }
 
+impl_cgroup! {
+    Subsystem, Devices,
+
+    /// Applies `resources.devices`. `deny` list is applied first, and then `allow` list is.
+    fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
+        for denied in &resources.devices.deny {
+            self.deny(denied)?;
+        }
+
+        for allowed in &resources.devices.allow {
+            self.allow(allowed)?;
+        }
+
+        Ok(())
+    }
+}
+
+const LIST: &str = "devices.list";
+const ALLOW: &str = "devices.allow";
+const DENY: &str = "devices.deny";
+
+impl Subsystem {
+    /// Reads the allowed device accesses of this cgroup from `devices.list` file.
+    pub fn list(&self) -> Result<Vec<Access>> {
+        self.open_file_read(LIST).and_then(parse_list)
+    }
+
+    /// Allows this cgroup to perform a type of access to devices with a specific type and number,
+    /// by writing to `devices.allow` file.
+    pub fn allow(&mut self, access: &Access) -> Result<()> {
+        self.write_file(ALLOW, access)
+    }
+
+    /// Denies this cgroup to perform a type of access to devices with a specific type and number,
+    /// by writing to `devices.deny` file.
+    pub fn deny(&mut self, access: &Access) -> Result<()> {
+        self.write_file(DENY, access)
+    }
+}
+
+fn parse_list(reader: impl std::io::Read) -> Result<Vec<Access>> {
+    use std::io::{BufRead, BufReader};
+
+    let mut result = Vec::new();
+    for line in BufReader::new(reader).lines() {
+        let line = line?;
+        result.push(line.parse::<Access>()?);
+    }
+
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Device, DeviceNumber, ErrorKind};
+    use crate::{Device, DeviceNumber};
 
     #[test]
-    fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(Devices, ["allow", "deny", "list"])
+    fn test_subsystem_create_file_exists_delete() -> Result<()> {
+        gen_test_subsystem_create_delete!(Devices, LIST, ALLOW, DENY)
     }
 
     #[test]
     fn test_subsystem_apply() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_apply!(
             Devices,
             Resources {
                 deny: vec!["a".parse::<Access>().unwrap()],
@@ -391,7 +387,7 @@ mod tests {
             },
         };
 
-        gen_subsystem_test!(Devices, list, vec![allowed_all])
+        gen_test_subsytem_get!(Devices, list, vec![allowed_all])
     }
 
     #[test]
@@ -424,7 +420,10 @@ mod tests {
             "a 1:3",
             "a 1:3 rwm invalid",
         ] {
-            assert_eq!(case.parse::<Access>().unwrap_err().kind(), ErrorKind::Parse);
+            assert_eq!(
+                case.parse::<Access>().unwrap_err().kind(),
+                crate::ErrorKind::Parse
+            );
         }
     }
 

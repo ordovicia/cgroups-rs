@@ -59,6 +59,15 @@ pub struct Resources {
     pub classid: Option<ClassId>,
 }
 
+impl Into<v1::Resources> for Resources {
+    fn into(self) -> v1::Resources {
+        v1::Resources {
+            net_cls: self,
+            ..v1::Resources::default()
+        }
+    }
+}
+
 /// Class ID.
 ///
 /// Besides writing a struct literal, `ClassId` can be instantiated by [`parse`]-ing a class ID
@@ -125,62 +134,6 @@ pub struct ClassId {
     pub minor: u16,
 }
 
-impl_cgroup! {
-    Subsystem, NetCls,
-
-    /// Applies `resources.net_cls.classid` if it is `Some`.
-    fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
-        if let Some(id) = resources.net_cls.classid {
-            self.set_classid(id)?;
-        }
-
-        Ok(())
-    }
-}
-
-const CLASSID: &str = "net_cls.classid";
-
-impl Subsystem {
-    with_doc! { concat!(
-        gen_doc!(
-            reads;
-            "net_cls.classid",
-            "the class ID of network packets from this cgroup,"
-        ),
-        gen_doc!(see; classid),
-        gen_doc!(err_read; "net_cls.classid"),
-        gen_doc!(eg_read; net_cls, classid)),
-        pub fn classid(&self) -> Result<ClassId> {
-            let raw: u32 = self.open_file_read(CLASSID).and_then(parse)?;
-            Ok(raw.into())
-        }
-    }
-
-    with_doc! { concat!(
-        gen_doc!(
-            sets;
-            "net_cls.classid",
-            "a class ID to network packets from this cgroup,"
-        ),
-        gen_doc!(see; classid),
-        gen_doc!(err_write; "net_cls.classid"),
-        gen_doc!(eg_write; net_cls, set_classid, [0x10, 0x1].into())),
-        pub fn set_classid(&mut self, id: ClassId) -> Result<()> {
-            let raw: u32 = id.into();
-            std::fs::write(self.path().join(CLASSID), format!("{:#08X}", raw)).map_err(Into::into)
-        }
-    }
-}
-
-impl Into<v1::Resources> for Resources {
-    fn into(self) -> v1::Resources {
-        v1::Resources {
-            net_cls: self,
-            ..v1::Resources::default()
-        }
-    }
-}
-
 impl FromStr for ClassId {
     type Err = Error;
 
@@ -233,18 +186,47 @@ impl Into<[u16; 2]> for ClassId {
     }
 }
 
+impl_cgroup! {
+    Subsystem, NetCls,
+
+    /// Applies `resources.net_cls.classid` if it is `Some`.
+    fn apply(&mut self, resources: &v1::Resources) -> Result<()> {
+        if let Some(id) = resources.net_cls.classid {
+            self.set_classid(id)?;
+        }
+
+        Ok(())
+    }
+}
+
+const CLASSID: &str = "net_cls.classid";
+
+impl Subsystem {
+    /// Reads the class ID of network packets from this cgroup, from `net_cls.classid` file.
+    pub fn classid(&self) -> Result<ClassId> {
+        let raw: u32 = self.open_file_read(CLASSID).and_then(parse)?;
+        Ok(raw.into())
+    }
+
+    /// Sets a class ID to network packets from this cgroup by writing to `net_cls.classid` file.
+    pub fn set_classid(&mut self, id: ClassId) -> Result<()> {
+        let raw: u32 = id.into();
+        std::fs::write(self.path().join(CLASSID), format!("{:#08X}", raw)).map_err(Into::into)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_subsystem_create_file_exists() -> Result<()> {
-        gen_subsystem_test!(NetCls, ["classid"])
+    fn test_subsystem_create_file_exists_delete() -> Result<()> {
+        gen_test_subsystem_create_delete!(NetCls, CLASSID)
     }
 
     #[test]
     fn test_subsystem_apply() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_apply!(
             NetCls,
             Resources {
                 classid: Some([0x10, 0x1].into()),
@@ -255,7 +237,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_classid() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_get_set!(
             NetCls,
             classid,
             ClassId { major: 0, minor: 0 },
@@ -263,7 +245,7 @@ mod tests {
             ClassId {
                 major: 0x10,
                 minor: 0x1
-            }
+            },
         )
     }
 
