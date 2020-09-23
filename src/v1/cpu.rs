@@ -265,6 +265,7 @@ fn parse_stat(reader: impl std::io::Read) -> Result<Stat> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use v1::SubsystemKind;
 
     #[test]
     fn test_subsystem_create_file_exists_delete() -> Result<()> {
@@ -313,7 +314,7 @@ mod tests {
     #[ignore] // must not be executed in parallel
     fn test_subsystem_stat_throttled() -> Result<()> {
         let mut cgroup =
-            Subsystem::new(CgroupPath::new(v1::SubsystemKind::Cpu, gen_cgroup_name!()));
+            Subsystem::new(CgroupPath::new(SubsystemKind::Cpu, gen_cgroup_name!()));
         cgroup.create()?;
 
         let pid = crate::Pid::from(std::process::id());

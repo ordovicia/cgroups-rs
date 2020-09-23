@@ -115,32 +115,15 @@ impl_cgroup! {
     }
 }
 
-macro_rules! _gen_getter {
-    ($desc: literal, $in_bytes: ident, $in_pages: ident) => {
-        with_doc! { concat!(
-            gen_doc!(reads; subsys_file!("hugetlb.<hugepage size>", $in_bytes), $desc),
-            gen_doc!(see),
-            gen_doc!(err_read; subsys_file!("hugetlb.<hugepage size>", $in_bytes)),
-            gen_doc!(eg_read; hugetlb, $in_bytes, hugetlb::HugepageSize::Mb2)),
-            pub fn $in_bytes(&self, size: HugepageSize) -> Result<u64> {
-                self.open_file_read(&format!("hugetlb.{}.{}", size, stringify!($in_bytes)))
-                    .and_then(parse)
-            }
-        }
-
-        with_doc! { concat!(
-            "Reads ", $desc, " in pages. See [`", stringify!($in_bytes), "`](#method.",
-            stringify!($in_bytes), ") method for more information."),
-            pub fn $in_pages(&self, size: HugepageSize) -> Result<u64> {
-                self.$in_bytes(size).map(|b| size.bytes_to_pages(b))
-            }
-        }
-    };
-}
-
 const LIMIT_IN_BYTES: &str = "limit_in_bytes";
+const LIMIT_IN_PAGES: &str = "limit_in_pages";
+
 const USAGE_IN_BYTES: &str = "usage_in_bytes";
+const USAGE_IN_PAGES: &str = "usage_in_pages";
+
 const MAX_USAGE_IN_BYTES: &str = "max_usage_in_bytes";
+const MAX_USAGE_IN_PAGES: &str = "max_usage_in_pages";
+
 const FAILCNT: &str = "failcnt";
 
 impl Subsystem {
@@ -171,29 +154,26 @@ impl Subsystem {
             && self.file_exists(&format!("hugetlb.{}.{}", size, FAILCNT))
     }
 
-    _gen_getter!(
-        "the limit of hugepage TLB usage in bytes",
-        limit_in_bytes,
-        limit_in_pages
-    );
+    /// Reads the limit of hugepage TLB usage in bytes from `hugetlb.<hugepage size>.limit_in_bytes`
+    /// file.
+    pub fn limit_in_bytes(&self, size: HugepageSize) -> Result<u64> {
+        self.open_file_read(&format!("hugetlb.{}.{}", size, LIMIT_IN_BYTES))
+            .and_then(parse)
+    }
 
-    with_doc! { concat!(
-        gen_doc!(
-            sets;
-            "hugetlb.<hugepage size>.limit_in_bytes",
-            "a limit of hugepage TLB usage"
-        ),
-        gen_doc!(see),
-        gen_doc!(err_write; "hugetlb.<hugepage size>.limit_in_bytes"),
-        gen_doc!(
-            eg_write; hugetlb,
-            set_limit, hugetlb::HugepageSize::Mb2, hugetlb::Limit::Pages(4)
-        )),
-        pub fn set_limit(&mut self, size: HugepageSize, limit: Limit) -> Result<()> {
-            match limit {
-                Limit::Bytes(bytes) => self.set_limit_in_bytes(size, bytes),
-                Limit::Pages(pages) => self.set_limit_in_pages(size, pages),
-            }
+    /// Reads the limit of hugepage TLB usage in pages from `hugetlb.<hugepage size>.limit_in_pages`
+    /// file.
+    pub fn limit_in_pages(&self, size: HugepageSize) -> Result<u64> {
+        self.open_file_read(&format!("hugetlb.{}.{}", size, LIMIT_IN_PAGES))
+            .and_then(parse)
+    }
+
+    /// Sets a limit of hugepage TLB usage by writing to `hugetlb.<hugepage size>.limit_in_bytes`
+    /// file.
+    pub fn set_limit(&mut self, size: HugepageSize, limit: Limit) -> Result<()> {
+        match limit {
+            Limit::Bytes(bytes) => self.set_limit_in_bytes(size, bytes),
+            Limit::Pages(pages) => self.set_limit_in_pages(size, pages),
         }
     }
 
@@ -211,31 +191,39 @@ impl Subsystem {
         self.set_limit_in_bytes(size, size.pages_to_bytes(pages))
     }
 
-    _gen_getter!(
-        "the current usage of hugepage TLB in bytes",
-        usage_in_bytes,
-        usage_in_pages
-    );
+    /// Reads the current usage of hugepage TLB in bytes from
+    /// `hugetlb.<hugepage size>.usage_in_bytes` file.
+    pub fn usage_in_bytes(&self, size: HugepageSize) -> Result<u64> {
+        self.open_file_read(&format!("hugetlb.{}.{}", size, USAGE_IN_BYTES))
+            .and_then(parse)
+    }
 
-    _gen_getter!(
-        "the maximum recorded usage of hugepage TLB in bytes",
-        max_usage_in_bytes,
-        max_usage_in_pages
-    );
+    /// Reads the current usage of hugepage TLB in pages from
+    /// `hugetlb.<hugepage size>.usage_in_pages` file.
+    pub fn usage_in_pages(&self, size: HugepageSize) -> Result<u64> {
+        self.open_file_read(&format!("hugetlb.{}.{}", size, USAGE_IN_PAGES))
+            .and_then(parse)
+    }
 
-    with_doc! { concat!(
-        gen_doc!(
-            reads;
-            "hugetlb.<hugepage size>.failcnt",
-            "the number of allocation failure due to the limit,"
-        ),
-        gen_doc!(see),
-        gen_doc!(err_read; "hugetlb.<hugepage size>.failcnt"),
-        gen_doc!(eg_read; hugetlb, failcnt, hugetlb::HugepageSize::Mb2)),
-        pub fn failcnt(&self, size: HugepageSize) -> Result<u64> {
-            self.open_file_read(&format!("hugetlb.{}.{}", size, FAILCNT))
-                .and_then(parse)
-        }
+    /// Reads the maximum recorded usage of hugepage TLB in bytes from
+    /// `hugetlb.<hugepage size>.max_usage_in_bytes` file.
+    pub fn max_usage_in_bytes(&self, size: HugepageSize) -> Result<u64> {
+        self.open_file_read(&format!("hugetlb.{}.{}", size, MAX_USAGE_IN_BYTES))
+            .and_then(parse)
+    }
+
+    /// Reads the maximum recorded usage of hugepage TLB in pages from
+    /// `hugetlb.<hugepage size>.max_usage_in_pages` file.
+    pub fn max_usage_in_pages(&self, size: HugepageSize) -> Result<u64> {
+        self.open_file_read(&format!("hugetlb.{}.{}", size, MAX_USAGE_IN_PAGES))
+            .and_then(parse)
+    }
+
+    /// Reads the number of allocation failure due to the limit, from
+    /// `hugetlb.<hugepage size>.failcnt` file.
+    pub fn failcnt(&self, size: HugepageSize) -> Result<u64> {
+        self.open_file_read(&format!("hugetlb.{}.{}", size, FAILCNT))
+            .and_then(parse)
     }
 }
 
@@ -249,22 +237,6 @@ impl Into<v1::Resources> for Resources {
 }
 
 impl HugepageSize {
-    fn bytes_to_pages(self, bytes: u64) -> u64 {
-        match self {
-            Self::Kb8 => bytes / (8 << 10),
-            Self::Kb64 => bytes / (64 << 10),
-            Self::Kb256 => bytes / (256 << 10),
-
-            Self::Mb1 => bytes / (1 << 20),
-            Self::Mb2 => bytes / (2 << 20),
-            Self::Mb4 => bytes / (4 << 20),
-            Self::Mb16 => bytes / (16 << 20),
-            Self::Mb256 => bytes / (256 << 20),
-
-            Self::Gb1 => bytes / (1 << 30),
-        }
-    }
-
     fn pages_to_bytes(self, pages: u64) -> u64 {
         match self {
             Self::Kb8 => pages * (8 << 10),
@@ -312,14 +284,17 @@ mod tests {
     const LIMIT_1GB_BYTES_DEFAULT: u64 = 0x7FFF_FFFF_C000_0000;
 
     #[test]
-    #[rustfmt::skip]
     fn test_subsystem_create_file_exists_delete() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_create_delete!(
             HugeTlb,
-            [
-                "2MB.limit_in_bytes", "2MB.usage_in_bytes", "2MB.max_usage_in_bytes", "2MB.failcnt",
-                "1GB.limit_in_bytes", "1GB.usage_in_bytes", "1GB.max_usage_in_bytes", "1GB.failcnt"
-            ]
+            "2MB.limit_in_bytes",
+            "2MB.usage_in_bytes",
+            "2MB.max_usage_in_bytes",
+            "2MB.failcnt",
+            "1GB.limit_in_bytes",
+            "1GB.usage_in_bytes",
+            "1GB.max_usage_in_bytes",
+            "1GB.failcnt",
         )
     }
 
@@ -363,69 +338,44 @@ mod tests {
         cgroup.delete()
     }
 
-    macro_rules! gen_test {
-        ($field: ident, $mb2: expr, $gb1: expr) => {{
-            let mut cgroup = Subsystem::new(CgroupPath::new(
-                v1::SubsystemKind::HugeTlb,
-                gen_cgroup_name!(),
-            ));
-
-            cgroup.create()?;
-            assert_eq!(cgroup.$field(Mb2)?, $mb2);
-            assert_eq!(cgroup.$field(Gb1)?, $gb1);
-
-            cgroup.delete()
-        }};
-
-        (
-            $field: ident,
-            $setter: ident,
-            $dfl_mb2: expr,
-            $dfl_gb1: expr,
-            $val_mb2: expr,
-            $val_gb1: expr
-        ) => {{
-            let mut cgroup = Subsystem::new(CgroupPath::new(
-                v1::SubsystemKind::HugeTlb,
-                gen_cgroup_name!(),
-            ));
-
-            cgroup.create()?;
-            assert_eq!(cgroup.$field(Mb2)?, $dfl_mb2);
-            assert_eq!(cgroup.$field(Gb1)?, $dfl_gb1);
-
-            cgroup.$setter(Mb2, $val_mb2)?;
-            cgroup.$setter(Gb1, $val_gb1)?;
-
-            assert_eq!(cgroup.$field(Mb2)?, $val_mb2);
-            assert_eq!(cgroup.$field(Gb1)?, $val_gb1);
-
-            cgroup.delete()
-        }};
-    }
-
     #[test]
     fn test_subsystem_limit_in_bytes() -> Result<()> {
-        gen_test!(
-            limit_in_bytes,
-            set_limit_in_bytes,
-            LIMIT_2MB_BYTES_DEFAULT,
-            LIMIT_1GB_BYTES_DEFAULT,
-            4 * (1 << 21),
-            2 * (1 << 30)
-        )
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            v1::SubsystemKind::HugeTlb,
+            gen_cgroup_name!(),
+        ));
+
+        cgroup.create()?;
+        assert_eq!(cgroup.limit_in_bytes(Mb2)?, LIMIT_2MB_BYTES_DEFAULT);
+        assert_eq!(cgroup.limit_in_bytes(Gb1)?, LIMIT_1GB_BYTES_DEFAULT);
+
+        cgroup.set_limit_in_bytes(Mb2, 4 * (1 << 21))?;
+        cgroup.set_limit_in_bytes(Gb1, 2 * (1 << 30))?;
+
+        assert_eq!(cgroup.limit_in_bytes(Mb2)?, 4 * (1 << 21));
+        assert_eq!(cgroup.limit_in_bytes(Gb1)?, 2 * (1 << 30));
+
+        cgroup.delete()
     }
 
     #[test]
     fn test_subsystem_limit_in_pages() -> Result<()> {
-        gen_test!(
-            limit_in_pages,
-            set_limit_in_pages,
-            LIMIT_2MB_BYTES_DEFAULT >> 21,
-            LIMIT_1GB_BYTES_DEFAULT >> 30,
-            4,
-            2
-        )
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            v1::SubsystemKind::HugeTlb,
+            gen_cgroup_name!(),
+        ));
+
+        cgroup.create()?;
+        assert_eq!(cgroup.limit_in_pages(Mb2)?, LIMIT_2MB_BYTES_DEFAULT >> 21);
+        assert_eq!(cgroup.limit_in_pages(Gb1)?, LIMIT_1GB_BYTES_DEFAULT >> 30);
+
+        cgroup.set_limit_in_pages(Mb2, 4)?;
+        cgroup.set_limit_in_pages(Gb1, 2)?;
+
+        assert_eq!(cgroup.limit_in_pages(Mb2)?, 4);
+        assert_eq!(cgroup.limit_in_pages(Gb1)?, 2);
+
+        cgroup.delete()
     }
 
     #[test]
@@ -450,37 +400,73 @@ mod tests {
     }
 
     #[test]
-    fn test_subsystem_usage() -> Result<()> {
-        gen_test!(usage_in_bytes, 0, 0)?;
-        gen_test!(usage_in_pages, 0, 0)
+    fn test_subsystem_usage_in_bytes() -> Result<()> {
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            SubsystemKind::HugeTlb,
+            gen_cgroup_name!(),
+        ));
+
+        cgroup.create()?;
+        assert_eq!(cgroup.usage_in_bytes(Mb2)?, 0);
+        assert_eq!(cgroup.usage_in_bytes(Gb1)?, 0);
+
+        cgroup.delete()
     }
 
     #[test]
-    fn test_subsystem_max_usage() -> Result<()> {
-        gen_test!(max_usage_in_bytes, 0, 0)?;
-        gen_test!(max_usage_in_pages, 0, 0)
+    fn test_subsystem_usage_in_pages() -> Result<()> {
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            SubsystemKind::HugeTlb,
+            gen_cgroup_name!(),
+        ));
+
+        cgroup.create()?;
+        assert_eq!(cgroup.usage_in_pages(Mb2)?, 0);
+        assert_eq!(cgroup.usage_in_pages(Gb1)?, 0);
+
+        cgroup.delete()
+    }
+
+    #[test]
+    fn test_subsystem_max_usage_in_bytes() -> Result<()> {
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            SubsystemKind::HugeTlb,
+            gen_cgroup_name!(),
+        ));
+
+        cgroup.create()?;
+        assert_eq!(cgroup.max_usage_in_bytes(Mb2)?, 0);
+        assert_eq!(cgroup.max_usage_in_bytes(Gb1)?, 0);
+
+        cgroup.delete()
+    }
+
+    #[test]
+    fn test_subsystem_max_usage_in_pages() -> Result<()> {
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            SubsystemKind::HugeTlb,
+            gen_cgroup_name!(),
+        ));
+
+        cgroup.create()?;
+        assert_eq!(cgroup.max_usage_in_pages(Mb2)?, 0);
+        assert_eq!(cgroup.max_usage_in_pages(Gb1)?, 0);
+
+        cgroup.delete()
     }
 
     #[test]
     fn test_subsystem_failcnt() -> Result<()> {
-        gen_test!(failcnt, 0, 0)
-    }
+        let mut cgroup = Subsystem::new(CgroupPath::new(
+            SubsystemKind::HugeTlb,
+            gen_cgroup_name!(),
+        ));
 
-    #[test]
-    fn test_bytes_to_pages() {
-        #![allow(clippy::identity_op)]
+        cgroup.create()?;
+        assert_eq!(cgroup.failcnt(Mb2)?, 0);
+        assert_eq!(cgroup.failcnt(Gb1)?, 0);
 
-        assert_eq!(Mb2.bytes_to_pages(1 * (1 << 20)), 0);
-        assert_eq!(Mb2.bytes_to_pages(1 * (1 << 21)), 1);
-        assert_eq!(Mb2.bytes_to_pages(4 * (1 << 21) - 1), 3);
-        assert_eq!(Mb2.bytes_to_pages(4 * (1 << 21)), 4);
-        assert_eq!(Mb2.bytes_to_pages(4 * (1 << 21) + 1), 4);
-
-        assert_eq!(Gb1.bytes_to_pages(1 * (1 << 29)), 0);
-        assert_eq!(Gb1.bytes_to_pages(1 * (1 << 30)), 1);
-        assert_eq!(Gb1.bytes_to_pages(4 * (1 << 30) - 1), 3);
-        assert_eq!(Gb1.bytes_to_pages(4 * (1 << 30)), 4);
-        assert_eq!(Gb1.bytes_to_pages(4 * (1 << 30) + 1), 4);
+        cgroup.delete()
     }
 
     #[test]

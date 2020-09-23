@@ -199,6 +199,7 @@ impl Subsystem {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use v1::SubsystemKind;
 
     #[test]
     fn test_subsystem_create_file_exists_delete() -> Result<()> {

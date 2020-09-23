@@ -5,15 +5,6 @@ macro_rules! with_doc {
     };
 }
 
-macro_rules! subsys_file {
-    ($subsystem: ident, $field: ident) => {
-        concat!(stringify!($subsystem), ".", stringify!($field))
-    };
-    ($subsystem: literal, $field: ident) => {
-        concat!($subsystem, ".", stringify!($field))
-    };
-}
-
 macro_rules! bail_parse {
     () => {
         return Err(crate::Error::new(crate::ErrorKind::Parse));
@@ -47,11 +38,6 @@ macro_rules! hashmap {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn test_subsys_file() {
-        assert_eq!(subsys_file!(cgroup, procs), "cgroup.procs");
-    }
-
     #[test]
     fn test_gen_cgroup_name() {
         assert_eq!(

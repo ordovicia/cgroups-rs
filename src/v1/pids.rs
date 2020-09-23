@@ -79,40 +79,31 @@ impl_cgroup! {
     }
 }
 
+const MAX: &str = "pids.max";
+const CURRENT: &str = "pids.current";
+const EVENTS: &str = "pids.events";
+
 impl Subsystem {
-    gen_getter!(
-        pids,
-        "the maximum number of processes this cgroup can have",
-        max: link,
-        Max,
-        parse
-    );
+    /// Reads the maximum number of processes this cgroup can have from `pids.max` file.
+    pub fn max(&self) -> Result<Max> {
+        self.open_file_read(MAX).and_then(parse)
+    }
 
-    gen_setter!(
-        pids,
-        "a maximum number of processes this cgroup can have,",
-        max: link,
-        set_max,
-        Max,
-        controlgroup::Max::Limit(2)
-    );
+    /// Sets a maximum number of processes this cgroup can have by writing to `pids.max` file.
+    pub fn set_max(&mut self, max: Max) -> Result<()> {
+        self.write_file(MAX, max)
+    }
 
-    gen_getter!(
-        pids,
-        "the number of processes this cgroup currently has",
-        current,
-        u32,
-        parse
-    );
+    /// Reads the number of processes this cgroup currently has from `pids.current` file.
+    pub fn current(&self) -> Result<u32> {
+        self.open_file_read(CURRENT).and_then(parse)
+    }
 
-    gen_getter!(
-        pids,
-        "the event counter, i.e. a pair of the maximum number of processes,
-         and the number of times fork failed due to the limit",
-        events,
-        (Max, u64),
-        parse_events
-    );
+    /// Reads the event counter, i.e. a pair of the maximum number of processes, and the number of
+    /// times fork failed due to the limit, from `pids.events` file.
+    pub fn events(&self) -> Result<(Max, u64)> {
+        self.open_file_read(EVENTS).and_then(parse_events)
+    }
 }
 
 impl Into<v1::Resources> for Resources {
@@ -145,12 +136,12 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists_delete() -> Result<()> {
-        gen_subsystem_test!(Pids, ["max", "current", "events"])
+        gen_test_subsystem_create_delete!(Pids, MAX, CURRENT, EVENTS)
     }
 
     #[test]
     fn test_subsystem_apply() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_apply!(
             Pids,
             Resources {
                 max: Some(Max::Limit(42)),
@@ -161,7 +152,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_max() -> Result<()> {
-        gen_subsystem_test!(Pids, max, Max::Max, set_max, Max::Limit(42))
+        gen_test_subsystem_get_set!(Pids, max, Max::Max, set_max, Max::Limit(42))
     }
 
     #[test]
@@ -184,7 +175,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_events() -> Result<()> {
-        gen_subsystem_test!(Pids, events, (Max::Max, 0))
+        gen_test_subsystem_get!(Pids, events, (Max::Max, 0))
     }
 
     #[test]

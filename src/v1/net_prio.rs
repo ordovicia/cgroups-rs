@@ -76,49 +76,41 @@ impl_cgroup! {
     }
 }
 
+const PRIOIDX: &str = "net_prio.prioidx";
+const IFPRIOMAP: &str = "net_prio.ifpriomap";
+
 impl Subsystem {
-    gen_getter!(
-        net_prio,
-        "the system-internal representation of this cgroup",
-        prioidx,
-        u64,
-        parse
-    );
+    /// Reads the system-internal representation of this cgroup from `net_prio.prioidx` file.
+    pub fn prioidx(&self) -> Result<u64> {
+        self.open_file_read(PRIOIDX).and_then(parse)
+    }
 
-    gen_getter!(
-        net_prio, "the map of priorities assigned to traffic originating from this cgroup,",
-        ifpriomap : link, HashMap<String, u32>, parse_ifpriomap
-    );
+    /// Reads the map of priorities assigned to traffic originating from this cgroup, from
+    /// `net_prio.ifpriomap` file.
+    pub fn ifpriomap(&self) -> Result<HashMap<String, u32>> {
+        self.open_file_read(IFPRIOMAP).and_then(parse_ifpriomap)
+    }
 
-    with_doc! { concat!(
-        gen_doc!(
-            sets;
-            "net_prio.ifpriomap",
-            "a map of priorities assigned to traffic originating from this cgroup,"
-            : "The first element of the iterator item is traffic name,
-               and the second is its priority."
-        ),
-        gen_doc!(see; ifpriomap),
-        gen_doc!(err_write; "net_prio.ifpriomap"),
-        gen_doc!(eg_write; net_prio, set_ifpriomap, [("lo", 0), ("wlp1s", 1)].iter())),
-        pub fn set_ifpriomap<I, T, K>(&mut self, prio_map: I) -> Result<()>
-        where
-            I: Iterator<Item = T>,
-            T: crate::RefKv<K, u32>,
-            K: std::fmt::Display,
-        {
-            use std::io::Write;
+    /// Sets a map of priorities assigned to traffic originating from this cgroup, by writing to
+    /// `net_prio.ifpriomap` file.
+    /// The first element of the iterator item is traffic name, and the second is its priority.
+    pub fn set_ifpriomap<I, T, K>(&mut self, prio_map: I) -> Result<()>
+    where
+        I: Iterator<Item = T>,
+        T: crate::RefKv<K, u32>,
+        K: std::fmt::Display,
+    {
+        use std::io::Write;
 
-            let mut file = self.open_file_write("net_prio.ifpriomap")?;
-            for if_prio in prio_map {
-                let (interface, prio) = if_prio.ref_kv();
+        let mut file = self.open_file_write(IFPRIOMAP)?;
+        for if_prio in prio_map {
+            let (interface, prio) = if_prio.ref_kv();
 
-                // write!(file, "{} {}", interface, prio)?; // not work
-                file.write_all(format!("{} {}", interface, prio).as_bytes())?;
-            }
-
-            Ok(())
+            // write!(file, "{} {}", interface, prio)?; // does not work
+            file.write_all(format!("{} {}", interface, prio).as_bytes())?;
         }
+
+        Ok(())
     }
 }
 
@@ -161,7 +153,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_create_file_exists_delete() -> Result<()> {
-        gen_subsystem_test!(NetPrio, ["prioidx", "ifpriomap"])
+        gen_test_subsystem_create_delete!(NetPrio, PRIOIDX, IFPRIOMAP)
     }
 
     #[test]

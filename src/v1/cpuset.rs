@@ -796,7 +796,7 @@ mod tests {
 
     #[test]
     fn test_subsystem_sched_load_balance() -> Result<()> {
-        gen_subsystem_test!(
+        gen_test_subsystem_get_set!(
             Cpuset,
             sched_load_balance,
             true,

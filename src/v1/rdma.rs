@@ -108,53 +108,40 @@ impl_cgroup! {
     }
 }
 
+const CURRENT: &str = "rdma.current";
+const MAX: &str = "rdma.max";
+
 impl Subsystem {
-    gen_getter!(
-        rdma, "the current usage of RDMA/IB devices",
-        current, HashMap<String, Limit>, parse_limits
-    );
+    /// Reads the current usage of RDMA/IB devices from `rdma.current` file.
+    pub fn current(&self) -> Result<HashMap<String, Limit>> {
+        self.open_file_read(CURRENT).and_then(parse_limits)
+    }
 
-    gen_getter!(
-        rdma, "the usage limits on RDMA/IB devices",
-        max : link, HashMap<String, Limit>, parse_limits
-    );
+    /// Reads the usage limits on RDMA/IB devices from `rdma.max` file.
+    pub fn max(&self) -> Result<HashMap<String, Limit>> {
+        self.open_file_read(MAX).and_then(parse_limits)
+    }
 
-    with_doc! { concat!(
-        gen_doc!(
-            sets; "rdma.max",
-            "usage limits on RDMA/IB devices"
-             : "The first element of the iterator item is device name,
-                and the second is limit for the device."
-        ),
-        gen_doc!(see; max),
-        gen_doc!(err_write; "rdma.max"),
-        gen_doc!(
-            eg_write;
-            rdma,
-            set_max,
-            [(
-                "mlx4_0",
-                rdma::Limit { hca_handle: 3.into(), hca_object: controlgroup::Max::Max }
-            )].iter()
-        )),
-        pub fn set_max<I, T, K>(&mut self, limits: I) -> Result<()>
-        where
-            I: Iterator<Item = T>,
-            T: crate::RefKv<K, Limit>,
-            K: fmt::Display,
-        {
-            use std::io::Write;
+    /// Sets usage limits on RDMA/IB devices by writing to `rdma.max` file.
+    /// The first element of an iterator item is device name, and the second is limit for the
+    /// device.
+    pub fn set_max<I, T, K>(&mut self, limits: I) -> Result<()>
+    where
+        I: Iterator<Item = T>,
+        T: crate::RefKv<K, Limit>,
+        K: fmt::Display,
+    {
+        use std::io::Write;
 
-            let mut file = self.open_file_write("rdma.max")?;
-            for lim in limits {
-                let (device, limit) = lim.ref_kv();
+        let mut file = self.open_file_write(MAX)?;
+        for lim in limits {
+            let (device, limit) = lim.ref_kv();
 
-                // write!(file, "{} {}", interface, prio)?; // not work
-                file.write_all(format!("{} {}", device, limit).as_bytes())?;
-            }
-
-            Ok(())
+            // write!(file, "{} {}", interface, prio)?; // does not work
+            file.write_all(format!("{} {}", device, limit).as_bytes())?;
         }
+
+        Ok(())
     }
 }
 
@@ -240,7 +227,7 @@ mod tests {
     #[test]
     #[ignore] // some systems have no RDMA/IB devices
     fn test_subsystem_create_file_exists_delete() -> Result<()> {
-        gen_subsystem_test!(Rdma, ["current", "max"])
+        gen_test_subsystem_create_delete!(Rdma, CURRENT, MAX)
     }
 
     #[test]

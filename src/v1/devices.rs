@@ -256,7 +256,7 @@ impl FromStr for AccessType {
     fn from_str(s: &str) -> Result<Self> {
         let mut access = AccessType::default();
 
-        macro_rules! s {
+        macro_rules! a {
             ($r: ident) => {{
                 if access.$r {
                     bail_parse!();
@@ -267,9 +267,9 @@ impl FromStr for AccessType {
 
         for c in s.chars() {
             match c {
-                'r' => s!(read),
-                'w' => s!(write),
-                'm' => s!(mknod),
+                'r' => a!(read),
+                'w' => a!(write),
+                'm' => a!(mknod),
                 _ => {
                     bail_parse!();
                 }
@@ -354,6 +354,7 @@ fn parse_list(reader: impl std::io::Read) -> Result<Vec<Access>> {
 mod tests {
     use super::*;
     use crate::{Device, DeviceNumber};
+    use v1::SubsystemKind;
 
     #[test]
     fn test_subsystem_create_file_exists_delete() -> Result<()> {
@@ -387,13 +388,13 @@ mod tests {
             },
         };
 
-        gen_test_subsytem_get!(Devices, list, vec![allowed_all])
+        gen_test_subsystem_get!(Devices, list, vec![allowed_all])
     }
 
     #[test]
     fn test_subsystem_deny_allow() -> Result<()> {
         let mut cgroup = Subsystem::new(CgroupPath::new(
-            v1::SubsystemKind::Devices,
+            SubsystemKind::Devices,
             gen_cgroup_name!(),
         ));
         cgroup.create()?;

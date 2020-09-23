@@ -241,9 +241,9 @@ fn parse_usage_all(reader: impl io::Read) -> Result<Vec<Stat>> {
 mod tests {
     use super::*;
     use crate::ErrorKind;
+    use v1::SubsystemKind;
 
     #[test]
-    #[rustfmt::skip]
     fn test_subsystem_create_file_exists_delete() -> Result<()> {
         gen_test_subsystem_create_delete!(
             Cpuacct,
@@ -305,7 +305,7 @@ mod tests {
     #[test]
     fn test_subsystem_reset() -> Result<()> {
         let mut cgroup = Subsystem::new(CgroupPath::new(
-            v1::SubsystemKind::Cpuacct,
+            SubsystemKind::Cpuacct,
             gen_cgroup_name!(),
         ));
         cgroup.create()?;
@@ -324,7 +324,7 @@ mod tests {
         }
 
         let mut cgroup = Subsystem::new(CgroupPath::new(
-            v1::SubsystemKind::Cpuacct,
+            SubsystemKind::Cpuacct,
             gen_cgroup_name!(),
         ));
         cgroup.create()?;
